@@ -15,6 +15,17 @@ INSERT INTO hello VALUES ("universe");
 INSERT INTO hello VALUES ("town");
 HERE
 
+rm -f four.sql
+sqlite3 --batch four.sql <<HERE
+CREATE TABLE aap (who varchar(255));
+CREATE TABLE noot (who varchar(255));
+CREATE TABLE mies (who varchar(255));
+CREATE TABLE vuur (who varchar(255));
+INSERT INTO aap VALUES ("world");
+INSERT INTO aap VALUES ("universe");
+INSERT INTO aap VALUES ("town");
+HERE
+
 # truncated
 head -c 50 single.sql > truncated.sql
 

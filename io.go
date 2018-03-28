@@ -18,6 +18,7 @@ var (
 	ErrFileTooShort          = errors.New("file is too short")
 	ErrHeaderInvalidMagic    = errors.New("invalid magic number")
 	ErrHeaderInvalidPageSize = errors.New("invalid page size")
+	ErrFileTruncated         = errors.New("file truncated")
 )
 
 type header struct {
@@ -61,6 +62,30 @@ func openFile(f string) (*database, error) {
 
 func (db *database) Close() error {
 	return db.f.Close()
+}
+
+func (db *database) pageMaster() (*leafTableBtree, error) {
+	buf, err := db.page(1)
+	if err != nil {
+		return nil, err
+	}
+	return newTableBtree(buf, true)
+}
+
+// n starts a 1, sqlite style
+func (db *database) page(n int) ([]byte, error) {
+	if n < 1 {
+		return nil, errors.New("invalid page number")
+	}
+	buf := make([]byte, db.header.PageSize)
+	n, err := db.f.ReadAt(buf[:], (int64(n)-1)*int64(db.header.PageSize))
+	if err != nil {
+		return nil, err
+	}
+	if n != len(buf) {
+		return nil, ErrFileTruncated
+	}
+	return buf, nil
 }
 
 func parseHeader(b [headerSize]byte) (header, error) {
