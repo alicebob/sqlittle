@@ -15,6 +15,16 @@ INSERT INTO hello VALUES ("universe");
 INSERT INTO hello VALUES ("town");
 HERE
 
+rm -f long.sql
+sqlite3 --batch long.sql <<HERE
+CREATE TABLE bottles (wall varchar);
+HERE
+for i in {1..1000}; do
+    sqlite3 --batch long.sql <<HERE
+INSERT INTO bottles VALUES ("bottles of beer on the wall $i");
+HERE
+done
+
 rm -f four.sql
 sqlite3 --batch four.sql <<HERE
 CREATE TABLE aap (who varchar(255));

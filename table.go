@@ -10,18 +10,25 @@ import (
 type IterCB func(rowid int64, row []byte) (bool, error)
 
 type TableBtree interface {
-	Iter(IterCB) error
-	Rows() (int, error)
+	// Iter goes over every record
+	Iter(*database, IterCB) (bool, error)
+	// Rows counts the number of rows
+	Rows(*database) (int, error)
 }
 
-// Knuth B*-Tree, leaf
 type leafTableBtree struct {
 	cellCount    int
 	cellPointers []byte
 	_content     []byte
 }
+type interiorTableBtree struct {
+	cellCount    int
+	cellPointers []byte
+	_content     []byte
+	rightmost    int
+}
 
-func newTableBtree(b []byte, isFileHeader bool) (*leafTableBtree, error) {
+func newTableBtree(b []byte, isFileHeader bool) (TableBtree, error) {
 	hb := b
 	if isFileHeader {
 		hb = b[headerSize:]
@@ -32,8 +39,11 @@ func newTableBtree(b []byte, isFileHeader bool) (*leafTableBtree, error) {
 		contentOffset = 65536
 	}
 	switch typ := int(hb[0]); typ {
-	case 13:
+	case 0x0d:
 		return newLeafTableBtree(cells, hb[8:8+2*cells], b), nil
+	case 0x05:
+		rightmostPointer := int(binary.BigEndian.Uint32(hb[8:12]))
+		return newInteriorTableBtree(cells, hb[12:8+2*cells], b, rightmostPointer), nil
 	default:
 		return nil, errors.New("unsupported")
 	}
@@ -47,15 +57,11 @@ func newLeafTableBtree(cellCount int, cellPointers []byte, content []byte) *leaf
 	}
 }
 
-func (l *leafTableBtree) Rows() (int, error) {
-	i := 0
-	return i, l.Iter(func(int64, []byte) (bool, error) {
-		i++
-		return false, nil
-	})
+func (l *leafTableBtree) Rows(*database) (int, error) {
+	return l.cellCount, nil
 }
 
-func (l *leafTableBtree) Iter(cb IterCB) error {
+func (l *leafTableBtree) Iter(_ *database, cb IterCB) (bool, error) {
 	end := len(l._content)
 	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
 	// SQLite docs aren't too clear about this, though.
@@ -64,11 +70,75 @@ func (l *leafTableBtree) Iter(cb IterCB) error {
 		c := l._content[start:end]
 		rowid, content := parseCellTableLeaf(c)
 		if done, err := cb(rowid, content); done || err != nil {
-			return err
+			return done, err
 		}
 		end = start
 	}
-	return nil
+	return false, nil
+}
+
+func newInteriorTableBtree(cellCount int, cellPointers []byte, content []byte, rightmost int) *interiorTableBtree {
+	return &interiorTableBtree{
+		cellCount:    cellCount,
+		cellPointers: cellPointers,
+		_content:     content,
+		rightmost:    rightmost,
+	}
+}
+
+type interiorIterCB func(left int) (bool, error)
+
+func (l *interiorTableBtree) cellIter(db *database, cb interiorIterCB) (bool, error) {
+	end := len(l._content)
+	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
+	// SQLite docs aren't too clear about this, though.
+	for i := 0; i < l.cellCount; i++ {
+		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
+		c := l._content[start:end]
+		left, _ := parseInteriorTableLeaf(c)
+		if done, err := cb(left); done || err != nil {
+			return done, err
+		}
+	}
+	return cb(l.rightmost)
+}
+
+func (l *interiorTableBtree) Rows(db *database) (int, error) {
+	total := 0
+	l.cellIter(db, func(p int) (bool, error) {
+		buf, err := db.page(p)
+		if err != nil {
+			return false, err
+		}
+		page, err := newTableBtree(buf, false)
+		if err != nil {
+			return false, err
+		}
+		n, err := page.Rows(db)
+		if err != nil {
+			return false, err
+		}
+		total += n
+		return false, nil
+	})
+	return total, nil
+}
+
+func (l *interiorTableBtree) Iter(db *database, cb IterCB) (bool, error) {
+	return l.cellIter(db, func(p int) (bool, error) {
+		buf, err := db.page(p)
+		if err != nil {
+			return false, err
+		}
+		page, err := newTableBtree(buf, false)
+		if err != nil {
+			return false, err
+		}
+		if done, err := page.Iter(db, cb); done || err != nil {
+			return done, err
+		}
+		return false, nil
+	})
 }
 
 // parse cell content
@@ -82,6 +152,12 @@ func parseCellTableLeaf(c []byte) (int64, []byte) {
 		panic("overflow!")
 	}
 	return rowid, c
+}
+
+func parseInteriorTableLeaf(c []byte) (int, int64) {
+	left := int(binary.BigEndian.Uint32(c[:4]))
+	key, _ := readVarint(c[4:])
+	return left, key
 }
 
 // readVarint from encoding/binary is little endian :(

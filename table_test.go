@@ -91,7 +91,7 @@ func TestTablesSingle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rows, err := master.Rows()
+	rows, err := master.Rows(f)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestTablesFour(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rowCount, err := master.Rows()
+	rowCount, err := master.Rows(f)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,20 +128,67 @@ func TestTablesFour(t *testing.T) {
 		t.Fatal("no table found")
 	}
 	var rows []interface{}
-	if err := aap.root.Iter(func(rowid int64, c []byte) (bool, error) {
-		e, err := parseRecord(c)
-		if err != nil {
-			return false, err
-		}
-		rows = append(rows, e)
-		return false, nil
-	}); err != nil {
+	if _, err := aap.root.Iter(f,
+		func(rowid int64, c []byte) (bool, error) {
+			e, err := parseRecord(c)
+			if err != nil {
+				return false, err
+			}
+			rows = append(rows, e)
+			return false, nil
+		}); err != nil {
 		t.Fatal(err)
 	}
 	if have, want := rows, []interface{}{
 		[]interface{}{"world"},
 		[]interface{}{"universe"},
 		[]interface{}{"town"},
+	}; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
+
+func TestTableLong(t *testing.T) {
+	// starts table interior page
+	f, err := openFile("./test/long.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	bottles, err := f.Table("bottles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bottles == nil {
+		t.Fatal("no table found")
+	}
+
+	rowCount, err := bottles.root.Rows(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rowCount, 1000; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	var rows []interface{}
+	if _, err := bottles.root.Iter(f,
+		func(rowid int64, c []byte) (bool, error) {
+			e, err := parseRecord(c)
+			if err != nil {
+				return false, err
+			}
+			if rowid == 42 {
+				rows = append(rows, e)
+				return true, nil
+			}
+			return false, nil
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rows, []interface{}{
+		[]interface{}{"bottles of beer on the wall 42"},
 	}; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}

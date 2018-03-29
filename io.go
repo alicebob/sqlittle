@@ -64,7 +64,7 @@ func (db *database) Close() error {
 	return db.f.Close()
 }
 
-func (db *database) pageMaster() (*leafTableBtree, error) {
+func (db *database) pageMaster() (TableBtree, error) {
 	buf, err := db.page(1)
 	if err != nil {
 		return nil, err
@@ -73,12 +73,12 @@ func (db *database) pageMaster() (*leafTableBtree, error) {
 }
 
 // n starts a 1, sqlite style
-func (db *database) page(id int64) ([]byte, error) {
+func (db *database) page(id int) ([]byte, error) {
 	if id < 1 {
 		return nil, errors.New("invalid page number")
 	}
 	buf := make([]byte, db.header.PageSize)
-	n, err := db.f.ReadAt(buf[:], (id-1)*int64(db.header.PageSize))
+	n, err := db.f.ReadAt(buf[:], int64(id-1)*int64(db.header.PageSize))
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ type table struct {
 // );
 type Master struct {
 	typ, name, tblName string
-	rootPage           int64
+	rootPage           int
 	sql                string
 }
 
@@ -140,7 +140,7 @@ func (db *database) master() ([]Master, error) {
 	}
 
 	var tables []Master
-	err = master.Iter(func(rowid int64, c []byte) (bool, error) {
+	_, err = master.Iter(db, func(rowid int64, c []byte) (bool, error) {
 		e, err := parseRecord(c)
 		if err != nil {
 			return false, err
@@ -164,7 +164,7 @@ func (db *database) master() ([]Master, error) {
 		if n, ok := e[3].(int64); !ok {
 			return false, errors.New("wrong column type for sqlite_master")
 		} else {
-			m.rootPage = n
+			m.rootPage = int(n)
 		}
 		if s, ok := e[4].(string); !ok {
 			return false, errors.New("wrong column type for sqlite_master")
@@ -197,7 +197,7 @@ func (db *database) Table(name string) (*table, error) {
 	return nil, nil
 }
 
-func (db *database) openRoot(page int64) (TableBtree, error) {
+func (db *database) openRoot(page int) (TableBtree, error) {
 	buf, err := db.page(page)
 	if err != nil {
 		return nil, err
