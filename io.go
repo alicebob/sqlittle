@@ -3,7 +3,7 @@ package sqlit
 import (
 	"encoding/binary"
 	"errors"
-	"math"
+	"math/bits"
 
 	"golang.org/x/exp/mmap"
 )
@@ -94,13 +94,12 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		return header{}, ErrHeaderInvalidMagic
 	}
 
-	pageSize := int(binary.BigEndian.Uint16(b[16:18]))
+	pageSize := uint(binary.BigEndian.Uint16(b[16:18]))
 	if pageSize == 1 {
 		pageSize = 1 << 16
 	}
-	isPower := func(n int) bool {
-		f := math.Log2(float64(n))
-		return f == math.Round(f)
+	isPower := func(n uint) bool {
+		return bits.OnesCount(n) == 1
 	}
 	if pageSize < 512 || pageSize > 1<<16 || !isPower(pageSize) {
 		// TODO: special case for 1
@@ -109,7 +108,7 @@ func parseHeader(b [headerSize]byte) (header, error) {
 
 	h := header{
 		Magic:    magic,
-		PageSize: pageSize,
+		PageSize: int(pageSize),
 	}
 	return h, nil
 }
