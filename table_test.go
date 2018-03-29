@@ -69,6 +69,86 @@ func TestRecord(t *testing.T) {
 				"CREATE TABLE hello (who varchar(255))",
 			},
 		},
+		{
+			// type 8: int 0
+			e:    "\x02\b",
+			want: []interface{}{int64(0)},
+		},
+		{
+			// type 9: int 1
+			e:    "\x02\t",
+			want: []interface{}{int64(1)},
+		},
+		{
+			// type 1: 8 bit
+			e:    "\x02\x01P",
+			want: []interface{}{int64(80)},
+		},
+		{
+			// type 1: 8 bit
+			e:    "\x02\x01\xb0",
+			want: []interface{}{-int64(80)},
+		},
+		{
+			// type 2: 16 bit
+			e:    "\x02\x02@\x00",
+			want: []interface{}{int64(1 << 14)},
+		},
+		{
+			// type 2: 16 bit
+			e:    "\x02\x02\xc0\x00",
+			want: []interface{}{-int64(1 << 14)},
+		},
+		{
+			// type 3: 24 bit
+			e:    "\x02\x03\x7f\x00\x00",
+			want: []interface{}{int64(0x7f0000)},
+		},
+		{
+			// type 3: 24 bit
+			e:    "\x02\x03\xff\xff\xff",
+			want: []interface{}{-int64(1)},
+		},
+		{
+			// type 4: 32 bit
+			e:    "\x02\x04\x7f\x00\x00\x00",
+			want: []interface{}{int64(0x7f000000)},
+		},
+		{
+			// type 4: 32 bit
+			e:    "\x02\x04\xff\xff\xff\xff",
+			want: []interface{}{-int64(1)},
+		},
+		{
+			// type 5: 48 bit
+			e:    "\x02\x05\x7f\x00\x00\x00\x00\x00",
+			want: []interface{}{int64(0x7f0000000000)},
+		},
+		{
+			// type 5: 48 bit
+			e:    "\x02\x05\xff\xff\xff\xff\xff\xff",
+			want: []interface{}{-int64(1)},
+		},
+		{
+			// type 6: 64 bit
+			e:    "\x02\x06\x7f\x00\x00\x00\x00\x00\x00\x00",
+			want: []interface{}{int64(0x7f00000000000000)},
+		},
+		{
+			// type 6: 64 bit
+			e:    "\x02\x06\xff\xff\xff\xff\xff\xff\xff\xff",
+			want: []interface{}{-int64(1)},
+		},
+		{
+			// type 7: float
+			e:    "\x02\x07\x00\x00\x00\x00\x00\x00\x00\x00",
+			want: []interface{}{0.0},
+		},
+		{
+			// type 7: float
+			e:    "\x02\x07\x40\x09\x21\xfb\x54\x44\x2d\x18",
+			want: []interface{}{3.141592653589793},
+		},
 	} {
 		e, err := parseRecord([]byte(cas.e))
 		if err != nil {
@@ -196,6 +276,7 @@ func TestTableLong(t *testing.T) {
 }
 
 func TestTableOverflow(t *testing.T) {
+	// record overflow
 	testline := ""
 	for i := 1; ; i++ {
 		testline += fmt.Sprintf("%d", i)
@@ -205,7 +286,6 @@ func TestTableOverflow(t *testing.T) {
 		testline += "longline"
 	}
 
-	// record overflow
 	f, err := openFile("./test/overflow.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -244,5 +324,64 @@ func TestTableOverflow(t *testing.T) {
 		[]interface{}{testline},
 	}; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
+
+func TestTableValues(t *testing.T) {
+	// different value types
+	f, err := openFile("./test/values.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	things, err := f.Table("things")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if things == nil {
+		t.Fatal("no table found")
+	}
+
+	rowCount, err := things.root.Rows(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rowCount, 17; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	var rows []interface{}
+	if _, err := things.root.Iter(f,
+		func(rowid int64, c []byte) (bool, error) {
+			e, err := parseRecord(c)
+			if err != nil {
+				return false, err
+			}
+			rows = append(rows, e)
+			return false, nil
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rows, []interface{}{
+		[]interface{}{nil, int64(0), int64(0)},
+		[]interface{}{"", int64(1), int64(0)},
+		[]interface{}{"", int64(0), int64(0)},
+		[]interface{}{"", int64(80), int64(0)},
+		[]interface{}{"", -int64(80), int64(0)},
+		[]interface{}{"", int64(1 << 14), int64(0)},
+		[]interface{}{"", -int64(1 << 14), int64(0)},
+		[]interface{}{"", int64(1 << 20), int64(0)},
+		[]interface{}{"", -int64(1 << 20), int64(0)},
+		[]interface{}{"", int64(1 << 30), int64(0)},
+		[]interface{}{"", -int64(1 << 30), int64(0)},
+		[]interface{}{"", int64(1 << 42), int64(0)},
+		[]interface{}{"", -int64(1 << 42), int64(0)},
+		[]interface{}{"", int64(1 << 53), int64(0)},
+		[]interface{}{"", -int64(1 << 53), int64(0)},
+		[]interface{}{"", int64(0), float64(3.14)},
+		[]interface{}{"", -int64(0), -float64(3.14)},
+	}; !reflect.DeepEqual(have, want) {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
 	}
 }
