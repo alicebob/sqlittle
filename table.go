@@ -7,10 +7,10 @@ import (
 )
 
 // Iterate callback. Return true when done.
-type IterCB func(rowid int64, row []byte) bool
+type IterCB func(rowid int64, row []byte) (bool, error)
 
 type TableBtree interface {
-	Iter(IterCB)
+	Iter(IterCB) error
 	Rows() int
 }
 
@@ -47,16 +47,15 @@ func newLeafTableBtree(cellCount int, cellPointers []byte, content []byte) *leaf
 	}
 }
 
-func (l *leafTableBtree) Rows() int {
+func (l *leafTableBtree) Rows() (int, error) {
 	i := 0
-	l.Iter(func(int64, []byte) bool {
+	return i, l.Iter(func(int64, []byte) (bool, error) {
 		i++
-		return false
+		return false, nil
 	})
-	return i
 }
 
-func (l *leafTableBtree) Iter(cb IterCB) {
+func (l *leafTableBtree) Iter(cb IterCB) error {
 	end := len(l._content)
 	// cell pointers go: [p1, p2, p3], contents goes [c3, c2, c1]
 	// sqlite docs aren't too clear about this, though.
@@ -64,11 +63,12 @@ func (l *leafTableBtree) Iter(cb IterCB) {
 		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
 		c := l._content[start:end]
 		rowid, content := parseCellTableLeaf(c)
-		if cb(rowid, content) {
-			return
+		if done, err := cb(rowid, content); done || err != nil {
+			return err
 		}
 		end = start
 	}
+	return nil
 }
 
 // parse cell content
@@ -116,7 +116,7 @@ func parseRecord(r []byte) ([]interface{}, error) {
 			res = append(res, nil)
 		case 1:
 			// 8-bit twos-complement integer.
-			res = append(res, int64(body[0]))
+			res = append(res, int64(int8(body[0])))
 			body = body[1:]
 		case 2, 3, 4, 5, 6, 7, 8, 9:
 			return nil, fmt.Errorf("unimplemented record type: %d. fix me!", c)

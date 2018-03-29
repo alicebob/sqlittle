@@ -112,3 +112,91 @@ func parseHeader(b [headerSize]byte) (header, error) {
 	}
 	return h, nil
 }
+
+type table struct {
+	name string
+	root TableBtree
+	// TODO: point to indices, &c.
+}
+
+// master records are defined as:
+// CREATE TABLE sqlite_master(
+//     type text,
+//     name text,
+//     tbl_name text,
+//     rootpage integer,
+//     sql text
+// );
+type Master struct {
+	typ, name, tblName string
+	rootPage           int64
+	sql                string
+}
+
+func (db *database) master() ([]Master, error) {
+	master, err := db.pageMaster()
+	if err != nil {
+		return nil, err
+	}
+
+	var tables []Master
+	err = master.Iter(func(rowid int64, c []byte) (bool, error) {
+		e, err := parseRecord(c)
+		if err != nil {
+			return false, err
+		}
+		m := Master{}
+		if s, ok := e[0].(string); !ok {
+			return false, errors.New("wrong column type for sqlite_master")
+		} else {
+			m.typ = s
+		}
+		if s, ok := e[1].(string); !ok {
+			return false, errors.New("wrong column type for sqlite_master")
+		} else {
+			m.name = s
+		}
+		if s, ok := e[2].(string); !ok {
+			return false, errors.New("wrong column type for sqlite_master")
+		} else {
+			m.tblName = s
+		}
+		if n, ok := e[3].(int64); !ok {
+			return false, errors.New("wrong column type for sqlite_master")
+		} else {
+			m.rootPage = n
+		}
+		if s, ok := e[4].(string); !ok {
+			return false, errors.New("wrong column type for sqlite_master")
+		} else {
+			m.sql = s
+		}
+		tables = append(tables, m)
+		return false, nil
+	})
+	return tables, err
+}
+
+func (db *database) Table(name string) (*table, error) {
+	tables, err := db.master()
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range tables {
+		if t.typ == "table" && t.name == name {
+			root, err := db.openRoot(t.rootPage)
+			if err != nil {
+				return nil, err
+			}
+			return &table{
+				name: t.name,
+				root: root,
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
+func (db *database) openRoot(page int64) (TableBtree, error) {
+	return nil, nil
+}

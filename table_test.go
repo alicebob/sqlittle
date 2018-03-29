@@ -1,7 +1,6 @@
 package sqlit
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -91,14 +90,14 @@ func TestTablesSingle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if have, want := master.Rows(), 1; have != want {
+
+	rows, err := master.Rows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rows, 1; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
-
-	master.Iter(func(rowid int64, c []byte) bool {
-		fmt.Printf("row: %d, c: %q\n", rowid, c)
-		return false
-	})
 }
 
 func TestTablesFour(t *testing.T) {
@@ -113,7 +112,11 @@ func TestTablesFour(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if have, want := master.Rows(), 4; have != want {
+	rows, err := master.Rows()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rows, 4; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
