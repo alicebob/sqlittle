@@ -61,14 +61,23 @@ func (l *leafTableBtree) Rows(*database) (int, error) {
 	return l.cellCount, nil
 }
 
-func (l *leafTableBtree) Iter(_ *database, cb IterCB) (bool, error) {
+func (l *leafTableBtree) Iter(db *database, cb IterCB) (bool, error) {
 	end := len(l._content)
 	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
 	// SQLite docs aren't too clear about this, though.
 	for i := 0; i < l.cellCount; i++ {
 		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
 		c := l._content[start:end]
-		rowid, content := parseCellTableLeaf(c)
+
+		rowid, payloadL, content, overflow := parseCellTableLeaf(c)
+		if overflow > 0 {
+			var err error
+			content, err = db.addOverflow(payloadL, overflow, content)
+			if err != nil {
+				return false, err
+			}
+		}
+
 		if done, err := cb(rowid, content); done || err != nil {
 			return done, err
 		}
@@ -142,16 +151,17 @@ func (l *interiorTableBtree) Iter(db *database, cb IterCB) (bool, error) {
 }
 
 // parse cell content
-// TODO: overflow
-func parseCellTableLeaf(c []byte) (int64, []byte) {
+// returns total header length, payload length, payload bytes we have, overflow-if-non-zero
+func parseCellTableLeaf(c []byte) (int64, int64, []byte, int) {
 	l, n := readVarint(c)
 	c = c[n:]
 	rowid, n := readVarint(c)
 	c = c[n:]
+	overflow := 0
 	if int64(len(c)) != l {
-		panic("overflow!")
+		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
 	}
-	return rowid, c
+	return rowid, l, c, overflow
 }
 
 func parseInteriorTableLeaf(c []byte) (int, int64) {

@@ -20,10 +20,16 @@ sqlite3 --batch long.sql <<HERE
 CREATE TABLE bottles (wall varchar);
 HERE
 for i in {1..1000}; do
-    sqlite3 --batch long.sql <<HERE
-INSERT INTO bottles VALUES ("bottles of beer on the wall $i");
+    echo "INSERT INTO bottles VALUES (\"bottles of beer on the wall $i\");"
+done | sqlite3 --batch long.sql
+
+# long records
+rm -f overflow.sql
+line=$(seq  -s"" "longline" 1000)
+sqlite3 --batch overflow.sql <<HERE
+CREATE TABLE mytable (myline varchar);
+INSERT INTO mytable VALUES ("$line");
 HERE
-done
 
 rm -f four.sql
 sqlite3 --batch four.sql <<HERE

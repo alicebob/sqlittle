@@ -1,6 +1,7 @@
 package sqlit
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -189,6 +190,58 @@ func TestTableLong(t *testing.T) {
 	}
 	if have, want := rows, []interface{}{
 		[]interface{}{"bottles of beer on the wall 42"},
+	}; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
+
+func TestTableOverflow(t *testing.T) {
+	testline := ""
+	for i := 1; ; i++ {
+		testline += fmt.Sprintf("%d", i)
+		if i == 1000 {
+			break
+		}
+		testline += "longline"
+	}
+
+	// record overflow
+	f, err := openFile("./test/overflow.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	mytable, err := f.Table("mytable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mytable == nil {
+		t.Fatal("no table found")
+	}
+
+	rowCount, err := mytable.root.Rows(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rowCount, 1; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	var rows []interface{}
+	if _, err := mytable.root.Iter(f,
+		func(rowid int64, c []byte) (bool, error) {
+			e, err := parseRecord(c)
+			if err != nil {
+				return false, err
+			}
+			rows = append(rows, e)
+			return false, nil
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rows, []interface{}{
+		[]interface{}{testline},
 	}; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
