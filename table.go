@@ -11,7 +11,7 @@ type IterCB func(rowid int64, row []byte) (bool, error)
 
 type TableBtree interface {
 	Iter(IterCB) error
-	Rows() int
+	Rows() (int, error)
 }
 
 // Knuth B*-Tree, leaf
@@ -57,8 +57,8 @@ func (l *leafTableBtree) Rows() (int, error) {
 
 func (l *leafTableBtree) Iter(cb IterCB) error {
 	end := len(l._content)
-	// cell pointers go: [p1, p2, p3], contents goes [c3, c2, c1]
-	// sqlite docs aren't too clear about this, though.
+	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
+	// SQLite docs aren't too clear about this, though.
 	for i := 0; i < l.cellCount; i++ {
 		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
 		c := l._content[start:end]

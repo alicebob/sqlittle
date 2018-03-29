@@ -73,12 +73,12 @@ func (db *database) pageMaster() (*leafTableBtree, error) {
 }
 
 // n starts a 1, sqlite style
-func (db *database) page(n int) ([]byte, error) {
-	if n < 1 {
+func (db *database) page(id int64) ([]byte, error) {
+	if id < 1 {
 		return nil, errors.New("invalid page number")
 	}
 	buf := make([]byte, db.header.PageSize)
-	n, err := db.f.ReadAt(buf[:], (int64(n)-1)*int64(db.header.PageSize))
+	n, err := db.f.ReadAt(buf[:], (id-1)*int64(db.header.PageSize))
 	if err != nil {
 		return nil, err
 	}
@@ -198,5 +198,9 @@ func (db *database) Table(name string) (*table, error) {
 }
 
 func (db *database) openRoot(page int64) (TableBtree, error) {
-	return nil, nil
+	buf, err := db.page(page)
+	if err != nil {
+		return nil, err
+	}
+	return newTableBtree(buf, false)
 }

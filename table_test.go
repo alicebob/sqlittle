@@ -112,11 +112,37 @@ func TestTablesFour(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rows, err := master.Rows()
+	rowCount, err := master.Rows()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if have, want := rows, 4; have != want {
+	if have, want := rowCount, 4; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	aap, err := f.Table("aap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if aap == nil {
+		t.Fatal("no table found")
+	}
+	var rows []interface{}
+	if err := aap.root.Iter(func(rowid int64, c []byte) (bool, error) {
+		e, err := parseRecord(c)
+		if err != nil {
+			return false, err
+		}
+		rows = append(rows, e)
+		return false, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rows, []interface{}{
+		[]interface{}{"world"},
+		[]interface{}{"universe"},
+		[]interface{}{"town"},
+	}; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
