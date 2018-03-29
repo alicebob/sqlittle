@@ -161,7 +161,7 @@ func TestRecord(t *testing.T) {
 }
 
 func TestTablesSingle(t *testing.T) {
-	f, err := openFile("./test/single.sql")
+	f, err := openFile("./test/single.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestTablesSingle(t *testing.T) {
 }
 
 func TestTablesFour(t *testing.T) {
-	f, err := openFile("./test/four.sql")
+	f, err := openFile("./test/four.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +231,7 @@ func TestTablesFour(t *testing.T) {
 
 func TestTableLong(t *testing.T) {
 	// starts table interior page
-	f, err := openFile("./test/long.sql")
+	f, err := openFile("./test/long.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +286,7 @@ func TestTableOverflow(t *testing.T) {
 		testline += "longline"
 	}
 
-	f, err := openFile("./test/overflow.sql")
+	f, err := openFile("./test/overflow.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
