@@ -1,6 +1,9 @@
-.PHONY: all test
+.PHONY: all test format
 
-all: test
+all: format test
 
 test:
 	go test
+
+format:
+	go fmt

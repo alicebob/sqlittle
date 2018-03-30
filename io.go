@@ -19,6 +19,7 @@ var (
 	ErrHeaderInvalidMagic    = errors.New("invalid magic number")
 	ErrHeaderInvalidPageSize = errors.New("invalid page size")
 	ErrFileTruncated         = errors.New("file truncated")
+	ErrNoSuchTable           = errors.New("no such table")
 )
 
 type header struct {
@@ -72,7 +73,7 @@ func (db *database) pageMaster() (TableBtree, error) {
 	return newTableBtree(buf, true)
 }
 
-// n starts a 1, sqlite style
+// n starts at 1, sqlite style
 func (db *database) page(id int) ([]byte, error) {
 	if id < 1 {
 		return nil, errors.New("invalid page number")
@@ -177,6 +178,7 @@ func (db *database) master() ([]Master, error) {
 	return tables, err
 }
 
+// returns nil if the table isn't found
 func (db *database) Table(name string) (*table, error) {
 	tables, err := db.master()
 	if err != nil {
@@ -216,4 +218,66 @@ func (db *database) addOverflow(length int64, page int, to []byte) ([]byte, erro
 		return db.addOverflow(length, next, to)
 	}
 	return to[:length], nil
+}
+
+// Row is a list of: nil, int64, float64, string, []byte
+type Row []interface{}
+
+// Call cb() for every row in the table. Will be called in 'database order'.
+// Might return ErrNoSuchTable when the table isn't there (or isn't a table),
+// or when something's wrong with the DB file.
+// There is no way to bail out of the scan halfway.
+func (db *database) TableScan(table string, cb func(Row)) error {
+	t, err := db.Table(table)
+	if err != nil {
+		return err
+	}
+	if t == nil {
+		return ErrNoSuchTable
+	}
+	_, err = t.root.Iter(
+		db,
+		func(rowid int64, c []byte) (bool, error) {
+			rec, err := parseRecord(c)
+			if err != nil {
+				return false, err
+			}
+			cb(rec)
+			return false, nil
+		},
+	)
+	return err
+}
+
+// Find a single rowid. Will return nil if it isn't found. The rowid is an
+// internal id, but if you have a `primary key(int)` that should be the same.
+// Might return ErrNoSuchTable when the table isn't there (or isn't a table),
+// or when something's wrong with the DB file.
+// Searching is efficient.
+func (db *database) TableRowid(table string, rowid int64) (Row, error) {
+	t, err := db.Table(table)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil {
+		return nil, ErrNoSuchTable
+	}
+
+	var rec []byte
+	if _, err := t.root.IterMin(
+		db,
+		rowid,
+		func(k int64, c []byte) (bool, error) {
+			if k == rowid {
+				rec = c
+			}
+			return true, nil
+		},
+	); err != nil {
+		return nil, err
+	}
+	if rec == nil {
+		return nil, nil
+	}
+	return parseRecord(rec)
 }

@@ -12,6 +12,8 @@ type IterCB func(rowid int64, row []byte) (bool, error)
 type TableBtree interface {
 	// Iter goes over every record
 	Iter(*database, IterCB) (bool, error)
+	// Scan starting from a key
+	IterMin(*database, int64, IterCB) (bool, error)
 	// Rows counts the number of rows
 	Rows(*database) (int, error)
 }
@@ -86,6 +88,18 @@ func (l *leafTableBtree) Iter(db *database, cb IterCB) (bool, error) {
 	return false, nil
 }
 
+func (l *leafTableBtree) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
+	return l.Iter(
+		db,
+		func(key int64, rec []byte) (bool, error) {
+			if key < rowid {
+				return false, nil
+			}
+			return cb(key, rec)
+		},
+	)
+}
+
 func newInteriorTableBtree(cellCount int, cellPointers []byte, content []byte, rightmost int) *interiorTableBtree {
 	return &interiorTableBtree{
 		cellCount:    cellCount,
@@ -95,7 +109,7 @@ func newInteriorTableBtree(cellCount int, cellPointers []byte, content []byte, r
 	}
 }
 
-type interiorIterCB func(left int) (bool, error)
+type interiorIterCB func(page int) (bool, error)
 
 func (l *interiorTableBtree) cellIter(db *database, cb interiorIterCB) (bool, error) {
 	end := len(l._content)
@@ -105,6 +119,26 @@ func (l *interiorTableBtree) cellIter(db *database, cb interiorIterCB) (bool, er
 		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
 		c := l._content[start:end]
 		left, _ := parseInteriorTableLeaf(c)
+		if done, err := cb(left); done || err != nil {
+			return done, err
+		}
+	}
+	return cb(l.rightmost)
+}
+
+func (l *interiorTableBtree) cellIterMin(db *database, rowid int64, cb interiorIterCB) (bool, error) {
+	// Loop over all pages, skipping pages which have rows too low.
+	// This could be implemented with a nice binary search.
+	end := len(l._content)
+	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
+	// SQLite docs aren't too clear about this, though.
+	for i := 0; i < l.cellCount; i++ {
+		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
+		c := l._content[start:end]
+		left, key := parseInteriorTableLeaf(c)
+		if key < rowid {
+			continue
+		}
 		if done, err := cb(left); done || err != nil {
 			return done, err
 		}
@@ -147,6 +181,22 @@ func (l *interiorTableBtree) Iter(db *database, cb IterCB) (bool, error) {
 			return done, err
 		}
 		return false, nil
+	})
+}
+
+func (l *interiorTableBtree) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
+	// we go over the keys, skipping pages with a low max key.
+	// This could be implemented with a binary search in the page.
+	return l.cellIterMin(db, rowid, func(pageID int) (bool, error) {
+		buf, err := db.page(pageID)
+		if err != nil {
+			return false, err
+		}
+		page, err := newTableBtree(buf, false)
+		if err != nil {
+			return false, err
+		}
+		return page.IterMin(db, rowid, cb)
 	})
 }
 
