@@ -351,8 +351,9 @@ func TestTableValues(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	var rows []interface{}
-	if _, err := things.root.Iter(f,
+	var rows []Row
+	if _, err := things.root.Iter(
+		f,
 		func(rowid int64, c []byte) (bool, error) {
 			e, err := parseRecord(c)
 			if err != nil {
@@ -363,25 +364,107 @@ func TestTableValues(t *testing.T) {
 		}); err != nil {
 		t.Fatal(err)
 	}
-	if have, want := rows, []interface{}{
-		[]interface{}{nil, int64(0), int64(0)},
-		[]interface{}{"", int64(1), int64(0)},
-		[]interface{}{"", int64(0), int64(0)},
-		[]interface{}{"", int64(80), int64(0)},
-		[]interface{}{"", -int64(80), int64(0)},
-		[]interface{}{"", int64(1 << 14), int64(0)},
-		[]interface{}{"", -int64(1 << 14), int64(0)},
-		[]interface{}{"", int64(1 << 20), int64(0)},
-		[]interface{}{"", -int64(1 << 20), int64(0)},
-		[]interface{}{"", int64(1 << 30), int64(0)},
-		[]interface{}{"", -int64(1 << 30), int64(0)},
-		[]interface{}{"", int64(1 << 42), int64(0)},
-		[]interface{}{"", -int64(1 << 42), int64(0)},
-		[]interface{}{"", int64(1 << 53), int64(0)},
-		[]interface{}{"", -int64(1 << 53), int64(0)},
-		[]interface{}{"", int64(0), float64(3.14)},
-		[]interface{}{"", -int64(0), -float64(3.14)},
+	if have, want := rows, []Row{
+		{nil, int64(0), int64(0)},
+		{"", int64(1), int64(0)},
+		{"", int64(0), int64(0)},
+		{"", int64(80), int64(0)},
+		{"", -int64(80), int64(0)},
+		{"", int64(1 << 14), int64(0)},
+		{"", -int64(1 << 14), int64(0)},
+		{"", int64(1 << 20), int64(0)},
+		{"", -int64(1 << 20), int64(0)},
+		{"", int64(1 << 30), int64(0)},
+		{"", -int64(1 << 30), int64(0)},
+		{"", int64(1 << 42), int64(0)},
+		{"", -int64(1 << 42), int64(0)},
+		{"", int64(1 << 53), int64(0)},
+		{"", -int64(1 << 53), int64(0)},
+		{"", int64(0), float64(3.14)},
+		{"", -int64(0), -float64(3.14)},
 	}; !reflect.DeepEqual(have, want) {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+}
+
+func TestIndexSingle(t *testing.T) {
+	// scan a whole index (single page)
+	db, err := openFile("./test/index.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	hello, err := db.Index("hello_index")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hello == nil {
+		t.Fatal("no index found")
+	}
+
+	rowCount, err := hello.root.Rows(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rowCount, 3; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	var rows []Row
+	if _, err := hello.root.Iter(
+		db,
+		func(l int64, pl []byte, overflow int) (bool, error) {
+			_, row, err := parseIndexRow(db, l, pl, overflow)
+			rows = append(rows, row)
+			return false, err
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rows, []Row{
+		{"town"},
+		{"universe"},
+		{"world"},
+	}; !reflect.DeepEqual(have, want) {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+}
+
+func TestIndexWords(t *testing.T) {
+	// scan a whole index, with internal page
+	db, err := openFile("./test/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if index == nil {
+		t.Fatal("no index found")
+	}
+
+	rowCount, err := index.root.Rows(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := rowCount, 1000; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	var rows []Row
+	if _, err := index.root.Iter(
+		db,
+		func(l int64, pl []byte, overflow int) (bool, error) {
+			_, row, err := parseIndexRow(db, l, pl, overflow)
+			rows = append(rows, row)
+			return false, err
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := len(rows), 1000; have != want {
 		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
 	}
 }

@@ -8,20 +8,38 @@ import (
 
 // Iterate callback. Return true when done.
 type IterCB func(rowid int64, row []byte) (bool, error)
-
 type TableBtree interface {
 	// Iter goes over every record
 	Iter(*database, IterCB) (bool, error)
 	// Scan starting from a key
 	IterMin(*database, int64, IterCB) (bool, error)
-	// Rows counts the number of rows
+	// Rows counts the number of rows. For debugging.
+	Rows(*database) (int, error)
+}
+
+// IndexIterCB gets the
+type IndexIterCB func(length int64, pl []byte, overflow int) (bool, error)
+type IndexBtree interface {
+	// Iter goes over every record
+	Iter(*database, IndexIterCB) (bool, error)
+	// Rows counts the number of rows. For debugging.
 	Rows(*database) (int, error)
 }
 
 type leafTableBtree struct {
 	cells [][]byte
 }
+
 type interiorTableBtree struct {
+	cells     [][]byte
+	rightmost int
+}
+
+type leafIndexBtree struct {
+	cells [][]byte
+}
+
+type interiorIndexBtree struct {
 	cells     [][]byte
 	rightmost int
 }
@@ -44,6 +62,23 @@ func newTableBtree(b []byte, isFileHeader bool) (TableBtree, error) {
 	case 0x05:
 		rightmostPointer := int(binary.BigEndian.Uint32(hb[8:12]))
 		return newInteriorTableBtree(cells, hb[12:], b, rightmostPointer)
+	case 0x0a, 0x02:
+		return nil, errors.New("found an index, expected a table")
+	default:
+		return nil, errors.New("unsupported")
+	}
+}
+
+func newIndexBtree(b []byte) (IndexBtree, error) {
+	cells := int(binary.BigEndian.Uint16(b[3:5]))
+	switch typ := int(b[0]); typ {
+	case 0x0d, 0x05:
+		return nil, errors.New("found a table, expected an index")
+	case 0x0a:
+		return newLeafIndex(cells, b[8:], b)
+	case 0x02:
+		rightmostPointer := int(binary.BigEndian.Uint32(b[8:12]))
+		return newInteriorIndex(cells, b[12:], b, rightmostPointer)
 	default:
 		return nil, errors.New("unsupported")
 	}
@@ -66,7 +101,7 @@ func (l *leafTableBtree) Rows(*database) (int, error) {
 
 func (l *leafTableBtree) Iter(db *database, cb IterCB) (bool, error) {
 	for _, c := range l.cells {
-		rowid, payloadL, content, overflow := parseCellTableLeaf(c)
+		rowid, payloadL, content, overflow := parseCellLeaf(c)
 		if overflow > 0 {
 			var err error
 			content, err = db.addOverflow(payloadL, overflow, content)
@@ -111,7 +146,7 @@ type interiorIterCB func(page int) (bool, error)
 
 func (l *interiorTableBtree) cellIter(db *database, cb interiorIterCB) (bool, error) {
 	for _, c := range l.cells {
-		left, _ := parseInteriorTableLeaf(c)
+		left, _ := parseInteriorLeaf(c)
 		if done, err := cb(left); done || err != nil {
 			return done, err
 		}
@@ -123,7 +158,7 @@ func (l *interiorTableBtree) cellIterMin(db *database, rowid int64, cb interiorI
 	// Loop over all pages, skipping pages which have rows too low.
 	// This could be implemented with a nice binary search.
 	for _, c := range l.cells {
-		left, key := parseInteriorTableLeaf(c)
+		left, key := parseInteriorLeaf(c)
 		if key < rowid {
 			continue
 		}
@@ -188,9 +223,95 @@ func (l *interiorTableBtree) IterMin(db *database, rowid int64, cb IterCB) (bool
 	})
 }
 
+func newLeafIndex(
+	count int,
+	pointers []byte,
+	content []byte,
+) (*leafIndexBtree, error) {
+	cells, err := parseCellpointers(count, pointers, content)
+	return &leafIndexBtree{
+		cells: cells,
+	}, err
+}
+
+func (l *leafIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
+	for _, c := range l.cells {
+		l, content, overflow := parseLeafIndex(c)
+		if done, err := cb(l, content, overflow); done || err != nil {
+			return done, err
+		}
+	}
+	return false, nil
+}
+
+func (l *leafIndexBtree) Rows(*database) (int, error) {
+	return len(l.cells), nil
+}
+
+func newInteriorIndex(
+	count int,
+	pointers []byte,
+	content []byte,
+	rightmost int,
+) (*interiorIndexBtree, error) {
+	cells, err := parseCellpointers(count, pointers, content)
+	return &interiorIndexBtree{
+		cells:     cells,
+		rightmost: rightmost,
+	}, err
+}
+
+func (l *interiorIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
+	for _, c := range l.cells {
+		left, pll, pl, overflow := parseInteriorIndex(c)
+		page, err := db.openIndex(left)
+		if err != nil {
+			return false, err
+		}
+		if done, err := page.Iter(db, cb); done || err != nil {
+			return done, err
+		}
+
+		// the btree node also has a record
+		if done, err := cb(pll, pl, overflow); done || err != nil {
+			return done, err
+		}
+	}
+
+	page, err := db.openIndex(l.rightmost)
+	if err != nil {
+		return false, err
+	}
+	return page.Iter(db, cb)
+}
+
+func (l *interiorIndexBtree) Rows(db *database) (int, error) {
+	total := 0
+	for _, c := range l.cells {
+		left, _, _, _ := parseInteriorIndex(c)
+		page, err := db.openIndex(left)
+		if err != nil {
+			return 0, err
+		}
+		n, err := page.Rows(db)
+		if err != nil {
+			return 0, err
+		}
+		total += n
+		total += 1 // the btree node has a record, too
+	}
+
+	page, err := db.openIndex(l.rightmost)
+	if err != nil {
+		return 0, err
+	}
+	n, err := page.Rows(db)
+	return total + n, err
+}
+
 // parse cell content
 // returns total header length, payload length, payload bytes we have, overflow-if-non-zero
-func parseCellTableLeaf(c []byte) (int64, int64, []byte, int) {
+func parseCellLeaf(c []byte) (int64, int64, []byte, int) {
 	l, n := readVarint(c)
 	c = c[n:]
 	rowid, n := readVarint(c)
@@ -202,13 +323,37 @@ func parseCellTableLeaf(c []byte) (int64, int64, []byte, int) {
 	return rowid, l, c, overflow
 }
 
-func parseInteriorTableLeaf(c []byte) (int, int64) {
+func parseInteriorLeaf(c []byte) (int, int64) {
 	left := int(binary.BigEndian.Uint32(c[:4]))
 	key, _ := readVarint(c[4:])
 	return left, key
 }
 
-// readVarint from encoding/binary is little endian :(
+// returns: payload length, payload we have, overflow pageid
+func parseLeafIndex(c []byte) (int64, []byte, int) {
+	l, n := readVarint(c)
+	c = c[n:]
+	overflow := 0
+	if int64(len(c)) != l {
+		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
+	}
+	return l, c, overflow
+}
+
+// returns: left page, payload length, payload we have, overflow pageid
+func parseInteriorIndex(c []byte) (int, int64, []byte, int) {
+	left := int(binary.BigEndian.Uint32(c[:4]))
+	c = c[4:]
+	l, n := readVarint(c)
+	c = c[n:]
+	overflow := 0
+	if int64(len(c)) != l {
+		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
+	}
+	return int(left), l, c, overflow
+}
+
+// The readVarint() from encoding/binary is little endian :(
 func readVarint(b []byte) (int64, int) {
 	var n uint64
 	for i := 0; ; i++ {
@@ -330,4 +475,29 @@ func parseCellpointers(
 		end = start
 	}
 	return cs, nil
+}
+
+// Parse an index cell. Last element of the row is the rowid
+func parseIndexRow(db *database, l int64, pl []byte, overflow int) (int64, Row, error) {
+	if overflow > 0 {
+		var err error
+		pl, err = db.addOverflow(l, overflow, pl)
+		if err != nil {
+			return 0, nil, err
+		}
+	}
+
+	row, err := parseRecord(pl)
+	if err != nil {
+		return 0, nil, err
+	}
+	if len(row) == 0 {
+		return 0, nil, errors.New("no fields in index")
+	}
+	rowid, ok := row[len(row)-1].(int64)
+	if !ok {
+		return 0, nil, errors.New("invalid rowid pointer in index")
+	}
+	row = row[:len(row)-1]
+	return rowid, row, nil
 }

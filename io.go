@@ -120,6 +120,11 @@ type table struct {
 	// TODO: point to indices, &c.
 }
 
+type index struct {
+	name string
+	root IndexBtree
+}
+
 // master records are defined as:
 // CREATE TABLE sqlite_master(
 //     type text,
@@ -186,7 +191,7 @@ func (db *database) Table(name string) (*table, error) {
 	}
 	for _, t := range tables {
 		if t.typ == "table" && t.name == name {
-			root, err := db.openRoot(t.rootPage)
+			root, err := db.openTable(t.rootPage)
 			if err != nil {
 				return nil, err
 			}
@@ -199,12 +204,41 @@ func (db *database) Table(name string) (*table, error) {
 	return nil, nil
 }
 
-func (db *database) openRoot(page int) (TableBtree, error) {
+// returns nil if the index isn't found
+func (db *database) Index(name string) (*index, error) {
+	tables, err := db.master()
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range tables {
+		if t.typ == "index" && t.name == name {
+			root, err := db.openIndex(t.rootPage)
+			if err != nil {
+				return nil, err
+			}
+			return &index{
+				name: t.name,
+				root: root,
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
+func (db *database) openTable(page int) (TableBtree, error) {
 	buf, err := db.page(page)
 	if err != nil {
 		return nil, err
 	}
 	return newTableBtree(buf, false)
+}
+
+func (db *database) openIndex(page int) (IndexBtree, error) {
+	buf, err := db.page(page)
+	if err != nil {
+		return nil, err
+	}
+	return newIndexBtree(buf)
 }
 
 func (db *database) addOverflow(length int64, page int, to []byte) ([]byte, error) {
