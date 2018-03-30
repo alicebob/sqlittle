@@ -182,18 +182,18 @@ func TestTablesSingle(t *testing.T) {
 }
 
 func TestTablesFour(t *testing.T) {
-	f, err := openFile("./test/four.sqlite")
+	db, err := openFile("./test/four.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer db.Close()
 
-	master, err := f.pageMaster()
+	master, err := db.pageMaster()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rowCount, err := master.Rows(f)
+	rowCount, err := master.Rows(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestTablesFour(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	aap, err := f.Table("aap")
+	aap, err := db.Table("aap")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,8 +209,13 @@ func TestTablesFour(t *testing.T) {
 		t.Fatal("no table found")
 	}
 	var rows []interface{}
-	if _, err := aap.root.Iter(f,
-		func(rowid int64, c []byte) (bool, error) {
+	if _, err := aap.root.Iter(
+		db,
+		func(rowid int64, pl Payload) (bool, error) {
+			c, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
 			e, err := parseRecord(c)
 			if err != nil {
 				return false, err
@@ -231,13 +236,13 @@ func TestTablesFour(t *testing.T) {
 
 func TestTableLong(t *testing.T) {
 	// starts table interior page
-	f, err := openFile("./test/long.sqlite")
+	db, err := openFile("./test/long.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer db.Close()
 
-	bottles, err := f.Table("bottles")
+	bottles, err := db.Table("bottles")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +250,7 @@ func TestTableLong(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := bottles.root.Rows(f)
+	rowCount, err := bottles.root.Rows(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,8 +259,13 @@ func TestTableLong(t *testing.T) {
 	}
 
 	var rows []interface{}
-	if _, err := bottles.root.Iter(f,
-		func(rowid int64, c []byte) (bool, error) {
+	if _, err := bottles.root.Iter(
+		db,
+		func(rowid int64, pl Payload) (bool, error) {
+			c, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
 			e, err := parseRecord(c)
 			if err != nil {
 				return false, err
@@ -286,13 +296,13 @@ func TestTableOverflow(t *testing.T) {
 		testline += "longline"
 	}
 
-	f, err := openFile("./test/overflow.sqlite")
+	db, err := openFile("./test/overflow.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer db.Close()
 
-	mytable, err := f.Table("mytable")
+	mytable, err := db.Table("mytable")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -300,7 +310,7 @@ func TestTableOverflow(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := mytable.root.Rows(f)
+	rowCount, err := mytable.root.Rows(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,8 +319,13 @@ func TestTableOverflow(t *testing.T) {
 	}
 
 	var rows []interface{}
-	if _, err := mytable.root.Iter(f,
-		func(rowid int64, c []byte) (bool, error) {
+	if _, err := mytable.root.Iter(
+		db,
+		func(rowid int64, pl Payload) (bool, error) {
+			c, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
 			e, err := parseRecord(c)
 			if err != nil {
 				return false, err
@@ -329,13 +344,13 @@ func TestTableOverflow(t *testing.T) {
 
 func TestTableValues(t *testing.T) {
 	// different value types
-	f, err := openFile("./test/values.sqlite")
+	db, err := openFile("./test/values.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer db.Close()
 
-	things, err := f.Table("things")
+	things, err := db.Table("things")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +358,7 @@ func TestTableValues(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := things.root.Rows(f)
+	rowCount, err := things.root.Rows(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,8 +368,12 @@ func TestTableValues(t *testing.T) {
 
 	var rows []Row
 	if _, err := things.root.Iter(
-		f,
-		func(rowid int64, c []byte) (bool, error) {
+		db,
+		func(rowid int64, pl Payload) (bool, error) {
+			c, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
 			e, err := parseRecord(c)
 			if err != nil {
 				return false, err

@@ -146,7 +146,12 @@ func (db *database) master() ([]Master, error) {
 	}
 
 	var tables []Master
-	_, err = master.Iter(db, func(rowid int64, c []byte) (bool, error) {
+	_, err = master.Iter(db, func(rowid int64, pl Payload) (bool, error) {
+		c, err := addOverflow(db, pl)
+		if err != nil {
+			return false, err
+		}
+
 		e, err := parseRecord(c)
 		if err != nil {
 			return false, err
@@ -258,7 +263,12 @@ func (db *database) TableScan(table string, cb func(Row)) error {
 	}
 	_, err = t.root.Iter(
 		db,
-		func(rowid int64, c []byte) (bool, error) {
+		func(rowid int64, pl Payload) (bool, error) {
+			c, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
+
 			rec, err := parseRecord(c)
 			if err != nil {
 				return false, err
@@ -284,21 +294,26 @@ func (db *database) TableRowid(table string, rowid int64) (Row, error) {
 		return nil, ErrNoSuchTable
 	}
 
-	var rec []byte
+	var recPl *Payload
 	if _, err := t.root.IterMin(
 		db,
 		rowid,
-		func(k int64, c []byte) (bool, error) {
+		func(k int64, pl Payload) (bool, error) {
 			if k == rowid {
-				rec = c
+				recPl = &pl
 			}
 			return true, nil
 		},
 	); err != nil {
 		return nil, err
 	}
-	if rec == nil {
+	if recPl == nil {
 		return nil, nil
 	}
-	return parseRecord(rec)
+
+	c, err := addOverflow(db, *recPl)
+	if err != nil {
+		return nil, err
+	}
+	return parseRecord(c)
 }

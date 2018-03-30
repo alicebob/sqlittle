@@ -14,8 +14,8 @@ type Payload struct {
 	Overflow int
 }
 
-// Iterate callback. Gets rowid and full payload. Return true when done.
-type IterCB func(rowid int64, row []byte) (bool, error)
+// Iterate callback. Gets rowid and (possibly truncated) payload. Return true when done
+type IterCB func(rowid int64, pl Payload) (bool, error)
 type TableBtree interface {
 	// Iter goes over every record
 	Iter(*database, IterCB) (bool, error)
@@ -25,7 +25,7 @@ type TableBtree interface {
 	Rows(*database) (int, error)
 }
 
-// IndexIterCB gets the truncated payload
+// IndexIterCB gets the (possibly truncated) payload
 type IndexIterCB func(pl Payload) (bool, error)
 type IndexBtree interface {
 	// Iter goes over every record
@@ -107,16 +107,11 @@ func (l *leafTableBtree) Rows(*database) (int, error) {
 	return len(l.cells), nil
 }
 
-func (l *leafTableBtree) Iter(db *database, cb IterCB) (bool, error) {
+func (l *leafTableBtree) Iter(_ *database, cb IterCB) (bool, error) {
 	for _, c := range l.cells {
 		rowid, pl := parseCellLeaf(c)
 
-		content, err := addOverflow(db, pl)
-		if err != nil {
-			return false, err
-		}
-
-		if done, err := cb(rowid, content); done || err != nil {
+		if done, err := cb(rowid, pl); done || err != nil {
 			return done, err
 		}
 	}
@@ -126,11 +121,11 @@ func (l *leafTableBtree) Iter(db *database, cb IterCB) (bool, error) {
 func (l *leafTableBtree) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
 	return l.Iter(
 		db,
-		func(key int64, rec []byte) (bool, error) {
+		func(key int64, pl Payload) (bool, error) {
 			if key < rowid {
 				return false, nil
 			}
-			return cb(key, rec)
+			return cb(key, pl)
 		},
 	)
 }
