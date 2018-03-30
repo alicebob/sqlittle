@@ -241,19 +241,6 @@ func (db *database) openIndex(page int) (IndexBtree, error) {
 	return newIndexBtree(buf)
 }
 
-func (db *database) addOverflow(length int64, page int, to []byte) ([]byte, error) {
-	buf, err := db.page(page)
-	if err != nil {
-		return nil, err
-	}
-	next, buf := int(binary.BigEndian.Uint32(buf[:4])), buf[4:]
-	to = append(to, buf...)
-	if next != 0 {
-		return db.addOverflow(length, next, to)
-	}
-	return to[:length], nil
-}
-
 // Row is a list of: nil, int64, float64, string, []byte
 type Row []interface{}
 

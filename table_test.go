@@ -414,8 +414,12 @@ func TestIndexSingle(t *testing.T) {
 	var rows []Row
 	if _, err := hello.root.Iter(
 		db,
-		func(l int64, pl []byte, overflow int) (bool, error) {
-			_, row, err := parseIndexRow(db, l, pl, overflow)
+		func(pl Payload) (bool, error) {
+			pf, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
+			_, row, err := parseIndexRow(pf)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
@@ -457,8 +461,12 @@ func TestIndexWords(t *testing.T) {
 	var rows []Row
 	if _, err := index.root.Iter(
 		db,
-		func(l int64, pl []byte, overflow int) (bool, error) {
-			_, row, err := parseIndexRow(db, l, pl, overflow)
+		func(pl Payload) (bool, error) {
+			pf, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
+			_, row, err := parseIndexRow(pf)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
