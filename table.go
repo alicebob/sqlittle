@@ -19,15 +19,11 @@ type TableBtree interface {
 }
 
 type leafTableBtree struct {
-	cellCount    int
-	cellPointers []byte
-	_content     []byte
+	cells [][]byte
 }
 type interiorTableBtree struct {
-	cellCount    int
-	cellPointers []byte
-	_content     []byte
-	rightmost    int
+	cells     [][]byte
+	rightmost int
 }
 
 func newTableBtree(b []byte, isFileHeader bool) (TableBtree, error) {
@@ -36,41 +32,40 @@ func newTableBtree(b []byte, isFileHeader bool) (TableBtree, error) {
 		hb = b[headerSize:]
 	}
 	cells := int(binary.BigEndian.Uint16(hb[3:5]))
-	contentOffset := int(binary.BigEndian.Uint16(hb[5:7]))
-	if contentOffset == 0 {
-		contentOffset = 65536
-	}
+	/*
+		contentOffset := int(binary.BigEndian.Uint16(hb[5:7]))
+		if contentOffset == 0 {
+			contentOffset = 65536
+		}
+	*/
 	switch typ := int(hb[0]); typ {
 	case 0x0d:
-		return newLeafTableBtree(cells, hb[8:8+2*cells], b), nil
+		return newLeafTableBtree(cells, hb[8:], b)
 	case 0x05:
 		rightmostPointer := int(binary.BigEndian.Uint32(hb[8:12]))
-		return newInteriorTableBtree(cells, hb[12:8+2*cells], b, rightmostPointer), nil
+		return newInteriorTableBtree(cells, hb[12:], b, rightmostPointer)
 	default:
 		return nil, errors.New("unsupported")
 	}
 }
 
-func newLeafTableBtree(cellCount int, cellPointers []byte, content []byte) *leafTableBtree {
+func newLeafTableBtree(
+	count int,
+	pointers []byte,
+	content []byte,
+) (*leafTableBtree, error) {
+	cells, err := parseCellpointers(count, pointers, content)
 	return &leafTableBtree{
-		cellCount:    cellCount,
-		cellPointers: cellPointers,
-		_content:     content,
-	}
+		cells: cells,
+	}, err
 }
 
 func (l *leafTableBtree) Rows(*database) (int, error) {
-	return l.cellCount, nil
+	return len(l.cells), nil
 }
 
 func (l *leafTableBtree) Iter(db *database, cb IterCB) (bool, error) {
-	end := len(l._content)
-	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
-	// SQLite docs aren't too clear about this, though.
-	for i := 0; i < l.cellCount; i++ {
-		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
-		c := l._content[start:end]
-
+	for _, c := range l.cells {
 		rowid, payloadL, content, overflow := parseCellTableLeaf(c)
 		if overflow > 0 {
 			var err error
@@ -83,7 +78,6 @@ func (l *leafTableBtree) Iter(db *database, cb IterCB) (bool, error) {
 		if done, err := cb(rowid, content); done || err != nil {
 			return done, err
 		}
-		end = start
 	}
 	return false, nil
 }
@@ -100,24 +94,23 @@ func (l *leafTableBtree) IterMin(db *database, rowid int64, cb IterCB) (bool, er
 	)
 }
 
-func newInteriorTableBtree(cellCount int, cellPointers []byte, content []byte, rightmost int) *interiorTableBtree {
+func newInteriorTableBtree(
+	count int,
+	pointers []byte,
+	content []byte,
+	rightmost int,
+) (*interiorTableBtree, error) {
+	cells, err := parseCellpointers(count, pointers, content)
 	return &interiorTableBtree{
-		cellCount:    cellCount,
-		cellPointers: cellPointers,
-		_content:     content,
-		rightmost:    rightmost,
-	}
+		cells:     cells,
+		rightmost: rightmost,
+	}, err
 }
 
 type interiorIterCB func(page int) (bool, error)
 
 func (l *interiorTableBtree) cellIter(db *database, cb interiorIterCB) (bool, error) {
-	end := len(l._content)
-	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
-	// SQLite docs aren't too clear about this, though.
-	for i := 0; i < l.cellCount; i++ {
-		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
-		c := l._content[start:end]
+	for _, c := range l.cells {
 		left, _ := parseInteriorTableLeaf(c)
 		if done, err := cb(left); done || err != nil {
 			return done, err
@@ -129,12 +122,7 @@ func (l *interiorTableBtree) cellIter(db *database, cb interiorIterCB) (bool, er
 func (l *interiorTableBtree) cellIterMin(db *database, rowid int64, cb interiorIterCB) (bool, error) {
 	// Loop over all pages, skipping pages which have rows too low.
 	// This could be implemented with a nice binary search.
-	end := len(l._content)
-	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
-	// SQLite docs aren't too clear about this, though.
-	for i := 0; i < l.cellCount; i++ {
-		start := int(binary.BigEndian.Uint16(l.cellPointers[2*i : 2*i+2]))
-		c := l._content[start:end]
+	for _, c := range l.cells {
 		left, key := parseInteriorTableLeaf(c)
 		if key < rowid {
 			continue
@@ -314,4 +302,32 @@ func parseRecord(r []byte) ([]interface{}, error) {
 		}
 	}
 	return res, nil
+}
+
+// Parse the list of pointers to cells into a slice of byte slices.
+// This format is used in all four page types.
+// N is the nr of cells, pointers point to the start of the cells, until end of
+// the page, content points to the whole page (because cell pointers use page
+// offsets).
+func parseCellpointers(
+	n int,
+	pointers []byte,
+	content []byte,
+) ([][]byte, error) {
+	if len(pointers) < n*2 {
+		return nil, errors.New("invalid cell pointer array")
+	}
+	cs := make([][]byte, n)
+	end := len(content)
+	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
+	// SQLite docs aren't too clear about this, though.
+	for i := range cs {
+		start := int(binary.BigEndian.Uint16(pointers[2*i : 2*i+2]))
+		if start > len(content) || start > end {
+			return nil, errors.New("invalid cell pointer")
+		}
+		cs[i] = content[start:end]
+		end = start
+	}
+	return cs, nil
 }
