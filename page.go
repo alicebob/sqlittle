@@ -25,9 +25,12 @@ type TableBtree interface {
 
 // IndexIterCB gets the (possibly truncated) payload
 type IndexIterCB func(pl Payload) (bool, error)
+type IndexIterMinCB func(rowid int64, row Record) (bool, error)
 type IndexBtree interface {
 	// Iter goes over every record
 	Iter(*database, IndexIterCB) (bool, error)
+	// Scan starting from an index value
+	IterMin(*database, Record, IndexIterMinCB) (bool, error)
 	// Count counts the number of records. For debugging.
 	Count(*database) (int, error)
 }
@@ -243,6 +246,38 @@ func (l *leafIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 	return false, nil
 }
 
+func (l *leafIndexBtree) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, error) {
+	for _, c := range l.cells {
+		pl := parseIndexLeaf(c)
+		cmpRes, rec, err := lazyCmp(db, pl, min)
+		if err != nil {
+			return false, err
+		}
+		if cmpRes < 0 {
+			continue
+		}
+
+		if rec == nil {
+			full, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
+			if rec, err = parseRecord(full); err != nil {
+				return false, err
+			}
+		}
+
+		rowid, rec, err := chompRowid(rec)
+		if err != nil {
+			return false, err
+		}
+		if done, err := cb(rowid, rec); done || err != nil {
+			return done, err
+		}
+	}
+	return false, nil
+}
+
 func (l *leafIndexBtree) Count(*database) (int, error) {
 	return len(l.cells), nil
 }
@@ -282,6 +317,50 @@ func (l *interiorIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 		return false, err
 	}
 	return page.Iter(db, cb)
+}
+
+func (l *interiorIndexBtree) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, error) {
+	for _, c := range l.cells {
+		left, pl := parseIndexInterior(c)
+		cmpRes, rec, err := lazyCmp(db, pl, min)
+		if err != nil {
+			return false, err
+		}
+		// on equal we still need to check left on non-unique indexes.
+		if cmpRes < 0 {
+			continue
+		}
+
+		page, err := db.openIndex(left)
+		if err != nil {
+			return false, err
+		}
+		if done, err := page.IterMin(db, min, cb); done || err != nil {
+			return done, err
+		}
+
+		if rec == nil {
+			full, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
+			if rec, err = parseRecord(full); err != nil {
+				return false, err
+			}
+		}
+		rowid, rec, err := chompRowid(rec)
+		if err != nil {
+			return false, err
+		}
+		if done, err := cb(rowid, rec); done || err != nil {
+			return done, err
+		}
+	}
+	page, err := db.openIndex(l.rightmost)
+	if err != nil {
+		return false, err
+	}
+	return page.IterMin(db, min, cb)
 }
 
 func (l *interiorIndexBtree) Count(db *database) (int, error) {
@@ -376,4 +455,24 @@ func parseCellpointers(
 		end = start
 	}
 	return cs, nil
+}
+
+// Given a (non-expanded) payload, runs cmp() against it.
+// The returned Record may be nil if the non-expanded payload was enough to
+// determine the result.
+// (that's TODO).
+func lazyCmp(db *database, pl Payload, against Record) (int, Record, error) {
+	// The TODO idea is that this function doesn't load the overflow page if it
+	// can determine the outcome without loading the overflow.
+	full, err := addOverflow(db, pl)
+	if err != nil {
+		return 0, nil, err
+	}
+	irec, err := parseRecord(full)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	r, err := cmp(irec, against)
+	return r, irec, err
 }

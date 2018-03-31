@@ -84,22 +84,19 @@ func parseRecord(r []byte) ([]interface{}, error) {
 	return res, nil
 }
 
-// Parse an index cell, and removes the rowid column (that's the last one).
+// removes the rowid column from in index value (that's the last value from a
+// Record).
 // Returns: rowid, record, error
-func parseIndexRecord(pl []byte) (int64, Record, error) {
-	row, err := parseRecord(pl)
-	if err != nil {
-		return 0, nil, err
-	}
-	if len(row) == 0 {
+func chompRowid(rec Record) (int64, Record, error) {
+	if len(rec) == 0 {
 		return 0, nil, errors.New("no fields in index")
 	}
-	rowid, ok := row[len(row)-1].(int64)
+	rowid, ok := rec[len(rec)-1].(int64)
 	if !ok {
 		return 0, nil, errors.New("invalid rowid pointer in index")
 	}
-	row = row[:len(row)-1]
-	return rowid, row, nil
+	rec = rec[:len(rec)-1]
+	return rowid, rec, nil
 }
 
 // Compare two records, according to the 'Record Sort Order' docs.

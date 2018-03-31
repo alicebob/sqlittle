@@ -284,7 +284,11 @@ func TestIndexSingle(t *testing.T) {
 			if err != nil {
 				return false, err
 			}
-			_, row, err := parseIndexRecord(pf)
+			irec, err := parseRecord(pf)
+			if err != nil {
+				return false, err
+			}
+			_, row, err := chompRowid(irec)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
@@ -331,13 +335,99 @@ func TestIndexWords(t *testing.T) {
 			if err != nil {
 				return false, err
 			}
-			_, row, err := parseIndexRecord(pf)
+			irec, err := parseRecord(pf)
+			if err != nil {
+				return false, err
+			}
+			_, row, err := chompRowid(irec)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
 		t.Fatal(err)
 	}
 	if have, want := len(rows), 1000; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	// check with: `LC_ALL=c sort tests/words.txt`
+	if have, want := rows[0][0].(string), "Adams"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[999][0].(string), "yeshivahs"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+}
+
+func TestIndexScanMin(t *testing.T) {
+	// scan a index
+	db, err := openFile("./test/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if index == nil {
+		t.Fatal("no index found")
+	}
+
+	var rows []Record
+	if _, err := index.root.IterMin(
+		db,
+		Record{"improvise"},
+		func(_ int64, r Record) (bool, error) {
+			rows = append(rows, r)
+			return false, err
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := len(rows), 460; have != want {
+		t.Fatalf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[0][0].(string), "improvise"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[460-1][0].(string), "yeshivahs"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+}
+
+func TestIndexScanMin2(t *testing.T) {
+	// scan a non-unique index
+	db, err := openFile("./test/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_2") // index: length(word), word
+	if err != nil {
+		t.Fatal(err)
+	}
+	if index == nil {
+		t.Fatal("no index found")
+	}
+
+	// Load all rows >= 15 chars
+	var rows []Record
+	if _, err := index.root.IterMin(
+		db,
+		Record{int64(15)},
+		func(_ int64, r Record) (bool, error) {
+			rows = append(rows, r)
+			return false, err
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := len(rows), 20; have != want {
+		t.Fatalf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[0][1].(string), "commercializing"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[20-1][1].(string), "internationalism's"; have != want {
 		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
 	}
 }

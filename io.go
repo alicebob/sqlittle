@@ -156,6 +156,7 @@ func (db *database) master() ([]Master, error) {
 		if err != nil {
 			return false, err
 		}
+
 		m := Master{}
 		if s, ok := e[0].(string); !ok {
 			return false, errors.New("wrong column type for sqlite_master")
