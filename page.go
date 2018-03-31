@@ -35,21 +35,33 @@ type IndexBtree interface {
 	Count(*database) (int, error)
 }
 
-type leafTableBtree struct {
-	cells [][]byte
+type tableLeafCell struct {
+	left    int64 // rowID
+	payload Payload
+}
+type tableLeaf struct {
+	cells []tableLeafCell
 }
 
-type interiorTableBtree struct {
-	cells     [][]byte
+type tableInteriorCell struct {
+	left int
+	key  int64
+}
+type tableInterior struct {
+	cells     []tableInteriorCell
 	rightmost int
 }
 
-type leafIndexBtree struct {
-	cells [][]byte
+type indexLeaf struct {
+	cells []Payload
 }
 
-type interiorIndexBtree struct {
-	cells     [][]byte
+type indexInteriorCell struct {
+	left    int // pageID
+	payload Payload
+}
+type indexInterior struct {
+	cells     []indexInteriorCell
 	rightmost int
 }
 
@@ -97,29 +109,34 @@ func newLeafTableBtree(
 	count int,
 	pointers []byte,
 	content []byte,
-) (*leafTableBtree, error) {
+) (*tableLeaf, error) {
 	cells, err := parseCellpointers(count, pointers, content)
-	return &leafTableBtree{
-		cells: cells,
-	}, err
+	if err != nil {
+		return nil, err
+	}
+	leafs := make([]tableLeafCell, len(cells))
+	for i, c := range cells {
+		leafs[i] = parseTableLeaf(c)
+	}
+	return &tableLeaf{
+		cells: leafs,
+	}, nil
 }
 
-func (l *leafTableBtree) Count(*database) (int, error) {
+func (l *tableLeaf) Count(*database) (int, error) {
 	return len(l.cells), nil
 }
 
-func (l *leafTableBtree) Iter(_ *database, cb IterCB) (bool, error) {
+func (l *tableLeaf) Iter(_ *database, cb IterCB) (bool, error) {
 	for _, c := range l.cells {
-		rowid, pl := parseTableLeaf(c)
-
-		if done, err := cb(rowid, pl); done || err != nil {
+		if done, err := cb(c.left, c.payload); done || err != nil {
 			return done, err
 		}
 	}
 	return false, nil
 }
 
-func (l *leafTableBtree) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
+func (l *tableLeaf) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
 	return l.Iter(
 		db,
 		func(key int64, pl Payload) (bool, error) {
@@ -136,49 +153,50 @@ func newInteriorTableBtree(
 	pointers []byte,
 	content []byte,
 	rightmost int,
-) (*interiorTableBtree, error) {
+) (*tableInterior, error) {
 	cells, err := parseCellpointers(count, pointers, content)
-	return &interiorTableBtree{
-		cells:     cells,
+	if err != nil {
+		return nil, err
+	}
+	cs := make([]tableInteriorCell, len(cells))
+	for i, c := range cells {
+		cs[i] = parseTableInterior(c)
+	}
+	return &tableInterior{
+		cells:     cs,
 		rightmost: rightmost,
-	}, err
+	}, nil
 }
 
 type interiorIterCB func(page int) (bool, error)
 
-func (l *interiorTableBtree) cellIter(db *database, cb interiorIterCB) (bool, error) {
+func (l *tableInterior) cellIter(db *database, cb interiorIterCB) (bool, error) {
 	for _, c := range l.cells {
-		left, _ := parseTableInterior(c)
-		if done, err := cb(left); done || err != nil {
+		if done, err := cb(c.left); done || err != nil {
 			return done, err
 		}
 	}
 	return cb(l.rightmost)
 }
 
-func (l *interiorTableBtree) cellIterMin(db *database, rowid int64, cb interiorIterCB) (bool, error) {
+func (l *tableInterior) cellIterMin(db *database, rowid int64, cb interiorIterCB) (bool, error) {
 	// Loop over all pages, skipping pages which have rows too low.
 	// This could be implemented with a nice binary search.
 	for _, c := range l.cells {
-		left, key := parseTableInterior(c)
-		if key < rowid {
+		if c.key < rowid {
 			continue
 		}
-		if done, err := cb(left); done || err != nil {
+		if done, err := cb(c.left); done || err != nil {
 			return done, err
 		}
 	}
 	return cb(l.rightmost)
 }
 
-func (l *interiorTableBtree) Count(db *database) (int, error) {
+func (l *tableInterior) Count(db *database) (int, error) {
 	total := 0
 	l.cellIter(db, func(p int) (bool, error) {
-		buf, err := db.page(p)
-		if err != nil {
-			return false, err
-		}
-		page, err := newTableBtree(buf, false)
+		page, err := db.openTable(p)
 		if err != nil {
 			return false, err
 		}
@@ -192,13 +210,9 @@ func (l *interiorTableBtree) Count(db *database) (int, error) {
 	return total, nil
 }
 
-func (l *interiorTableBtree) Iter(db *database, cb IterCB) (bool, error) {
+func (l *tableInterior) Iter(db *database, cb IterCB) (bool, error) {
 	return l.cellIter(db, func(p int) (bool, error) {
-		buf, err := db.page(p)
-		if err != nil {
-			return false, err
-		}
-		page, err := newTableBtree(buf, false)
+		page, err := db.openTable(p)
 		if err != nil {
 			return false, err
 		}
@@ -209,15 +223,11 @@ func (l *interiorTableBtree) Iter(db *database, cb IterCB) (bool, error) {
 	})
 }
 
-func (l *interiorTableBtree) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
+func (l *tableInterior) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
 	// we go over the keys, skipping pages with a low max key.
 	// This could be implemented with a binary search in the page.
 	return l.cellIterMin(db, rowid, func(pageID int) (bool, error) {
-		buf, err := db.page(pageID)
-		if err != nil {
-			return false, err
-		}
-		page, err := newTableBtree(buf, false)
+		page, err := db.openTable(pageID)
 		if err != nil {
 			return false, err
 		}
@@ -229,16 +239,22 @@ func newLeafIndex(
 	count int,
 	pointers []byte,
 	content []byte,
-) (*leafIndexBtree, error) {
+) (*indexLeaf, error) {
 	cells, err := parseCellpointers(count, pointers, content)
-	return &leafIndexBtree{
-		cells: cells,
+	if err != nil {
+		return nil, err
+	}
+	cs := make([]Payload, len(cells))
+	for i, c := range cells {
+		cs[i] = parseIndexLeaf(c)
+	}
+	return &indexLeaf{
+		cells: cs,
 	}, err
 }
 
-func (l *leafIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
-	for _, c := range l.cells {
-		pl := parseIndexLeaf(c)
+func (l *indexLeaf) Iter(db *database, cb IndexIterCB) (bool, error) {
+	for _, pl := range l.cells {
 		if done, err := cb(pl); done || err != nil {
 			return done, err
 		}
@@ -246,9 +262,8 @@ func (l *leafIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 	return false, nil
 }
 
-func (l *leafIndexBtree) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, error) {
-	for _, c := range l.cells {
-		pl := parseIndexLeaf(c)
+func (l *indexLeaf) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, error) {
+	for _, pl := range l.cells {
 		cmpRes, rec, err := lazyCmp(db, pl, min)
 		if err != nil {
 			return false, err
@@ -278,7 +293,7 @@ func (l *leafIndexBtree) IterMin(db *database, min Record, cb IndexIterMinCB) (b
 	return false, nil
 }
 
-func (l *leafIndexBtree) Count(*database) (int, error) {
+func (l *indexLeaf) Count(*database) (int, error) {
 	return len(l.cells), nil
 }
 
@@ -287,18 +302,24 @@ func newInteriorIndex(
 	pointers []byte,
 	content []byte,
 	rightmost int,
-) (*interiorIndexBtree, error) {
+) (*indexInterior, error) {
 	cells, err := parseCellpointers(count, pointers, content)
-	return &interiorIndexBtree{
-		cells:     cells,
+	if err != nil {
+		return nil, err
+	}
+	cs := make([]indexInteriorCell, len(cells))
+	for i, c := range cells {
+		cs[i] = parseIndexInterior(c)
+	}
+	return &indexInterior{
+		cells:     cs,
 		rightmost: rightmost,
 	}, err
 }
 
-func (l *interiorIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
+func (l *indexInterior) Iter(db *database, cb IndexIterCB) (bool, error) {
 	for _, c := range l.cells {
-		left, pl := parseIndexInterior(c)
-		page, err := db.openIndex(left)
+		page, err := db.openIndex(c.left)
 		if err != nil {
 			return false, err
 		}
@@ -307,7 +328,7 @@ func (l *interiorIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 		}
 
 		// the btree node also has a record
-		if done, err := cb(pl); done || err != nil {
+		if done, err := cb(c.payload); done || err != nil {
 			return done, err
 		}
 	}
@@ -319,10 +340,9 @@ func (l *interiorIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 	return page.Iter(db, cb)
 }
 
-func (l *interiorIndexBtree) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, error) {
+func (l *indexInterior) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, error) {
 	for _, c := range l.cells {
-		left, pl := parseIndexInterior(c)
-		cmpRes, rec, err := lazyCmp(db, pl, min)
+		cmpRes, rec, err := lazyCmp(db, c.payload, min)
 		if err != nil {
 			return false, err
 		}
@@ -331,7 +351,7 @@ func (l *interiorIndexBtree) IterMin(db *database, min Record, cb IndexIterMinCB
 			continue
 		}
 
-		page, err := db.openIndex(left)
+		page, err := db.openIndex(c.left)
 		if err != nil {
 			return false, err
 		}
@@ -340,7 +360,7 @@ func (l *interiorIndexBtree) IterMin(db *database, min Record, cb IndexIterMinCB
 		}
 
 		if rec == nil {
-			full, err := addOverflow(db, pl)
+			full, err := addOverflow(db, c.payload)
 			if err != nil {
 				return false, err
 			}
@@ -363,11 +383,10 @@ func (l *interiorIndexBtree) IterMin(db *database, min Record, cb IndexIterMinCB
 	return page.IterMin(db, min, cb)
 }
 
-func (l *interiorIndexBtree) Count(db *database) (int, error) {
+func (l *indexInterior) Count(db *database) (int, error) {
 	total := 0
 	for _, c := range l.cells {
-		left, _ := parseIndexInterior(c)
-		page, err := db.openIndex(left)
+		page, err := db.openIndex(c.left)
 		if err != nil {
 			return 0, err
 		}
@@ -387,8 +406,7 @@ func (l *interiorIndexBtree) Count(db *database) (int, error) {
 	return total + n, err
 }
 
-// returns total header length, payload
-func parseTableLeaf(c []byte) (int64, Payload) {
+func parseTableLeaf(c []byte) tableLeafCell {
 	l, n := readVarint(c)
 	c = c[n:]
 	rowid, n := readVarint(c)
@@ -397,13 +415,19 @@ func parseTableLeaf(c []byte) (int64, Payload) {
 	if int64(len(c)) != l {
 		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
 	}
-	return rowid, Payload{l, c, overflow}
+	return tableLeafCell{
+		left:    rowid,
+		payload: Payload{l, c, overflow},
+	}
 }
 
-func parseTableInterior(c []byte) (int, int64) {
+func parseTableInterior(c []byte) tableInteriorCell {
 	left := int(binary.BigEndian.Uint32(c[:4]))
 	key, _ := readVarint(c[4:])
-	return left, key
+	return tableInteriorCell{
+		left: left,
+		key:  key,
+	}
 }
 
 func parseIndexLeaf(c []byte) Payload {
@@ -417,7 +441,7 @@ func parseIndexLeaf(c []byte) Payload {
 }
 
 // returns: left page, payload
-func parseIndexInterior(c []byte) (int, Payload) {
+func parseIndexInterior(c []byte) indexInteriorCell {
 	left := int(binary.BigEndian.Uint32(c[:4]))
 	c = c[4:]
 	l, n := readVarint(c)
@@ -426,7 +450,10 @@ func parseIndexInterior(c []byte) (int, Payload) {
 	if int64(len(c)) != l {
 		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
 	}
-	return int(left), Payload{l, c, overflow}
+	return indexInteriorCell{
+		left:    int(left),
+		payload: Payload{l, c, overflow},
+	}
 }
 
 // Parse the list of pointers to cells into a slice of byte slices.
