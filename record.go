@@ -1,10 +1,16 @@
 package sqlit
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"math"
+	"strings"
 )
+
+// Row is a list of: nil, int64, float64, string, []byte
+// TODO: rename to Record
+type Row []interface{}
 
 func parseRecord(r []byte) ([]interface{}, error) {
 	var res []interface{}
@@ -81,4 +87,115 @@ func parseRecord(r []byte) ([]interface{}, error) {
 		}
 	}
 	return res, nil
+}
+
+// cmp two rows, according to the 'Record Sort Order' docs.
+// Note: strings are always compared binary; no collating functions are used.
+// Can return an error on impossible column pair comparison.
+func cmp(a, b Row) (int, error) {
+	for i, ac := range a {
+		if len(b)-1 < i {
+			return 1, nil
+		}
+		if c, err := columnCmp(ac, b[i]); c != 0 || err != nil {
+			return c, err
+		}
+	}
+	if len(b) > len(a) {
+		return -1, nil
+	}
+	return 0, nil
+}
+
+// returns -1 when a is smaller, 0 when a and b are equal, and else 1
+// Column can be: nil, int64, float64, string, []byte
+// Becuase float columns might be stored as int that's conversion is supported.
+var errCmp = errors.New("impossible comparison")
+
+func columnCmp(a, b interface{}) (int, error) {
+	switch at := a.(type) {
+	case nil:
+		switch b.(type) {
+		case nil:
+			return 0, nil
+		case int64, float64, string, []byte:
+			return -1, nil
+		default:
+			panic("impossible cmp type")
+		}
+	case int64:
+		switch bt := b.(type) {
+		case nil:
+			return 1, nil
+		case int64:
+			return cmpInt64(at, bt), nil
+		case float64:
+			return cmpFloat64(float64(at), bt), nil
+		case string, []byte:
+			return 0, errCmp
+		default:
+			panic("impossible cmp type")
+		}
+	case float64:
+		switch bt := b.(type) {
+		case nil:
+			return 1, nil
+		case int64:
+			return cmpFloat64(at, float64(bt)), nil
+		case float64:
+			return cmpFloat64(at, bt), nil
+		case string, []byte:
+			return 0, errCmp
+		default:
+			panic("impossible cmp type")
+		}
+	case string:
+		switch bt := b.(type) {
+		case nil:
+			return 1, nil
+		case int64, float64:
+			return 0, errCmp
+		case string:
+			return strings.Compare(at, bt), nil
+		case []byte:
+			return 0, errCmp
+		default:
+			panic("impossible cmp type")
+		}
+	case []byte:
+		switch bt := b.(type) {
+		case nil:
+			return 1, nil
+		case int64, float64, string:
+			return 0, errCmp
+		case []byte:
+			return bytes.Compare(at, bt), nil
+		default:
+			panic("impossible cmp type")
+		}
+	default:
+		panic("impossible cmp type")
+	}
+}
+
+func cmpInt64(a, b int64) int {
+	switch {
+	case a < b:
+		return -1
+	case a == b:
+		return 0
+	default:
+		return 1
+	}
+}
+
+func cmpFloat64(a, b float64) int {
+	switch {
+	case a < b:
+		return -1
+	case a == b:
+		return 0
+	default:
+		return 1
+	}
 }

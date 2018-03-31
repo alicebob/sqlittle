@@ -110,3 +110,113 @@ func TestRecord(t *testing.T) {
 		}
 	}
 }
+
+func TestColumnCompare(t *testing.T) {
+	type cas struct {
+		a, b interface{}
+		want int
+		err  error
+	}
+	for i, c := range []cas{
+		// nil
+		{nil, nil, 0, nil},
+
+		// int64
+		{nil, int64(1), -1, nil},
+		{int64(1), nil, 1, nil},
+		{int64(42), int64(42), 0, nil},
+		{int64(-42), int64(42), -1, nil},
+		{int64(42), int64(-42), 1, nil},
+
+		// float64
+		{nil, 3.14, -1, nil},
+		{3.14, nil, 1, nil},
+		{1.12, 3.14, -1, nil},
+		{3.14, 3.14, 0, nil},
+		{3.14, -3.14, 1, nil},
+
+		// float64 'n int
+		{-int64(12), -3.14, -1, nil},
+		{int64(3), 3.0, 0, nil},
+		{int64(3), -3.14, 1, nil},
+
+		// strings
+		{nil, "bar", -1, nil},
+		{"bar", nil, 1, nil},
+		{"foo", "bar", 1, nil},
+		{"foo", "foo", 0, nil},
+		{"bar", "foo", -1, nil},
+		{"foofoo", "foo", 1, nil},
+		{"foo", "foofoo", -1, nil},
+		{"foo", "Foo", 1, nil},
+
+		// bytes
+		{nil, []byte("bar"), -1, nil},
+		{[]byte("bar"), nil, 1, nil},
+		{[]byte("foo"), []byte("bar"), 1, nil},
+		{[]byte("bar"), []byte("bar"), 0, nil},
+		{[]byte("bar"), []byte("foo"), -1, nil},
+
+		// combos
+		{int64(42), "string", 0, errCmp},
+		{"string", int64(42), 0, errCmp},
+		{int64(42), []byte("byte"), 0, errCmp},
+		{[]byte("byte"), int64(42), 0, errCmp},
+		{3.14, "string", 0, errCmp},
+		{"string", 3.14, 0, errCmp},
+		{3.14, []byte("byte"), 0, errCmp},
+		{[]byte("byte"), 3.14, 0, errCmp},
+		{[]byte("byte"), "string", 0, errCmp},
+		{"string", []byte("byte"), 0, errCmp},
+	} {
+		o, err := columnCmp(c.a, c.b)
+		if have, want := err, c.err; !reflect.DeepEqual(have, want) {
+			t.Fatalf("case %d: have %q, want %q", i, have, want)
+		}
+		if have, want := o, c.want; have != want {
+			t.Errorf("case %d-(%v,%v): have %d, want %d", i, c.a, c.b, have, want)
+		}
+	}
+}
+
+func TestRecordCompare(t *testing.T) {
+	type cas struct {
+		a, b Row
+		want int
+	}
+	for i, c := range []cas{
+		{
+			a:    Row{int64(1)},
+			b:    Row{int64(42)},
+			want: -1,
+		},
+		{
+			a:    Row{int64(42)},
+			b:    Row{int64(42)},
+			want: 0,
+		},
+		{
+			a:    Row{int64(42)},
+			b:    Row{int64(1)},
+			want: 1,
+		},
+		{
+			a:    Row{int64(42), int64(43)},
+			b:    Row{int64(42)},
+			want: 1,
+		},
+		{
+			a:    Row{int64(42)},
+			b:    Row{int64(42), int64(43)},
+			want: -1,
+		},
+	} {
+		o, err := cmp(c.a, c.b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if have, want := o, c.want; have != want {
+			t.Errorf("case %d: have %d, want %d", i, have, want)
+		}
+	}
+}

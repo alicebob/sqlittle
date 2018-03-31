@@ -246,9 +246,6 @@ func (db *database) openIndex(page int) (IndexBtree, error) {
 	return newIndexBtree(buf)
 }
 
-// Row is a list of: nil, int64, float64, string, []byte
-type Row []interface{}
-
 // Call cb() for every row in the table. Will be called in 'database order'.
 // Might return ErrNoSuchTable when the table isn't there (or isn't a table),
 // or when something's wrong with the DB file.
