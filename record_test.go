@@ -181,33 +181,33 @@ func TestColumnCompare(t *testing.T) {
 
 func TestRecordCompare(t *testing.T) {
 	type cas struct {
-		a, b Row
+		a, b Record
 		want int
 	}
 	for i, c := range []cas{
 		{
-			a:    Row{int64(1)},
-			b:    Row{int64(42)},
+			a:    Record{int64(1)},
+			b:    Record{int64(42)},
 			want: -1,
 		},
 		{
-			a:    Row{int64(42)},
-			b:    Row{int64(42)},
+			a:    Record{int64(42)},
+			b:    Record{int64(42)},
 			want: 0,
 		},
 		{
-			a:    Row{int64(42)},
-			b:    Row{int64(1)},
+			a:    Record{int64(42)},
+			b:    Record{int64(1)},
 			want: 1,
 		},
 		{
-			a:    Row{int64(42), int64(43)},
-			b:    Row{int64(42)},
+			a:    Record{int64(42), int64(43)},
+			b:    Record{int64(42)},
 			want: 1,
 		},
 		{
-			a:    Row{int64(42)},
-			b:    Row{int64(42), int64(43)},
+			a:    Record{int64(42)},
+			b:    Record{int64(42), int64(43)},
 			want: -1,
 		},
 	} {

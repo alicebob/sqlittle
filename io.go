@@ -250,7 +250,7 @@ func (db *database) openIndex(page int) (IndexBtree, error) {
 // Might return ErrNoSuchTable when the table isn't there (or isn't a table),
 // or when something's wrong with the DB file.
 // There is no way to bail out of the scan halfway.
-func (db *database) TableScan(table string, cb func(Row)) error {
+func (db *database) TableScan(table string, cb func(Record)) error {
 	t, err := db.Table(table)
 	if err != nil {
 		return err
@@ -282,7 +282,7 @@ func (db *database) TableScan(table string, cb func(Row)) error {
 // Might return ErrNoSuchTable when the table isn't there (or isn't a table),
 // or when something's wrong with the DB file.
 // Searching is efficient.
-func (db *database) TableRowid(table string, rowid int64) (Row, error) {
+func (db *database) TableRowid(table string, rowid int64) (Record, error) {
 	t, err := db.Table(table)
 	if err != nil {
 		return nil, err

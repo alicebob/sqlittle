@@ -8,9 +8,8 @@ import (
 	"strings"
 )
 
-// Row is a list of: nil, int64, float64, string, []byte
-// TODO: rename to Record
-type Row []interface{}
+// Record is a list of: nil, int64, float64, string, []byte
+type Record []interface{}
 
 func parseRecord(r []byte) ([]interface{}, error) {
 	var res []interface{}
@@ -89,10 +88,10 @@ func parseRecord(r []byte) ([]interface{}, error) {
 	return res, nil
 }
 
-// cmp two rows, according to the 'Record Sort Order' docs.
+// Compare two records, according to the 'Record Sort Order' docs.
 // Note: strings are always compared binary; no collating functions are used.
 // Can return an error on impossible column pair comparison.
-func cmp(a, b Row) (int, error) {
+func cmp(a, b Record) (int, error) {
 	for i, ac := range a {
 		if len(b)-1 < i {
 			return 1, nil

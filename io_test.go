@@ -160,13 +160,13 @@ func TestIOTableRowidSingle(t *testing.T) {
 
 	for _, c := range []struct {
 		rowid int64
-		want  Row
+		want  Record
 	}{
 		{-1, nil},
 		{0, nil},
-		{1, Row{"world"}},
-		{2, Row{"universe"}},
-		{3, Row{"town"}},
+		{1, Record{"world"}},
+		{2, Record{"universe"}},
+		{3, Record{"town"}},
 		{4, nil},
 		{4000, nil},
 	} {
@@ -189,21 +189,21 @@ func TestIOTableRowidLong(t *testing.T) {
 
 	type cas struct {
 		rowid int64
-		want  Row
+		want  Record
 	}
 
 	var cases = []cas{
 		{-1, nil},
 		{0, nil},
-		{1, Row{"bottles of beer on the wall 1"}},
-		{1000, Row{"bottles of beer on the wall 1000"}},
+		{1, Record{"bottles of beer on the wall 1"}},
+		{1000, Record{"bottles of beer on the wall 1000"}},
 		{1001, nil},
 		{4000, nil},
 	}
 	for i := int64(1); i <= 1000; i++ {
 		cases = append(cases, cas{
 			i,
-			Row{fmt.Sprintf("bottles of beer on the wall %d", i)},
+			Record{fmt.Sprintf("bottles of beer on the wall %d", i)},
 		})
 	}
 	rand.Shuffle(len(cases), func(i, j int) {

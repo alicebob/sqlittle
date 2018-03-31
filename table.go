@@ -20,8 +20,8 @@ type TableBtree interface {
 	Iter(*database, IterCB) (bool, error)
 	// Scan starting from a key
 	IterMin(*database, int64, IterCB) (bool, error)
-	// Rows counts the number of rows. For debugging.
-	Rows(*database) (int, error)
+	// Count counts the number of records. For debugging.
+	Count(*database) (int, error)
 }
 
 // IndexIterCB gets the (possibly truncated) payload
@@ -29,8 +29,8 @@ type IndexIterCB func(pl Payload) (bool, error)
 type IndexBtree interface {
 	// Iter goes over every record
 	Iter(*database, IndexIterCB) (bool, error)
-	// Rows counts the number of rows. For debugging.
-	Rows(*database) (int, error)
+	// Count counts the number of records. For debugging.
+	Count(*database) (int, error)
 }
 
 type leafTableBtree struct {
@@ -102,7 +102,7 @@ func newLeafTableBtree(
 	}, err
 }
 
-func (l *leafTableBtree) Rows(*database) (int, error) {
+func (l *leafTableBtree) Count(*database) (int, error) {
 	return len(l.cells), nil
 }
 
@@ -169,7 +169,7 @@ func (l *interiorTableBtree) cellIterMin(db *database, rowid int64, cb interiorI
 	return cb(l.rightmost)
 }
 
-func (l *interiorTableBtree) Rows(db *database) (int, error) {
+func (l *interiorTableBtree) Count(db *database) (int, error) {
 	total := 0
 	l.cellIter(db, func(p int) (bool, error) {
 		buf, err := db.page(p)
@@ -180,7 +180,7 @@ func (l *interiorTableBtree) Rows(db *database) (int, error) {
 		if err != nil {
 			return false, err
 		}
-		n, err := page.Rows(db)
+		n, err := page.Count(db)
 		if err != nil {
 			return false, err
 		}
@@ -244,7 +244,7 @@ func (l *leafIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 	return false, nil
 }
 
-func (l *leafIndexBtree) Rows(*database) (int, error) {
+func (l *leafIndexBtree) Count(*database) (int, error) {
 	return len(l.cells), nil
 }
 
@@ -285,7 +285,7 @@ func (l *interiorIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 	return page.Iter(db, cb)
 }
 
-func (l *interiorIndexBtree) Rows(db *database) (int, error) {
+func (l *interiorIndexBtree) Count(db *database) (int, error) {
 	total := 0
 	for _, c := range l.cells {
 		left, _ := parseInteriorIndex(c)
@@ -293,7 +293,7 @@ func (l *interiorIndexBtree) Rows(db *database) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		n, err := page.Rows(db)
+		n, err := page.Count(db)
 		if err != nil {
 			return 0, err
 		}
@@ -305,7 +305,7 @@ func (l *interiorIndexBtree) Rows(db *database) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	n, err := page.Rows(db)
+	n, err := page.Count(db)
 	return total + n, err
 }
 
@@ -401,7 +401,7 @@ func parseCellpointers(
 }
 
 // Parse an index cell. Last element of the row is the rowid
-func parseIndexRow(pl []byte) (int64, Row, error) {
+func parseIndexRecord(pl []byte) (int64, Record, error) {
 	row, err := parseRecord(pl)
 	if err != nil {
 		return 0, nil, err

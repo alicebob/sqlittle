@@ -66,7 +66,7 @@ func TestTablesSingle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rows, err := master.Rows(f)
+	rows, err := master.Count(f)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestTablesFour(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rowCount, err := master.Rows(db)
+	rowCount, err := master.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestTableLong(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := bottles.root.Rows(db)
+	rowCount, err := bottles.root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +204,7 @@ func TestTableOverflow(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := mytable.root.Rows(db)
+	rowCount, err := mytable.root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestTableValues(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := things.root.Rows(db)
+	rowCount, err := things.root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +260,7 @@ func TestTableValues(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	var rows []Row
+	var rows []Record
 	if _, err := things.root.Iter(
 		db,
 		func(rowid int64, pl Payload) (bool, error) {
@@ -277,7 +277,7 @@ func TestTableValues(t *testing.T) {
 		}); err != nil {
 		t.Fatal(err)
 	}
-	if have, want := rows, []Row{
+	if have, want := rows, []Record{
 		{nil, int64(0), int64(0)},
 		{"", int64(1), int64(0)},
 		{"", int64(0), int64(0)},
@@ -316,7 +316,7 @@ func TestIndexSingle(t *testing.T) {
 		t.Fatal("no index found")
 	}
 
-	rowCount, err := hello.root.Rows(db)
+	rowCount, err := hello.root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +324,7 @@ func TestIndexSingle(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	var rows []Row
+	var rows []Record
 	if _, err := hello.root.Iter(
 		db,
 		func(pl Payload) (bool, error) {
@@ -332,13 +332,13 @@ func TestIndexSingle(t *testing.T) {
 			if err != nil {
 				return false, err
 			}
-			_, row, err := parseIndexRow(pf)
+			_, row, err := parseIndexRecord(pf)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
 		t.Fatal(err)
 	}
-	if have, want := rows, []Row{
+	if have, want := rows, []Record{
 		{"town"},
 		{"universe"},
 		{"world"},
@@ -363,7 +363,7 @@ func TestIndexWords(t *testing.T) {
 		t.Fatal("no index found")
 	}
 
-	rowCount, err := index.root.Rows(db)
+	rowCount, err := index.root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +371,7 @@ func TestIndexWords(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	var rows []Row
+	var rows []Record
 	if _, err := index.root.Iter(
 		db,
 		func(pl Payload) (bool, error) {
@@ -379,7 +379,7 @@ func TestIndexWords(t *testing.T) {
 			if err != nil {
 				return false, err
 			}
-			_, row, err := parseIndexRow(pf)
+			_, row, err := parseIndexRecord(pf)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
