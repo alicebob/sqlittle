@@ -1,4 +1,4 @@
-package sqlit
+package sqlittle
 
 // The readVarint() from encoding/binary is little endian :(
 func readVarint(b []byte) (int64, int) {

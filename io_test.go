@@ -1,4 +1,4 @@
-package sqlit
+package sqlittle
 
 import (
 	"errors"
