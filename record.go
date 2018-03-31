@@ -44,13 +44,9 @@ func parseRecord(r []byte) ([]interface{}, error) {
 			body = body[4:]
 		case 5:
 			// Value is a big-endian 48-bit twos-complement integer.
-			n := int64(uint64(body[0])<<40 | uint64(body[1])<<32 | uint64(body[2])<<24 |
-				uint64(body[3])<<16 | uint64(body[4])<<8 | uint64(body[5]))
-			if n&(1<<47) != 0 {
-				n -= (1 << 48)
-			}
-			res = append(res, n)
-			body = body[6:]
+			v, n := readTwos48(body)
+			res = append(res, v)
+			body = body[n:]
 		case 6:
 			// Value is a big-endian 64-bit twos-complement integer.
 			res = append(res, int64(binary.BigEndian.Uint64(body[:8])))
@@ -86,6 +82,24 @@ func parseRecord(r []byte) ([]interface{}, error) {
 		}
 	}
 	return res, nil
+}
+
+// Parse an index cell, and removes the rowid column (that's the last one).
+// Returns: rowid, record, error
+func parseIndexRecord(pl []byte) (int64, Record, error) {
+	row, err := parseRecord(pl)
+	if err != nil {
+		return 0, nil, err
+	}
+	if len(row) == 0 {
+		return 0, nil, errors.New("no fields in index")
+	}
+	rowid, ok := row[len(row)-1].(int64)
+	if !ok {
+		return 0, nil, errors.New("invalid rowid pointer in index")
+	}
+	row = row[:len(row)-1]
+	return rowid, row, nil
 }
 
 // Compare two records, according to the 'Record Sort Order' docs.

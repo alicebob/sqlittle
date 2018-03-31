@@ -5,14 +5,6 @@ import (
 	"errors"
 )
 
-// Payload represents the payload part of a cell. If overflow is non-zero the
-// Payload field will be truncated. Use addOverflow() to get a full payload.
-type Payload struct {
-	Length   int64
-	Payload  []byte
-	Overflow int
-}
-
 // Iterate callback. Gets rowid and (possibly truncated) payload. Return true when done
 type IterCB func(rowid int64, pl Payload) (bool, error)
 type TableBtree interface {
@@ -108,7 +100,7 @@ func (l *leafTableBtree) Count(*database) (int, error) {
 
 func (l *leafTableBtree) Iter(_ *database, cb IterCB) (bool, error) {
 	for _, c := range l.cells {
-		rowid, pl := parseCellLeaf(c)
+		rowid, pl := parseTableLeaf(c)
 
 		if done, err := cb(rowid, pl); done || err != nil {
 			return done, err
@@ -146,7 +138,7 @@ type interiorIterCB func(page int) (bool, error)
 
 func (l *interiorTableBtree) cellIter(db *database, cb interiorIterCB) (bool, error) {
 	for _, c := range l.cells {
-		left, _ := parseInteriorLeaf(c)
+		left, _ := parseTableInterior(c)
 		if done, err := cb(left); done || err != nil {
 			return done, err
 		}
@@ -158,7 +150,7 @@ func (l *interiorTableBtree) cellIterMin(db *database, rowid int64, cb interiorI
 	// Loop over all pages, skipping pages which have rows too low.
 	// This could be implemented with a nice binary search.
 	for _, c := range l.cells {
-		left, key := parseInteriorLeaf(c)
+		left, key := parseTableInterior(c)
 		if key < rowid {
 			continue
 		}
@@ -236,7 +228,7 @@ func newLeafIndex(
 
 func (l *leafIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 	for _, c := range l.cells {
-		pl := parseLeafIndex(c)
+		pl := parseIndexLeaf(c)
 		if done, err := cb(pl); done || err != nil {
 			return done, err
 		}
@@ -263,7 +255,7 @@ func newInteriorIndex(
 
 func (l *interiorIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 	for _, c := range l.cells {
-		left, pl := parseInteriorIndex(c)
+		left, pl := parseIndexInterior(c)
 		page, err := db.openIndex(left)
 		if err != nil {
 			return false, err
@@ -288,7 +280,7 @@ func (l *interiorIndexBtree) Iter(db *database, cb IndexIterCB) (bool, error) {
 func (l *interiorIndexBtree) Count(db *database) (int, error) {
 	total := 0
 	for _, c := range l.cells {
-		left, _ := parseInteriorIndex(c)
+		left, _ := parseIndexInterior(c)
 		page, err := db.openIndex(left)
 		if err != nil {
 			return 0, err
@@ -309,9 +301,8 @@ func (l *interiorIndexBtree) Count(db *database) (int, error) {
 	return total + n, err
 }
 
-// parse cell content
 // returns total header length, payload
-func parseCellLeaf(c []byte) (int64, Payload) {
+func parseTableLeaf(c []byte) (int64, Payload) {
 	l, n := readVarint(c)
 	c = c[n:]
 	rowid, n := readVarint(c)
@@ -323,14 +314,13 @@ func parseCellLeaf(c []byte) (int64, Payload) {
 	return rowid, Payload{l, c, overflow}
 }
 
-func parseInteriorLeaf(c []byte) (int, int64) {
+func parseTableInterior(c []byte) (int, int64) {
 	left := int(binary.BigEndian.Uint32(c[:4]))
 	key, _ := readVarint(c[4:])
 	return left, key
 }
 
-// returns: payload
-func parseLeafIndex(c []byte) Payload {
+func parseIndexLeaf(c []byte) Payload {
 	l, n := readVarint(c)
 	c = c[n:]
 	overflow := 0
@@ -340,8 +330,8 @@ func parseLeafIndex(c []byte) Payload {
 	return Payload{l, c, overflow}
 }
 
-// returns: left page, payload length, payload we have, overflow pageid
-func parseInteriorIndex(c []byte) (int, Payload) {
+// returns: left page, payload
+func parseIndexInterior(c []byte) (int, Payload) {
 	left := int(binary.BigEndian.Uint32(c[:4]))
 	c = c[4:]
 	l, n := readVarint(c)
@@ -351,25 +341,6 @@ func parseInteriorIndex(c []byte) (int, Payload) {
 		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
 	}
 	return int(left), Payload{l, c, overflow}
-}
-
-// The readVarint() from encoding/binary is little endian :(
-func readVarint(b []byte) (int64, int) {
-	var n uint64
-	for i := 0; ; i++ {
-		if i >= len(b) {
-			return int64(n), i
-		}
-		c := b[i]
-		if i == 8 {
-			n = (n << 8) | uint64(c)
-			return int64(n), i + 1
-		}
-		n = (n << 7) | uint64(c&0x7f)
-		if c < 0x80 {
-			return int64(n), i + 1
-		}
-	}
 }
 
 // Parse the list of pointers to cells into a slice of byte slices.
@@ -398,38 +369,4 @@ func parseCellpointers(
 		end = start
 	}
 	return cs, nil
-}
-
-// Parse an index cell. Last element of the row is the rowid
-func parseIndexRecord(pl []byte) (int64, Record, error) {
-	row, err := parseRecord(pl)
-	if err != nil {
-		return 0, nil, err
-	}
-	if len(row) == 0 {
-		return 0, nil, errors.New("no fields in index")
-	}
-	rowid, ok := row[len(row)-1].(int64)
-	if !ok {
-		return 0, nil, errors.New("invalid rowid pointer in index")
-	}
-	row = row[:len(row)-1]
-	return rowid, row, nil
-}
-
-func addOverflow(db *database, pl Payload) ([]byte, error) {
-	to := pl.Payload
-	overflow := pl.Overflow
-	for {
-		if overflow == 0 {
-			return to[:pl.Length], nil
-		}
-		buf, err := db.page(overflow)
-		if err != nil {
-			return nil, err
-		}
-		next, buf := int(binary.BigEndian.Uint32(buf[:4])), buf[4:]
-		to = append(to, buf...)
-		overflow = next
-	}
 }
