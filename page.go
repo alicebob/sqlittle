@@ -1,3 +1,10 @@
+// Btree page types.
+// 'Table' are data tables. InteriorTable pages have no data, and
+// points to other pages. InteriorLeaf pages have data and don't point to other
+// pages.
+// 'Index' tables have index keys. Both the internal and leaf pages contain
+// keys.
+
 package sqlittle
 
 import (
