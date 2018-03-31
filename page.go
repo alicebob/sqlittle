@@ -406,18 +406,23 @@ func (l *indexInterior) Count(db *database) (int, error) {
 	return total + n, err
 }
 
-func parseTableLeaf(c []byte) tableLeafCell {
-	l, n := readVarint(c)
-	c = c[n:]
-	rowid, n := readVarint(c)
-	c = c[n:]
+// shared code for parsing payload from cells
+func parsePayload(l int64, c []byte) Payload {
 	overflow := 0
 	if int64(len(c)) != l {
 		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
 	}
+	return Payload{l, c, overflow}
+}
+
+func parseTableLeaf(c []byte) tableLeafCell {
+	l, n := readVarint(c)
+	c = c[n:]
+	rowid, n := readVarint(c)
+	pl := parsePayload(l, c[n:])
 	return tableLeafCell{
 		left:    rowid,
-		payload: Payload{l, c, overflow},
+		payload: pl,
 	}
 }
 
@@ -432,12 +437,7 @@ func parseTableInterior(c []byte) tableInteriorCell {
 
 func parseIndexLeaf(c []byte) Payload {
 	l, n := readVarint(c)
-	c = c[n:]
-	overflow := 0
-	if int64(len(c)) != l {
-		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
-	}
-	return Payload{l, c, overflow}
+	return parsePayload(l, c[n:])
 }
 
 // returns: left page, payload
@@ -445,14 +445,10 @@ func parseIndexInterior(c []byte) indexInteriorCell {
 	left := int(binary.BigEndian.Uint32(c[:4]))
 	c = c[4:]
 	l, n := readVarint(c)
-	c = c[n:]
-	overflow := 0
-	if int64(len(c)) != l {
-		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
-	}
+	pl := parsePayload(l, c[n:])
 	return indexInteriorCell{
 		left:    int(left),
-		payload: Payload{l, c, overflow},
+		payload: pl,
 	}
 }
 
