@@ -3,7 +3,6 @@
 ALL:=empty.sqlite \
     four.sqlite \
     index.sqlite \
-    long.sqlite \
     magic.sqlite \
     notadatabase.sqlite \
     overflow.sqlite \

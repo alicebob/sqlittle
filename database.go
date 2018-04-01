@@ -32,7 +32,10 @@ func openFile(f string) (*database, error) {
 	if err != nil {
 		return nil, err
 	}
+	return newDatabase(l)
+}
 
+func newDatabase(l loader) (*database, error) {
 	buf, err := l.header()
 	if err != nil {
 		return nil, err

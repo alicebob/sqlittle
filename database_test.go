@@ -1,12 +1,16 @@
 package sqlittle
 
 import (
+	"bufio"
 	"errors"
-	"fmt"
+	"io"
 	"math/rand"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func init() {
@@ -180,8 +184,29 @@ func TestIOTableRowidSingle(t *testing.T) {
 	}
 }
 
+// wordList gives the contents of words.txt
+func wordList(t *testing.T) []string {
+	f, err := os.Open("./test/words.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	var words []string
+	b := bufio.NewReader(f)
+	for {
+		w, err := b.ReadString('\n')
+		if err == io.EOF {
+			return words
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		words = append(words, strings.TrimRight(w, "\n"))
+	}
+}
+
 func TestIOTableRowidLong(t *testing.T) {
-	db, err := openFile("./test/long.sqlite")
+	db, err := openFile("./test/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,15 +220,18 @@ func TestIOTableRowidLong(t *testing.T) {
 	var cases = []cas{
 		{-1, nil},
 		{0, nil},
-		{1, Record{"bottles of beer on the wall 1"}},
-		{1000, Record{"bottles of beer on the wall 1000"}},
+		{1, Record{"hangdog", int64(7)}},
+		{1000, Record{"ideologist", int64(10)}},
 		{1001, nil},
 		{4000, nil},
 	}
-	for i := int64(1); i <= 1000; i++ {
+	for i, w := range wordList(t) {
 		cases = append(cases, cas{
-			i,
-			Record{fmt.Sprintf("bottles of beer on the wall %d", i)},
+			rowid: int64(i) + 1,
+			want: Record{
+				w,
+				int64(utf8.RuneCountInString(w)),
+			},
 		})
 	}
 	rand.Shuffle(len(cases), func(i, j int) {
@@ -211,7 +239,7 @@ func TestIOTableRowidLong(t *testing.T) {
 	})
 
 	for _, c := range cases {
-		row, err := db.TableRowid("bottles", c.rowid)
+		row, err := db.TableRowid("words", c.rowid)
 		if err != nil {
 			t.Fatal(err)
 		}

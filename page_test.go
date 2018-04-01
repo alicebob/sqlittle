@@ -81,22 +81,22 @@ func TestTablesFour(t *testing.T) {
 }
 
 func TestTableLong(t *testing.T) {
-	// starts table interior page
-	db, err := openFile("./test/long.sqlite")
+	// start page is an interior table page
+	db, err := openFile("./test/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	bottles, err := db.Table("bottles")
+	tab, err := db.Table("words")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bottles == nil {
+	if tab == nil {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := bottles.root.Count(db)
+	rowCount, err := tab.root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestTableLong(t *testing.T) {
 	}
 
 	var rows []interface{}
-	if _, err := bottles.root.Iter(
+	if _, err := tab.root.Iter(
 		db,
 		func(rowid int64, pl Payload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -125,7 +125,7 @@ func TestTableLong(t *testing.T) {
 		t.Fatal(err)
 	}
 	if have, want := rows, []interface{}{
-		[]interface{}{"bottles of beer on the wall 42"},
+		[]interface{}{"aniseed", int64(7)},
 	}; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
