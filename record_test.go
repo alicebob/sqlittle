@@ -9,6 +9,7 @@ func TestRecord(t *testing.T) {
 	for i, cas := range []struct {
 		e    string
 		want []interface{}
+		err  error
 	}{
 		{
 			e: "\x06\x17\x17\x17\x01Wtablehellohello\x02CREATE TABLE hello (who varchar(255))",
@@ -19,16 +20,6 @@ func TestRecord(t *testing.T) {
 				int64(2),
 				"CREATE TABLE hello (who varchar(255))",
 			},
-		},
-		{
-			// type 8: int 0
-			e:    "\x02\b",
-			want: []interface{}{int64(0)},
-		},
-		{
-			// type 9: int 1
-			e:    "\x02\t",
-			want: []interface{}{int64(1)},
 		},
 		{
 			// type 1: 8 bit
@@ -100,10 +91,101 @@ func TestRecord(t *testing.T) {
 			e:    "\x02\x07\x40\x09\x21\xfb\x54\x44\x2d\x18",
 			want: []interface{}{3.141592653589793},
 		},
+		{
+			// type 8: int 0
+			e:    "\x02\b",
+			want: []interface{}{int64(0)},
+		},
+		{
+			// type 9: int 1
+			e:    "\x02\t",
+			want: []interface{}{int64(1)},
+		},
+		{
+			// type 10: internal
+			e:   "\x02\x0a",
+			err: errInternal,
+		},
+		{
+			// type 11: internal
+			e:   "\x02\x0b",
+			err: errInternal,
+		},
+		{
+			// type > 11, even: bytes
+			e: "\x02VCREATE TABLE hello (who varchar(255))",
+			want: []interface{}{
+				[]byte("CREATE TABLE hello (who varchar(255))"),
+			},
+		},
+		{
+			// type > 11, odd: string
+			e: "\x02WCREATE TABLE hello (who varchar(255))",
+			want: []interface{}{
+				"CREATE TABLE hello (who varchar(255))",
+			},
+		},
+		// Error cases
+		{
+			// truncated record
+			e:   "\x02",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated 8 bit
+			e:   "\x02\x01",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated 16 bit
+			e:   "\x02\x02@",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated 32 bit
+			e:   "\x02\x04\x7f\x00\x00",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated 48 bit
+			e:   "\x02\x05\x7f\x00\x00",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated 64 bit
+			e:   "\x02\x06\x7f\x00\x00\x00\x00\x00\x00",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated float
+			e:   "\x02\x07\x40\x09\x21\xfb\x54\x44\x2d",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated bytes
+			e:   "\x02VCREATE TABLE hello (who varchar(255)",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated string
+			e:   "\x02WCREATE TABLE hello (who varchar(255)",
+			err: ErrFileTruncated,
+		},
+		{
+			// truncated multi field record
+			e:   "\x06\x17\x17\x17\x01Wtablehellohello\x02",
+			err: ErrFileTruncated,
+			want: []interface{}{
+				"table",
+				"hello",
+				"hello",
+				int64(2),
+			},
+		},
 	} {
 		e, err := parseRecord([]byte(cas.e))
-		if err != nil {
-			t.Fatalf("case %d: %s", i, err)
+		if have, want := err, cas.err; !reflect.DeepEqual(have, want) {
+			t.Fatalf("case %d: have %v, want %v", i, have, want)
 		}
 		if have, want := e, cas.want; !reflect.DeepEqual(have, want) {
 			t.Errorf("case %d: have\n-[[%#v]], want\n-[[%#v]]", i, have, want)

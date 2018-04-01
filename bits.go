@@ -1,11 +1,14 @@
 package sqlittle
 
-// The readVarint() from encoding/binary is little endian :(
+// Same as encoding.binary.ReadVarInt, but that one is little endian.
+// Returns: the number, bytes needed.
+// Will return (0, -1) if there are not enough bytes available.
 func readVarint(b []byte) (int64, int) {
 	var n uint64
 	for i := 0; ; i++ {
 		if i >= len(b) {
-			return int64(n), i
+			// oops
+			return 0, -1
 		}
 		c := b[i]
 		if i == 8 {
@@ -19,8 +22,22 @@ func readVarint(b []byte) (int64, int) {
 	}
 }
 
-// Read a 48 bits two-complement integer, and report how many bytes we needed.
-func readTwos48(b []byte) (int64, int) {
+// Read a 24 bits two-complement integer.
+// b needs to be at least 3 bytes long
+func readTwos24(b []byte) int64 {
+	n := int64(
+		uint64(b[0])<<16 |
+			uint64(b[1])<<8 |
+			uint64(b[2]))
+	if n&(1<<23) != 0 {
+		n -= (1 << 24)
+	}
+	return n
+}
+
+// Read a 48 bits two-complement integer.
+// b needs to be at least 6 bytes long
+func readTwos48(b []byte) int64 {
 	n := int64(
 		uint64(b[0])<<40 |
 			uint64(b[1])<<32 |
@@ -31,5 +48,5 @@ func readTwos48(b []byte) (int64, int) {
 	if n&(1<<47) != 0 {
 		n -= (1 << 48)
 	}
-	return n, 6
+	return n
 }

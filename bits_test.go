@@ -41,6 +41,17 @@ func TestVarint(t *testing.T) {
 			l: 9,
 			n: -1,
 		},
+		// Error cases
+		{
+			b: []byte("\xFF"),
+			l: -1,
+			n: 0,
+		},
+		{
+			b: []byte("\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"),
+			l: -1,
+			n: 0,
+		},
 	} {
 		n, l := readVarint(cas.b)
 		if have, want := l, cas.l; have != want {
