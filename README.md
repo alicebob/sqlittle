@@ -16,6 +16,11 @@ cross-compilation is much easier. Given the constraints a valid use-case would
 for example be storing app configuration in read-only sqlite files.
 
 
+# docs
+
+https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
+
+
 # features
 
 - low level interface to access tables and indices. Full table/index
@@ -63,3 +68,4 @@ stored in the database by SQLite. Notably that includes:
 # less short term todo
 
 - locks
+
