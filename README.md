@@ -27,7 +27,7 @@ for example be storing app configuration in read-only sqlite files.
 
 - read-only
 - files can't be written to while sqlittle has them open. But there are no
-  locks.
+  locks to enforce this.
 - no internal caching. Scanning a table should be pretty fast, but doing lots
   of individual lookups will be slow
 - only supports UTF8 strings
@@ -56,7 +56,7 @@ stored in the database by SQLite. Notably that includes:
 
 - fail on non-utf8 encoding
 - check all constant header fields
-- proper ~~page loading abstraction/~~cache
+- proper ~~page loading abstraction/~~page cache
 - deal with the reserved region
 
 
