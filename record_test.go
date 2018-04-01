@@ -134,47 +134,47 @@ func TestRecord(t *testing.T) {
 		{
 			// truncated 8 bit
 			e:   "\x02\x01",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated 16 bit
 			e:   "\x02\x02@",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated 32 bit
 			e:   "\x02\x04\x7f\x00\x00",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated 48 bit
 			e:   "\x02\x05\x7f\x00\x00",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated 64 bit
 			e:   "\x02\x06\x7f\x00\x00\x00\x00\x00\x00",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated float
 			e:   "\x02\x07\x40\x09\x21\xfb\x54\x44\x2d",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated bytes
 			e:   "\x02VCREATE TABLE hello (who varchar(255)",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated string
 			e:   "\x02WCREATE TABLE hello (who varchar(255)",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated multi field record
 			e:   "\x06\x17\x17\x17\x01Wtablehellohello\x02",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 			want: []interface{}{
 				"table",
 				"hello",

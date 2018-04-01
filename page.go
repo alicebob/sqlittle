@@ -116,7 +116,10 @@ func newLeafTableBtree(
 	}
 	leafs := make([]tableLeafCell, len(cells))
 	for i, c := range cells {
-		leafs[i] = parseTableLeaf(c)
+		leafs[i], err = parseTableLeaf(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &tableLeaf{
 		cells: leafs,
@@ -160,7 +163,10 @@ func newInteriorTableBtree(
 	}
 	cs := make([]tableInteriorCell, len(cells))
 	for i, c := range cells {
-		cs[i] = parseTableInterior(c)
+		cs[i], err = parseTableInterior(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &tableInterior{
 		cells:     cs,
@@ -246,11 +252,14 @@ func newLeafIndex(
 	}
 	cs := make([]Payload, len(cells))
 	for i, c := range cells {
-		cs[i] = parseIndexLeaf(c)
+		cs[i], err = parseIndexLeaf(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &indexLeaf{
 		cells: cs,
-	}, err
+	}, nil
 }
 
 func (l *indexLeaf) Iter(db *database, cb IndexIterCB) (bool, error) {
@@ -309,12 +318,15 @@ func newInteriorIndex(
 	}
 	cs := make([]indexInteriorCell, len(cells))
 	for i, c := range cells {
-		cs[i] = parseIndexInterior(c)
+		cs[i], err = parseIndexInterior(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &indexInterior{
 		cells:     cs,
 		rightmost: rightmost,
-	}, err
+	}, nil
 }
 
 func (l *indexInterior) Iter(db *database, cb IndexIterCB) (bool, error) {
@@ -407,49 +419,72 @@ func (l *indexInterior) Count(db *database) (int, error) {
 }
 
 // shared code for parsing payload from cells
-func parsePayload(l int64, c []byte) Payload {
+func parsePayload(l int64, c []byte) (Payload, error) {
 	overflow := 0
 	if int64(len(c)) != l {
+		if len(c) < 4 {
+			return Payload{}, ErrCorrupted
+		}
 		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
 	}
-	return Payload{l, c, overflow}
+	return Payload{l, c, overflow}, nil
 }
 
-func parseTableLeaf(c []byte) tableLeafCell {
+func parseTableLeaf(c []byte) (tableLeafCell, error) {
 	l, n := readVarint(c)
+	if n < 0 {
+		return tableLeafCell{}, ErrCorrupted
+	}
 	c = c[n:]
 	rowid, n := readVarint(c)
-	pl := parsePayload(l, c[n:])
+	if n < 0 {
+		return tableLeafCell{}, ErrCorrupted
+	}
+	pl, err := parsePayload(l, c[n:])
 	return tableLeafCell{
 		left:    rowid,
 		payload: pl,
-	}
+	}, err
 }
 
-func parseTableInterior(c []byte) tableInteriorCell {
+func parseTableInterior(c []byte) (tableInteriorCell, error) {
+	if len(c) < 4 {
+		return tableInteriorCell{}, ErrCorrupted
+	}
 	left := int(binary.BigEndian.Uint32(c[:4]))
-	key, _ := readVarint(c[4:])
+	key, n := readVarint(c[4:])
+	if n < 0 {
+		return tableInteriorCell{}, ErrCorrupted
+	}
 	return tableInteriorCell{
 		left: left,
 		key:  key,
-	}
+	}, nil
 }
 
-func parseIndexLeaf(c []byte) Payload {
+func parseIndexLeaf(c []byte) (Payload, error) {
 	l, n := readVarint(c)
+	if n < 0 {
+		return Payload{}, ErrCorrupted
+	}
 	return parsePayload(l, c[n:])
 }
 
-// returns: left page, payload
-func parseIndexInterior(c []byte) indexInteriorCell {
+func parseIndexInterior(c []byte) (indexInteriorCell, error) {
+	if len(c) < 4 {
+		return indexInteriorCell{}, ErrCorrupted
+	}
 	left := int(binary.BigEndian.Uint32(c[:4]))
 	c = c[4:]
 	l, n := readVarint(c)
-	pl := parsePayload(l, c[n:])
+	if n < 0 {
+		return indexInteriorCell{}, ErrCorrupted
+	}
+	pl, err := parsePayload(l, c[n:])
 	return indexInteriorCell{
 		left:    int(left),
 		payload: pl,
-	}
+	}, err
 }
 
 // Parse the list of pointers to cells into a slice of byte slices.

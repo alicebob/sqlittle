@@ -15,6 +15,7 @@ var (
 	ErrHeaderInvalidMagic    = errors.New("invalid magic number")
 	ErrHeaderInvalidPageSize = errors.New("invalid page size")
 	ErrNoSuchTable           = errors.New("no such table")
+	ErrCorrupted             = errors.New("database corrupted")
 )
 
 type header struct {

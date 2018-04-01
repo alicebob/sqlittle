@@ -25,7 +25,7 @@ func parseRecord(r []byte) ([]interface{}, error) {
 	for len(header) > 0 {
 		c, n := readVarint(header)
 		if n < 0 {
-			return res, ErrFileTruncated
+			return res, ErrCorrupted
 		}
 		header = header[n:]
 		switch c {
@@ -35,49 +35,49 @@ func parseRecord(r []byte) ([]interface{}, error) {
 		case 1:
 			// 8-bit twos-complement integer.
 			if len(body) < 1 {
-				return res, ErrFileTruncated
+				return res, ErrCorrupted
 			}
 			res = append(res, int64(int8(body[0])))
 			body = body[1:]
 		case 2:
 			// Value is a big-endian 16-bit twos-complement integer.
 			if len(body) < 2 {
-				return res, ErrFileTruncated
+				return res, ErrCorrupted
 			}
 			res = append(res, int64(int16(binary.BigEndian.Uint16(body[:2]))))
 			body = body[2:]
 		case 3:
 			// Value is a big-endian 24-bit twos-complement integer.
 			if len(body) < 3 {
-				return res, ErrFileTruncated
+				return res, ErrCorrupted
 			}
 			res = append(res, readTwos24(body))
 			body = body[3:]
 		case 4:
 			// Value is a big-endian 32-bit twos-complement integer.
 			if len(body) < 4 {
-				return res, ErrFileTruncated
+				return res, ErrCorrupted
 			}
 			res = append(res, int64(int32(binary.BigEndian.Uint32(body[:4]))))
 			body = body[4:]
 		case 5:
 			// Value is a big-endian 48-bit twos-complement integer.
 			if len(body) < 6 {
-				return res, ErrFileTruncated
+				return res, ErrCorrupted
 			}
 			res = append(res, readTwos48(body))
 			body = body[6:]
 		case 6:
 			// Value is a big-endian 64-bit twos-complement integer.
 			if len(body) < 8 {
-				return res, ErrFileTruncated
+				return res, ErrCorrupted
 			}
 			res = append(res, int64(binary.BigEndian.Uint64(body[:8])))
 			body = body[8:]
 		case 7:
 			// Value is a big-endian IEEE 754-2008 64-bit floating point number.
 			if len(body) < 8 {
-				return res, ErrFileTruncated
+				return res, ErrCorrupted
 			}
 			res = append(res, math.Float64frombits(binary.BigEndian.Uint64(body[:8])))
 			body = body[8:]
@@ -95,7 +95,7 @@ func parseRecord(r []byte) ([]interface{}, error) {
 				// even, blob
 				l := (c - 12) / 2
 				if int64(len(body)) < l {
-					return res, ErrFileTruncated
+					return res, ErrCorrupted
 				}
 				p := body[:l]
 				body = body[l:]
@@ -105,7 +105,7 @@ func parseRecord(r []byte) ([]interface{}, error) {
 				// TODO: deal with encoding
 				l := (c - 13) / 2
 				if int64(len(body)) < l {
-					return res, ErrFileTruncated
+					return res, ErrCorrupted
 				}
 				p := body[:l]
 				body = body[l:]
