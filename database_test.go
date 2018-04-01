@@ -125,14 +125,14 @@ func TestIONoSuch(t *testing.T) {
 
 func TestIOZero(t *testing.T) {
 	_, err := openFile("./test/zerolength.sqlite")
-	if have, want := err, ErrFileZeroLength; have != want {
+	if have, want := err, ErrFileTruncated; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOTruncated(t *testing.T) {
 	_, err := openFile("./test/truncated.sqlite")
-	if have, want := err, ErrFileTooShort; have != want {
+	if have, want := err, ErrFileTruncated; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
