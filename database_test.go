@@ -110,7 +110,7 @@ func TestHeader(t *testing.T) {
 }
 
 func TestIOBasic(t *testing.T) {
-	f, err := openFile("./test/single.sqlite")
+	f, err := OpenFile("./test/single.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,35 +121,35 @@ func TestIOBasic(t *testing.T) {
 }
 
 func TestIONoSuch(t *testing.T) {
-	_, err := openFile("./test/nosuch.sqlite")
+	_, err := OpenFile("./test/nosuch.sqlite")
 	if have, want := err.Error(), "open ./test/nosuch.sqlite: no such file or directory"; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOZero(t *testing.T) {
-	_, err := openFile("./test/zerolength.sqlite")
+	_, err := OpenFile("./test/zerolength.sqlite")
 	if have, want := err, ErrFileTruncated; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOTruncated(t *testing.T) {
-	_, err := openFile("./test/truncated.sqlite")
+	_, err := OpenFile("./test/truncated.sqlite")
 	if have, want := err, ErrFileTruncated; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOInvalidMagic(t *testing.T) {
-	_, err := openFile("./test/magic.sqlite")
+	_, err := OpenFile("./test/magic.sqlite")
 	if have, want := err, ErrHeaderInvalidMagic; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOTableRowidSingle(t *testing.T) {
-	db, err := openFile("./test/single.sqlite")
+	db, err := OpenFile("./test/single.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func wordList(t *testing.T) []string {
 }
 
 func TestIOTableRowidLong(t *testing.T) {
-	db, err := openFile("./test/words.sqlite")
+	db, err := OpenFile("./test/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}

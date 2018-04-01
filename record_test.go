@@ -129,7 +129,7 @@ func TestRecord(t *testing.T) {
 		{
 			// truncated record
 			e:   "\x02",
-			err: ErrFileTruncated,
+			err: ErrCorrupted,
 		},
 		{
 			// truncated 8 bit
@@ -285,12 +285,12 @@ func TestRecordCompare(t *testing.T) {
 		{
 			a:    Record{int64(42), int64(43)},
 			b:    Record{int64(42)},
-			want: 1,
+			want: 0,
 		},
 		{
 			a:    Record{int64(42)},
 			b:    Record{int64(42), int64(43)},
-			want: -1,
+			want: 0,
 		},
 	} {
 		o, err := cmp(c.a, c.b)

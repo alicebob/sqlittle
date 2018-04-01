@@ -12,14 +12,15 @@ var (
 	errInternal = errors.New("unexpected record type found")
 )
 
-// Record is a list of: nil, int64, float64, string, []byte
+// Record is a row in the database.
+// It can only have fields of these types: nil, int64, float64, string, []byte
 type Record []interface{}
 
 func parseRecord(r []byte) ([]interface{}, error) {
 	var res []interface{}
 	hSize, n := readVarint(r)
 	if n < 0 || hSize < int64(n) || hSize > int64(len(r)) {
-		return res, ErrFileTruncated
+		return res, ErrCorrupted
 	}
 	header, body := r[n:hSize], r[hSize:]
 	for len(header) > 0 {
@@ -116,7 +117,7 @@ func parseRecord(r []byte) ([]interface{}, error) {
 	return res, nil
 }
 
-// removes the rowid column from in index value (that's the last value from a
+// removes the rowid column from an index value (that's the last value from a
 // Record).
 // Returns: rowid, record, error
 func chompRowid(rec Record) (int64, Record, error) {
@@ -131,20 +132,23 @@ func chompRowid(rec Record) (int64, Record, error) {
 	return rowid, rec, nil
 }
 
-// Compare two records, according to the 'Record Sort Order' docs.
-// Note: strings are always compared binary; no collating functions are used.
-// Can return an error on impossible column pair comparison.
+// Compare two records, column by column, according to the 'Record Sort Order' docs.
+// Only the first min(length(a), length(b)) columns are compared.
+// Returns:
+//   - -1 if `a` is smaller than `b` (first non-equal column of `a` is smaller)
+//   - 0 if all columns from `a` match `b`
+//   - 1 if `a` is bigger than `b` (first non-equal column of `a` is bigger),
+// Note: strings are always compared with binary comparison; no collating
+// functions are used.
+// Will return an error on impossible column pair comparison.
 func cmp(a, b Record) (int, error) {
 	for i, ac := range a {
 		if len(b)-1 < i {
-			return 1, nil
+			return 0, nil
 		}
 		if c, err := columnCmp(ac, b[i]); c != 0 || err != nil {
 			return c, err
 		}
-	}
-	if len(b) > len(a) {
-		return -1, nil
 	}
 	return 0, nil
 }

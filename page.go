@@ -13,31 +13,31 @@ import (
 )
 
 // Iterate callback. Gets rowid and (possibly truncated) payload. Return true when done
-type IterCB func(rowid int64, pl Payload) (bool, error)
-type TableBtree interface {
+type iterCB func(rowid int64, pl cellPayload) (bool, error)
+type tableBtree interface {
 	// Iter goes over every record
-	Iter(*database, IterCB) (bool, error)
+	Iter(*Database, iterCB) (bool, error)
 	// Scan starting from a key
-	IterMin(*database, int64, IterCB) (bool, error)
+	IterMin(*Database, int64, iterCB) (bool, error)
 	// Count counts the number of records. For debugging.
-	Count(*database) (int, error)
+	Count(*Database) (int, error)
 }
 
 // IndexIterCB gets the (possibly truncated) payload
-type IndexIterCB func(pl Payload) (bool, error)
-type IndexIterMinCB func(rowid int64, row Record) (bool, error)
-type IndexBtree interface {
+type indexIterCB func(pl cellPayload) (bool, error)
+type indexIterMinCB func(rowid int64, row Record) (bool, error)
+type indexBtree interface {
 	// Iter goes over every record
-	Iter(*database, IndexIterCB) (bool, error)
+	Iter(*Database, indexIterCB) (bool, error)
 	// Scan starting from an index value
-	IterMin(*database, Record, IndexIterMinCB) (bool, error)
+	IterMin(*Database, Record, indexIterMinCB) (bool, error)
 	// Count counts the number of records. For debugging.
-	Count(*database) (int, error)
+	Count(*Database) (int, error)
 }
 
 type tableLeafCell struct {
 	left    int64 // rowID
-	payload Payload
+	payload cellPayload
 }
 type tableLeaf struct {
 	cells []tableLeafCell
@@ -53,19 +53,19 @@ type tableInterior struct {
 }
 
 type indexLeaf struct {
-	cells []Payload
+	cells []cellPayload
 }
 
 type indexInteriorCell struct {
 	left    int // pageID
-	payload Payload
+	payload cellPayload
 }
 type indexInterior struct {
 	cells     []indexInteriorCell
 	rightmost int
 }
 
-func newTableBtree(b []byte, isFileHeader bool) (TableBtree, error) {
+func newTableBtree(b []byte, isFileHeader bool) (tableBtree, error) {
 	hb := b
 	if isFileHeader {
 		hb = b[headerSize:]
@@ -90,7 +90,7 @@ func newTableBtree(b []byte, isFileHeader bool) (TableBtree, error) {
 	}
 }
 
-func newIndexBtree(b []byte) (IndexBtree, error) {
+func newIndexBtree(b []byte) (indexBtree, error) {
 	cells := int(binary.BigEndian.Uint16(b[3:5]))
 	switch typ := int(b[0]); typ {
 	case 0x0d, 0x05:
@@ -126,11 +126,11 @@ func newLeafTableBtree(
 	}, nil
 }
 
-func (l *tableLeaf) Count(*database) (int, error) {
+func (l *tableLeaf) Count(*Database) (int, error) {
 	return len(l.cells), nil
 }
 
-func (l *tableLeaf) Iter(_ *database, cb IterCB) (bool, error) {
+func (l *tableLeaf) Iter(_ *Database, cb iterCB) (bool, error) {
 	for _, c := range l.cells {
 		if done, err := cb(c.left, c.payload); done || err != nil {
 			return done, err
@@ -139,10 +139,10 @@ func (l *tableLeaf) Iter(_ *database, cb IterCB) (bool, error) {
 	return false, nil
 }
 
-func (l *tableLeaf) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
+func (l *tableLeaf) IterMin(db *Database, rowid int64, cb iterCB) (bool, error) {
 	return l.Iter(
 		db,
-		func(key int64, pl Payload) (bool, error) {
+		func(key int64, pl cellPayload) (bool, error) {
 			if key < rowid {
 				return false, nil
 			}
@@ -176,7 +176,7 @@ func newInteriorTableBtree(
 
 type interiorIterCB func(page int) (bool, error)
 
-func (l *tableInterior) cellIter(db *database, cb interiorIterCB) (bool, error) {
+func (l *tableInterior) cellIter(db *Database, cb interiorIterCB) (bool, error) {
 	for _, c := range l.cells {
 		if done, err := cb(c.left); done || err != nil {
 			return done, err
@@ -185,7 +185,7 @@ func (l *tableInterior) cellIter(db *database, cb interiorIterCB) (bool, error) 
 	return cb(l.rightmost)
 }
 
-func (l *tableInterior) cellIterMin(db *database, rowid int64, cb interiorIterCB) (bool, error) {
+func (l *tableInterior) cellIterMin(db *Database, rowid int64, cb interiorIterCB) (bool, error) {
 	// Loop over all pages, skipping pages which have rows too low.
 	// This could be implemented with a nice binary search.
 	for _, c := range l.cells {
@@ -199,7 +199,7 @@ func (l *tableInterior) cellIterMin(db *database, rowid int64, cb interiorIterCB
 	return cb(l.rightmost)
 }
 
-func (l *tableInterior) Count(db *database) (int, error) {
+func (l *tableInterior) Count(db *Database) (int, error) {
 	total := 0
 	l.cellIter(db, func(p int) (bool, error) {
 		page, err := db.openTable(p)
@@ -216,7 +216,7 @@ func (l *tableInterior) Count(db *database) (int, error) {
 	return total, nil
 }
 
-func (l *tableInterior) Iter(db *database, cb IterCB) (bool, error) {
+func (l *tableInterior) Iter(db *Database, cb iterCB) (bool, error) {
 	return l.cellIter(db, func(p int) (bool, error) {
 		page, err := db.openTable(p)
 		if err != nil {
@@ -229,7 +229,7 @@ func (l *tableInterior) Iter(db *database, cb IterCB) (bool, error) {
 	})
 }
 
-func (l *tableInterior) IterMin(db *database, rowid int64, cb IterCB) (bool, error) {
+func (l *tableInterior) IterMin(db *Database, rowid int64, cb iterCB) (bool, error) {
 	// we go over the keys, skipping pages with a low max key.
 	// This could be implemented with a binary search in the page.
 	return l.cellIterMin(db, rowid, func(pageID int) (bool, error) {
@@ -250,7 +250,7 @@ func newLeafIndex(
 	if err != nil {
 		return nil, err
 	}
-	cs := make([]Payload, len(cells))
+	cs := make([]cellPayload, len(cells))
 	for i, c := range cells {
 		cs[i], err = parseIndexLeaf(c)
 		if err != nil {
@@ -262,7 +262,7 @@ func newLeafIndex(
 	}, nil
 }
 
-func (l *indexLeaf) Iter(db *database, cb IndexIterCB) (bool, error) {
+func (l *indexLeaf) Iter(db *Database, cb indexIterCB) (bool, error) {
 	for _, pl := range l.cells {
 		if done, err := cb(pl); done || err != nil {
 			return done, err
@@ -271,7 +271,7 @@ func (l *indexLeaf) Iter(db *database, cb IndexIterCB) (bool, error) {
 	return false, nil
 }
 
-func (l *indexLeaf) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, error) {
+func (l *indexLeaf) IterMin(db *Database, min Record, cb indexIterMinCB) (bool, error) {
 	for _, pl := range l.cells {
 		cmpRes, rec, err := lazyCmp(db, pl, min)
 		if err != nil {
@@ -302,7 +302,7 @@ func (l *indexLeaf) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, 
 	return false, nil
 }
 
-func (l *indexLeaf) Count(*database) (int, error) {
+func (l *indexLeaf) Count(*Database) (int, error) {
 	return len(l.cells), nil
 }
 
@@ -329,7 +329,7 @@ func newInteriorIndex(
 	}, nil
 }
 
-func (l *indexInterior) Iter(db *database, cb IndexIterCB) (bool, error) {
+func (l *indexInterior) Iter(db *Database, cb indexIterCB) (bool, error) {
 	for _, c := range l.cells {
 		page, err := db.openIndex(c.left)
 		if err != nil {
@@ -352,7 +352,7 @@ func (l *indexInterior) Iter(db *database, cb IndexIterCB) (bool, error) {
 	return page.Iter(db, cb)
 }
 
-func (l *indexInterior) IterMin(db *database, min Record, cb IndexIterMinCB) (bool, error) {
+func (l *indexInterior) IterMin(db *Database, min Record, cb indexIterMinCB) (bool, error) {
 	for _, c := range l.cells {
 		cmpRes, rec, err := lazyCmp(db, c.payload, min)
 		if err != nil {
@@ -395,7 +395,7 @@ func (l *indexInterior) IterMin(db *database, min Record, cb IndexIterMinCB) (bo
 	return page.IterMin(db, min, cb)
 }
 
-func (l *indexInterior) Count(db *database) (int, error) {
+func (l *indexInterior) Count(db *Database) (int, error) {
 	total := 0
 	for _, c := range l.cells {
 		page, err := db.openIndex(c.left)
@@ -419,15 +419,15 @@ func (l *indexInterior) Count(db *database) (int, error) {
 }
 
 // shared code for parsing payload from cells
-func parsePayload(l int64, c []byte) (Payload, error) {
+func parsePayload(l int64, c []byte) (cellPayload, error) {
 	overflow := 0
 	if int64(len(c)) != l {
 		if len(c) < 4 {
-			return Payload{}, ErrCorrupted
+			return cellPayload{}, ErrCorrupted
 		}
 		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
 	}
-	return Payload{l, c, overflow}, nil
+	return cellPayload{l, c, overflow}, nil
 }
 
 func parseTableLeaf(c []byte) (tableLeafCell, error) {
@@ -462,10 +462,10 @@ func parseTableInterior(c []byte) (tableInteriorCell, error) {
 	}, nil
 }
 
-func parseIndexLeaf(c []byte) (Payload, error) {
+func parseIndexLeaf(c []byte) (cellPayload, error) {
 	l, n := readVarint(c)
 	if n < 0 {
-		return Payload{}, ErrCorrupted
+		return cellPayload{}, ErrCorrupted
 	}
 	return parsePayload(l, c[n:])
 }
@@ -519,7 +519,7 @@ func parseCellpointers(
 // The returned Record may be nil if the non-expanded payload was enough to
 // determine the result.
 // (that's TODO).
-func lazyCmp(db *database, pl Payload, against Record) (int, Record, error) {
+func lazyCmp(db *Database, pl cellPayload, against Record) (int, Record, error) {
 	// The TODO idea is that this function doesn't load the overflow page if it
 	// can determine the outcome without loading the overflow.
 	full, err := addOverflow(db, pl)

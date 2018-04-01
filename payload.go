@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 )
 
-// Payload represents the payload part of a cell. If overflow is non-zero the
-// Payload field will be truncated. Use addOverflow() to get a full payload.
-type Payload struct {
+// cellPayload represents the payload part of a cell. If overflow is non-zero the
+// cellPayload field will be truncated. Use addOverflow() to get a full payload.
+type cellPayload struct {
 	Length   int64
 	Payload  []byte
 	Overflow int
@@ -14,7 +14,7 @@ type Payload struct {
 
 // overflow is stored on different pages. Load whatever is needed to complete
 // the payload data.
-func addOverflow(db *database, pl Payload) ([]byte, error) {
+func addOverflow(db *Database, pl cellPayload) ([]byte, error) {
 	to := pl.Payload
 	overflow := pl.Overflow
 	for {

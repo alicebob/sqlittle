@@ -7,7 +7,7 @@ import (
 )
 
 func TestTablesSingle(t *testing.T) {
-	f, err := openFile("./test/single.sqlite")
+	f, err := OpenFile("./test/single.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestTablesSingle(t *testing.T) {
 }
 
 func TestTablesFour(t *testing.T) {
-	db, err := openFile("./test/four.sqlite")
+	db, err := OpenFile("./test/four.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestTablesFour(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	aap, err := db.Table("aap")
+	aap, err := db.table("aap")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestTablesFour(t *testing.T) {
 	var rows []interface{}
 	if _, err := aap.root.Iter(
 		db,
-		func(rowid int64, pl Payload) (bool, error) {
+		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
 			if err != nil {
 				return false, err
@@ -82,13 +82,13 @@ func TestTablesFour(t *testing.T) {
 
 func TestTableLong(t *testing.T) {
 	// start page is an interior table page
-	db, err := openFile("./test/words.sqlite")
+	db, err := OpenFile("./test/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	tab, err := db.Table("words")
+	tab, err := db.table("words")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestTableLong(t *testing.T) {
 	var rows []interface{}
 	if _, err := tab.root.Iter(
 		db,
-		func(rowid int64, pl Payload) (bool, error) {
+		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
 			if err != nil {
 				return false, err
@@ -142,13 +142,13 @@ func TestTableOverflow(t *testing.T) {
 		testline += "longline"
 	}
 
-	db, err := openFile("./test/overflow.sqlite")
+	db, err := OpenFile("./test/overflow.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	mytable, err := db.Table("mytable")
+	mytable, err := db.table("mytable")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestTableOverflow(t *testing.T) {
 	var rows []interface{}
 	if _, err := mytable.root.Iter(
 		db,
-		func(rowid int64, pl Payload) (bool, error) {
+		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
 			if err != nil {
 				return false, err
@@ -190,13 +190,13 @@ func TestTableOverflow(t *testing.T) {
 
 func TestTableValues(t *testing.T) {
 	// different value types
-	db, err := openFile("./test/values.sqlite")
+	db, err := OpenFile("./test/values.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	things, err := db.Table("things")
+	things, err := db.table("things")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func TestTableValues(t *testing.T) {
 	var rows []Record
 	if _, err := things.root.Iter(
 		db,
-		func(rowid int64, pl Payload) (bool, error) {
+		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
 			if err != nil {
 				return false, err
@@ -254,13 +254,13 @@ func TestTableValues(t *testing.T) {
 
 func TestIndexSingle(t *testing.T) {
 	// scan a whole index (single page)
-	db, err := openFile("./test/index.sqlite")
+	db, err := OpenFile("./test/index.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	hello, err := db.Index("hello_index")
+	hello, err := db.index("hello_index")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +279,7 @@ func TestIndexSingle(t *testing.T) {
 	var rows []Record
 	if _, err := hello.root.Iter(
 		db,
-		func(pl Payload) (bool, error) {
+		func(pl cellPayload) (bool, error) {
 			pf, err := addOverflow(db, pl)
 			if err != nil {
 				return false, err
@@ -305,13 +305,13 @@ func TestIndexSingle(t *testing.T) {
 
 func TestIndexWords(t *testing.T) {
 	// scan a whole index, with internal page
-	db, err := openFile("./test/words.sqlite")
+	db, err := OpenFile("./test/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	index, err := db.Index("words_index_1")
+	index, err := db.index("words_index_1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +330,7 @@ func TestIndexWords(t *testing.T) {
 	var rows []Record
 	if _, err := index.root.Iter(
 		db,
-		func(pl Payload) (bool, error) {
+		func(pl cellPayload) (bool, error) {
 			pf, err := addOverflow(db, pl)
 			if err != nil {
 				return false, err
@@ -359,13 +359,13 @@ func TestIndexWords(t *testing.T) {
 
 func TestIndexScanMin(t *testing.T) {
 	// scan a index
-	db, err := openFile("./test/words.sqlite")
+	db, err := OpenFile("./test/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	index, err := db.Index("words_index_1")
+	index, err := db.index("words_index_1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,13 +396,13 @@ func TestIndexScanMin(t *testing.T) {
 
 func TestIndexScanMin2(t *testing.T) {
 	// scan a non-unique index
-	db, err := openFile("./test/words.sqlite")
+	db, err := OpenFile("./test/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	index, err := db.Index("words_index_2") // index: length(word), word
+	index, err := db.index("words_index_2") // index: length(word), word
 	if err != nil {
 		t.Fatal(err)
 	}

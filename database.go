@@ -7,14 +7,15 @@ import (
 )
 
 const (
-	Magic      = "SQLite format 3\x00"
-	headerSize = 100
+	headerMagic = "SQLite format 3\x00"
+	headerSize  = 100
 )
 
 var (
 	ErrHeaderInvalidMagic    = errors.New("invalid magic number")
 	ErrHeaderInvalidPageSize = errors.New("invalid page size")
 	ErrNoSuchTable           = errors.New("no such table")
+	ErrNoSuchIndex           = errors.New("no such index")
 	ErrCorrupted             = errors.New("database corrupted")
 )
 
@@ -23,12 +24,14 @@ type header struct {
 	PageSize int
 }
 
-type database struct {
+type Database struct {
 	l      loader
 	header header
 }
 
-func openFile(f string) (*database, error) {
+// OpenFile opens a .sqlite file. This is the main entry point.
+// Use database.Close() when done.
+func OpenFile(f string) (*Database, error) {
 	l, err := newMMapLoader(f)
 	if err != nil {
 		return nil, err
@@ -36,7 +39,7 @@ func openFile(f string) (*database, error) {
 	return newDatabase(l)
 }
 
-func newDatabase(l loader) (*database, error) {
+func newDatabase(l loader) (*Database, error) {
 	buf, err := l.header()
 	if err != nil {
 		return nil, err
@@ -46,18 +49,19 @@ func newDatabase(l loader) (*database, error) {
 		return nil, err
 	}
 
-	db := &database{
+	db := &Database{
 		l:      l,
 		header: header,
 	}
 	return db, nil
 }
 
-func (db *database) Close() error {
+// Close the database.
+func (db *Database) Close() error {
 	return db.l.Close()
 }
 
-func (db *database) pageMaster() (TableBtree, error) {
+func (db *Database) pageMaster() (tableBtree, error) {
 	buf, err := db.page(1)
 	if err != nil {
 		return nil, err
@@ -66,7 +70,7 @@ func (db *database) pageMaster() (TableBtree, error) {
 }
 
 // n starts at 1, sqlite style
-func (db *database) page(id int) ([]byte, error) {
+func (db *Database) page(id int) ([]byte, error) {
 	if id < 1 {
 		return nil, errors.New("invalid page number")
 	}
@@ -75,7 +79,7 @@ func (db *database) page(id int) ([]byte, error) {
 
 func parseHeader(b [headerSize]byte) (header, error) {
 	magic := string(b[:16])
-	if magic != Magic {
+	if magic != headerMagic {
 		return header{}, ErrHeaderInvalidMagic
 	}
 
@@ -100,13 +104,13 @@ func parseHeader(b [headerSize]byte) (header, error) {
 
 type table struct {
 	name string
-	root TableBtree
+	root tableBtree
 	// TODO: point to indices, &c.
 }
 
 type index struct {
 	name string
-	root IndexBtree
+	root indexBtree
 }
 
 // master records are defined as:
@@ -117,20 +121,20 @@ type index struct {
 //     rootpage integer,
 //     sql text
 // );
-type Master struct {
+type sqliteMaster struct {
 	typ, name, tblName string
 	rootPage           int
 	sql                string
 }
 
-func (db *database) master() ([]Master, error) {
+func (db *Database) master() ([]sqliteMaster, error) {
 	master, err := db.pageMaster()
 	if err != nil {
 		return nil, err
 	}
 
-	var tables []Master
-	_, err = master.Iter(db, func(rowid int64, pl Payload) (bool, error) {
+	var tables []sqliteMaster
+	_, err = master.Iter(db, func(rowid int64, pl cellPayload) (bool, error) {
 		c, err := addOverflow(db, pl)
 		if err != nil {
 			return false, err
@@ -141,7 +145,7 @@ func (db *database) master() ([]Master, error) {
 			return false, err
 		}
 
-		m := Master{}
+		m := sqliteMaster{}
 		if s, ok := e[0].(string); !ok {
 			return false, errors.New("wrong column type for sqlite_master")
 		} else {
@@ -174,7 +178,7 @@ func (db *database) master() ([]Master, error) {
 }
 
 // returns nil if the table isn't found
-func (db *database) Table(name string) (*table, error) {
+func (db *Database) table(name string) (*table, error) {
 	tables, err := db.master()
 	if err != nil {
 		return nil, err
@@ -195,7 +199,7 @@ func (db *database) Table(name string) (*table, error) {
 }
 
 // returns nil if the index isn't found
-func (db *database) Index(name string) (*index, error) {
+func (db *Database) index(name string) (*index, error) {
 	tables, err := db.master()
 	if err != nil {
 		return nil, err
@@ -215,7 +219,7 @@ func (db *database) Index(name string) (*index, error) {
 	return nil, nil
 }
 
-func (db *database) openTable(page int) (TableBtree, error) {
+func (db *Database) openTable(page int) (tableBtree, error) {
 	buf, err := db.page(page)
 	if err != nil {
 		return nil, err
@@ -223,7 +227,7 @@ func (db *database) openTable(page int) (TableBtree, error) {
 	return newTableBtree(buf, false)
 }
 
-func (db *database) openIndex(page int) (IndexBtree, error) {
+func (db *Database) openIndex(page int) (indexBtree, error) {
 	buf, err := db.page(page)
 	if err != nil {
 		return nil, err
@@ -231,12 +235,21 @@ func (db *database) openIndex(page int) (IndexBtree, error) {
 	return newIndexBtree(buf)
 }
 
-// Call cb() for every row in the table. Will be called in 'database order'.
-// Might return ErrNoSuchTable when the table isn't there (or isn't a table),
-// or when something's wrong with the DB file.
-// There is no way to bail out of the scan halfway.
-func (db *database) TableScan(table string, cb func(Record)) error {
-	t, err := db.Table(table)
+// TablScanCB is the callback for TableScan(). It gets the rowid (usually an
+// internal number), and the data of a row. It should return true when the scan
+// should be terminated.
+type TableScanCB func(int64, Record) bool
+
+// TableScan calls cb() for every row in the table. Will be called in 'database order'.
+// Will return ErrNoSuchTable when the table isn't there (or isn't a table).
+// The record is given as sqlite stores it; this means:
+//  - float64 columns might be stored as int64
+//  - after an alter table which adds columns a row might miss those columns
+//  - "integer primary key" column will be always be nil, and the rowid is the
+//  value
+// If the callback returns true (done) the scan will be stopped.
+func (db *Database) TableScan(table string, cb TableScanCB) error {
+	t, err := db.table(table)
 	if err != nil {
 		return err
 	}
@@ -245,7 +258,7 @@ func (db *database) TableScan(table string, cb func(Record)) error {
 	}
 	_, err = t.root.Iter(
 		db,
-		func(rowid int64, pl Payload) (bool, error) {
+		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
 			if err != nil {
 				return false, err
@@ -255,20 +268,18 @@ func (db *database) TableScan(table string, cb func(Record)) error {
 			if err != nil {
 				return false, err
 			}
-			cb(rec)
-			return false, nil
+			return cb(rowid, rec), nil
 		},
 	)
 	return err
 }
 
-// Find a single rowid. Will return nil if it isn't found. The rowid is an
-// internal id, but if you have a `primary key(int)` that should be the same.
-// Might return ErrNoSuchTable when the table isn't there (or isn't a table),
-// or when something's wrong with the DB file.
-// Searching is efficient.
-func (db *database) TableRowid(table string, rowid int64) (Record, error) {
-	t, err := db.Table(table)
+// TableRowid finds a single row by rowid. Will return nil if it isn't found.
+// The rowid is an internal id, but if you have an `integer primary key` column
+// that should be the same.
+// Will return ErrNoSuchTable when the table isn't there (or isn't a table).
+func (db *Database) TableRowid(table string, rowid int64) (Record, error) {
+	t, err := db.table(table)
 	if err != nil {
 		return nil, err
 	}
@@ -276,11 +287,11 @@ func (db *database) TableRowid(table string, rowid int64) (Record, error) {
 		return nil, ErrNoSuchTable
 	}
 
-	var recPl *Payload
+	var recPl *cellPayload
 	if _, err := t.root.IterMin(
 		db,
 		rowid,
-		func(k int64, pl Payload) (bool, error) {
+		func(k int64, pl cellPayload) (bool, error) {
 			if k == rowid {
 				recPl = &pl
 			}
@@ -298,4 +309,66 @@ func (db *database) TableRowid(table string, rowid int64) (Record, error) {
 		return nil, err
 	}
 	return parseRecord(c)
+}
+
+// IndexScanCB is passed to IndexScan() and IndexScanMin(). It gets the rowid
+// and the values from the index. It should return true when the scan should be
+// stopped.
+type IndexScanCB func(int64, Record) bool
+
+// IndexScan calls cb() for every row in the index. These will be called in the
+// index order.
+// The callback gets the rowid the row is about (use TableRowid() to load the
+// row, if you need it), and all the columns present in the index.
+// If the callback returns true (done) the scan will be stopped.
+func (db *Database) IndexScan(index string, cb IndexScanCB) error {
+	ind, err := db.index(index)
+	if err != nil {
+		return err
+	}
+	if ind == nil {
+		return ErrNoSuchIndex
+	}
+	_, err = ind.root.Iter(
+		db,
+		func(pl cellPayload) (bool, error) {
+			full, err := addOverflow(db, pl)
+			if err != nil {
+				return false, err
+			}
+			rec, err := parseRecord(full)
+			if err != nil {
+				return false, err
+			}
+			rowid, rec, err := chompRowid(rec)
+			if err != nil {
+				return false, err
+			}
+			return cb(rowid, rec), nil
+		},
+	)
+	return err
+}
+
+// IndexScanMin calls cb() for every row in the index, starting from the first
+// record equal or bigger then the given record. If the type of columns in the given
+// record don't match those in the index a error will be returned.
+// If the callback returns true (done) the scan will be stopped.
+// All comments from IndexScan are valid here as well.
+func (db *Database) IndexScanMin(index string, from Record, cb IndexScanCB) error {
+	ind, err := db.index(index)
+	if err != nil {
+		return err
+	}
+	if ind == nil {
+		return ErrNoSuchIndex
+	}
+	_, err = ind.root.IterMin(
+		db,
+		from,
+		func(rowid int64, rec Record) (bool, error) {
+			return cb(rowid, rec), nil
+		},
+	)
+	return err
 }

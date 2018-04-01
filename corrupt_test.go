@@ -23,7 +23,7 @@ func twiddleAByte(b []byte) {
 
 type corrupter mmapLoader
 
-func corruptDatabase(f string) (*database, error) {
+func corruptDatabase(f string) (*Database, error) {
 	l, err := newMMapLoader(f)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func readTableWords() ([]string, error) {
 	}
 	defer db.Close()
 
-	tab, err := db.Table("words")
+	tab, err := db.table("words")
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func readTableWords() ([]string, error) {
 	var rows []string
 	_, err = tab.root.Iter(
 		db,
-		func(rowid int64, pl Payload) (bool, error) {
+		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
 			if err != nil {
 				return false, err
