@@ -1,7 +1,14 @@
+`make bench` results over time
+
 no page cache
 Benchmark_RandomRowid-4        20000         59802 ns/op
 (desktop)
 
-page cache
+table cache
 Benchmark_RandomRowid-4       100000         16286 ns/op
 (desktop)
+
+binary search in table's IterMin
+Benchmark_RandomRowid-4       100000         13680 ns/op
+(desktop)
+

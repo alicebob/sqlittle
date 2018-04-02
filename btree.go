@@ -10,6 +10,7 @@ package sqlittle
 import (
 	"encoding/binary"
 	"errors"
+	"sort"
 )
 
 // Iterate callback. Gets rowid and (possibly truncated) payload. Return true when done
@@ -134,15 +135,13 @@ func (l *tableLeaf) Iter(_ *Database, cb iterCB) (bool, error) {
 }
 
 func (l *tableLeaf) IterMin(db *Database, rowid int64, cb iterCB) (bool, error) {
-	return l.Iter(
-		db,
-		func(key int64, pl cellPayload) (bool, error) {
-			if key < rowid {
-				return false, nil
-			}
-			return cb(key, pl)
-		},
-	)
+	n := sort.Search(len(l.cells), func(n int) bool {
+		return l.cells[n].left >= rowid
+	})
+	for _, c := range l.cells[n:] {
+		return cb(c.left, c.payload)
+	}
+	return false, nil
 }
 
 func newInteriorTableBtree(
@@ -180,12 +179,10 @@ func (l *tableInterior) cellIter(db *Database, cb interiorIterCB) (bool, error) 
 }
 
 func (l *tableInterior) cellIterMin(db *Database, rowid int64, cb interiorIterCB) (bool, error) {
-	// Loop over all pages, skipping pages which have rows too low.
-	// This could be implemented with a nice binary search.
-	for _, c := range l.cells {
-		if c.key < rowid {
-			continue
-		}
+	n := sort.Search(len(l.cells), func(n int) bool {
+		return l.cells[n].key >= rowid
+	})
+	for _, c := range l.cells[n:] {
 		if done, err := cb(c.left); done || err != nil {
 			return done, err
 		}
@@ -224,8 +221,6 @@ func (l *tableInterior) Iter(db *Database, cb iterCB) (bool, error) {
 }
 
 func (l *tableInterior) IterMin(db *Database, rowid int64, cb iterCB) (bool, error) {
-	// we go over the keys, skipping pages with a low max key.
-	// This could be implemented with a binary search in the page.
 	return l.cellIterMin(db, rowid, func(pageID int) (bool, error) {
 		page, err := db.openTable(pageID)
 		if err != nil {
