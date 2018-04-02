@@ -2,6 +2,7 @@ package sqlittle
 
 import (
 	"errors"
+
 	"golang.org/x/exp/mmap"
 )
 
@@ -12,7 +13,7 @@ var (
 type loader interface {
 	// read the file header bytes. Page size is unknown yet.
 	header() ([headerSize]byte, error)
-	// load a page from storage. The loader is allowed to use a cache.
+	// load a page from storage.
 	page(n int, pagesize int) ([]byte, error)
 	// as it says
 	Close() error

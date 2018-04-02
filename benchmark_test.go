@@ -16,10 +16,10 @@ func Benchmark_RandomRowid(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		n := int64(r.Intn(1000)+1)
+		n := int64(r.Intn(1000) + 1)
 		row, err := db.TableRowid("words", n)
 		if err != nil {
-            b.Fatal(err)
+			b.Fatal(err)
 		}
 		if len(row) != 2 {
 			b.Fatal("invalid row")

@@ -81,12 +81,12 @@ func readTableWords() ([]string, error) {
 		return nil, errors.New("no table found")
 	}
 
-	if _, err := tab.root.Count(db); err != nil {
+	if _, err := tab.Count(db); err != nil {
 		return nil, err
 	}
 
 	var rows []string
-	_, err = tab.root.Iter(
+	_, err = tab.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)

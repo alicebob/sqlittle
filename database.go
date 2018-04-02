@@ -10,6 +10,9 @@ import (
 const (
 	headerMagic = "SQLite format 3\x00"
 	headerSize  = 100
+	// CacheTables is the number of tables pages to keep in memory. Default
+	// size per page is about 4K.
+	CacheTables = 100
 )
 
 var (
@@ -32,6 +35,7 @@ type header struct {
 type Database struct {
 	l      loader
 	header header
+	tables *tableCache
 }
 
 // OpenFile opens a .sqlite file. This is the main entry point.
@@ -57,6 +61,7 @@ func newDatabase(l loader) (*Database, error) {
 	db := &Database{
 		l:      l,
 		header: header,
+		tables: newTableCache(CacheTables),
 	}
 	return db, nil
 }
@@ -145,7 +150,8 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		return h, ErrIncompatible
 	}
 
-	// 1,2,3,4 are the only valid values. version 1 ignores 'DESC' on indexes
+	// 1,2,3,4 are the only valid values. Version 1 ignores 'DESC' on indexes,
+	// so we could support that as long as we ignore any 'DESC' index, but...
 	switch hs.SchemaFormat {
 	case 2, 3, 4:
 	default:
@@ -169,17 +175,6 @@ func parseHeader(b [headerSize]byte) (header, error) {
 	}
 
 	return h, nil
-}
-
-type table struct {
-	name string
-	root tableBtree
-	// TODO: point to indices, &c.
-}
-
-type index struct {
-	name string
-	root indexBtree
 }
 
 // master records are defined as:
@@ -247,53 +242,47 @@ func (db *Database) master() ([]sqliteMaster, error) {
 }
 
 // returns nil if the table isn't found
-func (db *Database) table(name string) (*table, error) {
+func (db *Database) table(name string) (tableBtree, error) {
 	tables, err := db.master()
 	if err != nil {
 		return nil, err
 	}
 	for _, t := range tables {
 		if t.typ == "table" && t.name == name {
-			root, err := db.openTable(t.rootPage)
-			if err != nil {
-				return nil, err
-			}
-			return &table{
-				name: t.name,
-				root: root,
-			}, nil
+			return db.openTable(t.rootPage)
 		}
 	}
 	return nil, nil
 }
 
 // returns nil if the index isn't found
-func (db *Database) index(name string) (*index, error) {
+func (db *Database) index(name string) (indexBtree, error) {
 	tables, err := db.master()
 	if err != nil {
 		return nil, err
 	}
 	for _, t := range tables {
 		if t.typ == "index" && t.name == name {
-			root, err := db.openIndex(t.rootPage)
-			if err != nil {
-				return nil, err
-			}
-			return &index{
-				name: t.name,
-				root: root,
-			}, nil
+			return db.openIndex(t.rootPage)
 		}
 	}
 	return nil, nil
 }
 
 func (db *Database) openTable(page int) (tableBtree, error) {
+	if p := db.tables.get(page); p != nil {
+		return p, nil
+	}
+
 	buf, err := db.page(page)
 	if err != nil {
 		return nil, err
 	}
-	return newTableBtree(buf, false)
+	p, err := newTableBtree(buf, false)
+	if err == nil {
+		db.tables.set(page, p)
+	}
+	return p, err
 }
 
 func (db *Database) openIndex(page int) (indexBtree, error) {
@@ -325,7 +314,7 @@ func (db *Database) TableScan(table string, cb TableScanCB) error {
 	if t == nil {
 		return ErrNoSuchTable
 	}
-	_, err = t.root.Iter(
+	_, err = t.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -357,7 +346,7 @@ func (db *Database) TableRowid(table string, rowid int64) (Record, error) {
 	}
 
 	var recPl *cellPayload
-	if _, err := t.root.IterMin(
+	if _, err := t.IterMin(
 		db,
 		rowid,
 		func(k int64, pl cellPayload) (bool, error) {
@@ -398,7 +387,7 @@ func (db *Database) IndexScan(index string, cb IndexScanCB) error {
 	if ind == nil {
 		return ErrNoSuchIndex
 	}
-	_, err = ind.root.Iter(
+	_, err = ind.Iter(
 		db,
 		func(pl cellPayload) (bool, error) {
 			full, err := addOverflow(db, pl)
@@ -432,7 +421,7 @@ func (db *Database) IndexScanMin(index string, from Record, cb IndexScanCB) erro
 	if ind == nil {
 		return ErrNoSuchIndex
 	}
-	_, err = ind.root.IterMin(
+	_, err = ind.IterMin(
 		db,
 		from,
 		func(rowid int64, rec Record) (bool, error) {

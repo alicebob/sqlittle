@@ -55,7 +55,7 @@ func TestTablesFour(t *testing.T) {
 		t.Fatal("no table found")
 	}
 	var rows []interface{}
-	if _, err := aap.root.Iter(
+	if _, err := aap.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -96,7 +96,7 @@ func TestTableLong(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := tab.root.Count(db)
+	rowCount, err := tab.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestTableLong(t *testing.T) {
 	}
 
 	var rows []interface{}
-	if _, err := tab.root.Iter(
+	if _, err := tab.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -156,7 +156,7 @@ func TestTableOverflow(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := mytable.root.Count(db)
+	rowCount, err := mytable.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestTableOverflow(t *testing.T) {
 	}
 
 	var rows []interface{}
-	if _, err := mytable.root.Iter(
+	if _, err := mytable.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -204,7 +204,7 @@ func TestTableValues(t *testing.T) {
 		t.Fatal("no table found")
 	}
 
-	rowCount, err := things.root.Count(db)
+	rowCount, err := things.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func TestTableValues(t *testing.T) {
 	}
 
 	var rows []Record
-	if _, err := things.root.Iter(
+	if _, err := things.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -268,7 +268,7 @@ func TestIndexSingle(t *testing.T) {
 		t.Fatal("no index found")
 	}
 
-	rowCount, err := hello.root.Count(db)
+	rowCount, err := hello.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +277,7 @@ func TestIndexSingle(t *testing.T) {
 	}
 
 	var rows []Record
-	if _, err := hello.root.Iter(
+	if _, err := hello.Iter(
 		db,
 		func(pl cellPayload) (bool, error) {
 			pf, err := addOverflow(db, pl)
@@ -319,7 +319,7 @@ func TestIndexWords(t *testing.T) {
 		t.Fatal("no index found")
 	}
 
-	rowCount, err := index.root.Count(db)
+	rowCount, err := index.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +328,7 @@ func TestIndexWords(t *testing.T) {
 	}
 
 	var rows []Record
-	if _, err := index.root.Iter(
+	if _, err := index.Iter(
 		db,
 		func(pl cellPayload) (bool, error) {
 			pf, err := addOverflow(db, pl)
@@ -374,7 +374,7 @@ func TestIndexScanMin(t *testing.T) {
 	}
 
 	var rows []Record
-	if _, err := index.root.IterMin(
+	if _, err := index.IterMin(
 		db,
 		Record{"improvise"},
 		func(_ int64, r Record) (bool, error) {
@@ -412,7 +412,7 @@ func TestIndexScanMin2(t *testing.T) {
 
 	// Load all rows >= 15 chars
 	var rows []Record
-	if _, err := index.root.IterMin(
+	if _, err := index.IterMin(
 		db,
 		Record{int64(15)},
 		func(_ int64, r Record) (bool, error) {

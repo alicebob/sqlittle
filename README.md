@@ -33,8 +33,6 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 - read-only
 - files can't be written to while sqlittle has them open. But there are no
   locks to enforce this.
-- no internal caching. Scanning a table should be pretty fast, but doing lots
-  of individual lookups will be slow
 - only supports UTF8 strings
 - only supports binary string comparisons
 - no joins/sorting/ranges
@@ -61,7 +59,7 @@ stored in the database by SQLite. Notably that includes:
 
 - ~~fail on non-utf8 encoding~~
 - ~~check all constant header fields~~
-- proper ~~page loading abstraction~~/page cache
+- proper ~~page loading abstraction~~/~~page cache~~/index cache
 - deal with the reserved region
 
 
