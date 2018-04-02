@@ -12,3 +12,6 @@ binary search in table's IterMin
 Benchmark_RandomRowid-4       100000         13680 ns/op
 (desktop)
 
+table cache for master table
+Benchmark_RandomRowid-4       200000          8342 ns/op
+(desktop)

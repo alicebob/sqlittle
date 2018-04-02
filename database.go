@@ -71,14 +71,6 @@ func (db *Database) Close() error {
 	return db.l.Close()
 }
 
-func (db *Database) pageMaster() (tableBtree, error) {
-	buf, err := db.page(1)
-	if err != nil {
-		return nil, err
-	}
-	return newTableBtree(buf, true)
-}
-
 // n starts at 1, sqlite style
 func (db *Database) page(id int) ([]byte, error) {
 	if id < 1 {
@@ -192,7 +184,7 @@ type sqliteMaster struct {
 }
 
 func (db *Database) master() ([]sqliteMaster, error) {
-	master, err := db.pageMaster()
+	master, err := db.openTable(1)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +270,7 @@ func (db *Database) openTable(page int) (tableBtree, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, err := newTableBtree(buf, false)
+	p, err := newTableBtree(buf, page == 1)
 	if err == nil {
 		db.tables.set(page, p)
 	}

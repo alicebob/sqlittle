@@ -13,7 +13,7 @@ func TestTablesSingle(t *testing.T) {
 	}
 	defer f.Close()
 
-	master, err := f.pageMaster()
+	master, err := f.openTable(1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestTablesFour(t *testing.T) {
 	}
 	defer db.Close()
 
-	master, err := db.pageMaster()
+	master, err := db.openTable(1)
 	if err != nil {
 		t.Fatal(err)
 	}
