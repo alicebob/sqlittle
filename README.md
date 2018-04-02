@@ -59,9 +59,9 @@ stored in the database by SQLite. Notably that includes:
 
 # short term todo
 
-- fail on non-utf8 encoding
-- check all constant header fields
-- proper ~~page loading abstraction/~~page cache
+- ~~fail on non-utf8 encoding~~
+- ~~check all constant header fields~~
+- proper ~~page loading abstraction~~/page cache
 - deal with the reserved region
 
 

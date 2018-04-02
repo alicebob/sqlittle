@@ -71,12 +71,6 @@ func newTableBtree(b []byte, isFileHeader bool) (tableBtree, error) {
 		hb = b[headerSize:]
 	}
 	cells := int(binary.BigEndian.Uint16(hb[3:5]))
-	/*
-		contentOffset := int(binary.BigEndian.Uint16(hb[5:7]))
-		if contentOffset == 0 {
-			contentOffset = 65536
-		}
-	*/
 	switch typ := int(hb[0]); typ {
 	case 0x0d:
 		return newLeafTableBtree(cells, hb[8:], b)

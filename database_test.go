@@ -47,8 +47,8 @@ func TestHeader(t *testing.T) {
 				return h
 			},
 			want: header{
-				Magic:    "SQLite format 3\x00",
-				PageSize: 4096,
+				PageSize:      4096,
+				ReservedSpace: 0,
 			},
 		},
 
@@ -62,7 +62,7 @@ func TestHeader(t *testing.T) {
 			err: ErrHeaderInvalidMagic,
 		},
 
-		// PageSize tests
+		// PageSize
 		{
 			// page size 4
 			change: func(h [headerSize]byte) [headerSize]byte {
@@ -94,14 +94,130 @@ func TestHeader(t *testing.T) {
 				return h
 			},
 			want: header{
-				Magic:    "SQLite format 3\x00",
-				PageSize: 65536,
+				PageSize:      0x010000,
+				ReservedSpace: 0,
 			},
+		},
+
+		// read version
+		{
+			// read version > 2
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[19] = 3
+				return h
+			},
+			err: ErrIncompatible,
+		},
+
+		// reserved space
+		{
+			// test #7
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[20] = 0x10
+				return h
+			},
+			want: header{
+				PageSize:      0x1000,
+				ReservedSpace: 0x10,
+			},
+		},
+
+		// constants
+		{
+			// maximum fraction
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[21] = 123
+				return h
+			},
+			err: ErrIncompatible,
+		},
+		{
+			// minimum fraction
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[22] = 123
+				return h
+			},
+			err: ErrIncompatible,
+		},
+		{
+			// leaf fraction
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[23] = 123
+				return h
+			},
+			err: ErrIncompatible,
+		},
+
+		// Schema format numner
+		{
+			// no support for version 1
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[44+3] = 1
+				return h
+			},
+			err: ErrIncompatible,
+		},
+		{
+			// invalid value
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[44+3] = 0
+				return h
+			},
+			err: ErrIncompatible,
+		},
+		{
+			// invalid value
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[44+3] = 5
+				return h
+			},
+			err: ErrIncompatible,
+		},
+
+		// Text Encoding
+		{
+			// invalid value
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[56+3] = 0
+				return h
+			},
+			err: ErrIncompatible,
+		},
+		{
+			// invalid value
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[56+3] = 2
+				return h
+			},
+			err: ErrEncoding,
+		},
+		{
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[56+3] = 1
+				return h
+			},
+			want: header{
+				PageSize:      0x1000,
+				ReservedSpace: 0,
+			},
+		},
+
+		// empty
+		{
+			// 'Reserved for expansion'. Must be 0s.
+			change: func(h [headerSize]byte) [headerSize]byte {
+				h[78] = 1
+				return h
+			},
+			err: ErrIncompatible,
 		},
 	} {
 		h, err := parseHeader(c.change(base))
 		if have, want := err, c.err; !reflect.DeepEqual(have, want) {
 			t.Fatalf("case %d: have %v, want %v", n, have, want)
+		}
+		if c.err != nil {
+			continue
 		}
 		if have, want := h, c.want; have != want {
 			t.Fatalf("case %d: have %#v, want %#v", n, have, want)

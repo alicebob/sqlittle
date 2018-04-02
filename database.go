@@ -1,6 +1,7 @@
 package sqlittle
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"math/bits"
@@ -17,11 +18,15 @@ var (
 	ErrNoSuchTable           = errors.New("no such table")
 	ErrNoSuchIndex           = errors.New("no such index")
 	ErrCorrupted             = errors.New("database corrupted")
+	ErrIncompatible          = errors.New("incompatible database version")
+	ErrEncoding              = errors.New("unsupported encoding")
 )
 
 type header struct {
-	Magic    string
+	// The database page size in bytes.
 	PageSize int
+	// Bytes of unused "reserved" space at the end of each page. Usually 0.
+	ReservedSpace int
 }
 
 type Database struct {
@@ -77,28 +82,92 @@ func (db *Database) page(id int) ([]byte, error) {
 	return db.l.page(id, db.header.PageSize)
 }
 
+// the file header, as described in "1.2. The Database Header"
 func parseHeader(b [headerSize]byte) (header, error) {
-	magic := string(b[:16])
-	if magic != headerMagic {
-		return header{}, ErrHeaderInvalidMagic
+	hs := struct {
+		Magic                [16]byte
+		PageSize             uint16
+		WriteVersion         uint8
+		ReadVersion          uint8
+		ReservedSpace        uint8
+		MaxFraction          uint8
+		MinFraction          uint8
+		LeafFraction         uint8
+		_                    uint32 // ChangeCounter
+		_                    uint32
+		_                    uint32
+		_                    uint32
+		_                    uint32 // SchemaCookie
+		SchemaFormat         uint32
+		_                    uint32
+		_                    uint32
+		TextEncoding         uint32
+		_                    uint32
+		_                    uint32
+		_                    uint32
+		ReservedForExpansion [20]byte
+		_                    uint32
+		_                    uint32
+	}{}
+	if err := binary.Read(bytes.NewBuffer(b[:]), binary.BigEndian, &hs); err != nil {
+		return header{}, err
 	}
 
-	pageSize := uint(binary.BigEndian.Uint16(b[16:18]))
-	if pageSize == 1 {
-		pageSize = 1 << 16
-	}
-	isPower := func(n uint) bool {
-		return bits.OnesCount(n) == 1
-	}
-	if pageSize < 512 || pageSize > 1<<16 || !isPower(pageSize) {
-		// TODO: special case for 1
-		return header{}, ErrHeaderInvalidPageSize
+	h := header{}
+
+	if string(hs.Magic[:]) != headerMagic {
+		return h, ErrHeaderInvalidMagic
 	}
 
-	h := header{
-		Magic:    magic,
-		PageSize: int(pageSize),
+	{
+		s := uint(hs.PageSize)
+		if s == 1 {
+			s = 1 << 16
+		}
+		isPower := func(n uint) bool {
+			return bits.OnesCount(n) == 1
+		}
+		if s < 512 || s > 1<<16 || !isPower(s) {
+			return header{}, ErrHeaderInvalidPageSize
+		}
+		h.PageSize = int(s)
 	}
+
+	if hs.ReadVersion > 2 {
+		return h, ErrIncompatible
+	}
+
+	h.ReservedSpace = int(hs.ReservedSpace)
+
+	if hs.MaxFraction != 64 ||
+		hs.MinFraction != 32 ||
+		hs.LeafFraction != 32 {
+		return h, ErrIncompatible
+	}
+
+	// 1,2,3,4 are the only valid values. version 1 ignores 'DESC' on indexes
+	switch hs.SchemaFormat {
+	case 2, 3, 4:
+	default:
+		return h, ErrIncompatible
+	}
+
+	switch hs.TextEncoding {
+	case 1:
+		// UTF8. It's the only thing we currently support
+	case 2, 3:
+		// UTF16le and UTF16be
+		return h, ErrEncoding
+	default:
+		return h, ErrIncompatible
+	}
+
+	for _, v := range hs.ReservedForExpansion {
+		if v != 0 {
+			return h, ErrIncompatible
+		}
+	}
+
 	return h, nil
 }
 
