@@ -293,18 +293,19 @@ func (db *Database) openIndex(page int) (indexBtree, error) {
 	return newIndexBtree(buf)
 }
 
-// TablScanCB is the callback for TableScan(). It gets the rowid (usually an
-// internal number), and the data of a row. It should return true when the scan
-// should be terminated.
+// TableScanCB is the callback for TableScan(). It gets the rowid (usually an
+// internal number), and the data of the row. It should return true when the
+// scan should be terminated.
 type TableScanCB func(int64, Record) bool
 
-// TableScan calls cb() for every row in the table. Will be called in 'database order'.
+// TableScan calls cb() for every row in the table. Will be called in 'database
+// order'.
 // Will return ErrNoSuchTable when the table isn't there (or isn't a table).
 // The record is given as sqlite stores it; this means:
 //  - float64 columns might be stored as int64
-//  - after an alter table which adds columns a row might miss those columns
-//  - "integer primary key" column will be always be nil, and the rowid is the
-//  value
+//  - after an alter table which adds columns a row might miss the new columns
+//  - an "integer primary key" column will be always be nil, and the rowid is
+//  the value
 // If the callback returns true (done) the scan will be stopped.
 func (db *Database) TableScan(table string, cb TableScanCB) error {
 	t, err := db.table(table)
