@@ -10,8 +10,12 @@ func ExampleDatabase_TableScan() {
 		panic(err)
 	}
 	defer db.Close()
-	if err := db.TableScan(
-		"hello",
+
+	table, err := db.Table("hello")
+	if err != nil {
+		panic(err)
+	}
+	if err := table.Scan(
 		func(rowid int64, rec Record) bool {
 			fmt.Printf("row %d: %s\n", rowid, rec[0].(string))
 			return false // we want all the rows
@@ -31,7 +35,12 @@ func ExampleDatabase_TableRowid() {
 		panic(err)
 	}
 	defer db.Close()
-	row, err := db.TableRowid("hello", 2)
+
+	table, err := db.Table("hello")
+	if err != nil {
+		panic(err)
+	}
+	row, err := table.Rowid(2)
 	if err != nil {
 		panic(err)
 	}

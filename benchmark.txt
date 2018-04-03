@@ -15,3 +15,10 @@ Benchmark_RandomRowid-4       100000         13680 ns/op
 table cache for master table
 Benchmark_RandomRowid-4       200000          8342 ns/op
 (desktop)
+Benchmark_RandomRowid-4   	  300000	      5228 ns/op
+(XPS)
+
+rework low level API
+Benchmark_RandomRowid-4   	 2000000	       986 ns/op
+(XPS)
+

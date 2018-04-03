@@ -47,15 +47,17 @@ func TestTablesFour(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	aap, err := db.table("aap")
+	aap, err := db.Table("aap")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if aap == nil {
-		t.Fatal("no table found")
+	root, err := db.openTable(aap.root)
+	if err != nil {
+		t.Fatal(err)
 	}
+
 	var rows []interface{}
-	if _, err := aap.Iter(
+	if _, err := root.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -88,15 +90,16 @@ func TestTableLong(t *testing.T) {
 	}
 	defer db.Close()
 
-	tab, err := db.table("words")
+	table, err := db.Table("words")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tab == nil {
-		t.Fatal("no table found")
+	root, err := db.openTable(table.root)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	rowCount, err := tab.Count(db)
+	rowCount, err := root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +108,7 @@ func TestTableLong(t *testing.T) {
 	}
 
 	var rows []interface{}
-	if _, err := tab.Iter(
+	if _, err := root.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -148,15 +151,16 @@ func TestTableOverflow(t *testing.T) {
 	}
 	defer db.Close()
 
-	mytable, err := db.table("mytable")
+	mytable, err := db.Table("mytable")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mytable == nil {
-		t.Fatal("no table found")
+	root, err := db.openTable(mytable.root)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	rowCount, err := mytable.Count(db)
+	rowCount, err := root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +169,7 @@ func TestTableOverflow(t *testing.T) {
 	}
 
 	var rows []interface{}
-	if _, err := mytable.Iter(
+	if _, err := root.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -196,15 +200,16 @@ func TestTableValues(t *testing.T) {
 	}
 	defer db.Close()
 
-	things, err := db.table("things")
+	things, err := db.Table("things")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if things == nil {
-		t.Fatal("no table found")
+	root, err := db.openTable(things.root)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	rowCount, err := things.Count(db)
+	rowCount, err := root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +218,7 @@ func TestTableValues(t *testing.T) {
 	}
 
 	var rows []Record
-	if _, err := things.Iter(
+	if _, err := root.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)

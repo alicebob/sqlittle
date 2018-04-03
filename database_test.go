@@ -264,6 +264,35 @@ func TestIOInvalidMagic(t *testing.T) {
 	}
 }
 
+func TestDatabaseTable(t *testing.T) {
+	db, err := OpenFile("./test/index.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	{
+		_, err := db.Table("nosuch")
+		if have, want := err, ErrNoSuchTable; have != want {
+			t.Errorf("have %#v, want %#v", have, want)
+		}
+	}
+
+	{
+		_, err := db.Table("hello_index")
+		if have, want := err, ErrNoSuchTable; have != want {
+			t.Errorf("have %#v, want %#v", have, want)
+		}
+	}
+
+	{
+		_, err := db.Table("hello")
+		if err != nil {
+			t.Errorf("have err: %s", err)
+		}
+	}
+}
+
 func TestIOTableRowidSingle(t *testing.T) {
 	db, err := OpenFile("./test/single.sqlite")
 	if err != nil {
@@ -271,11 +300,9 @@ func TestIOTableRowidSingle(t *testing.T) {
 	}
 	defer db.Close()
 
-	{
-		_, err := db.TableRowid("nosuch", 999)
-		if have, want := err, ErrNoSuchTable; have != want {
-			t.Errorf("have %#v, want %#v", have, want)
-		}
+	table, err := db.Table("hello")
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	for _, c := range []struct {
@@ -290,7 +317,7 @@ func TestIOTableRowidSingle(t *testing.T) {
 		{4, nil},
 		{4000, nil},
 	} {
-		row, err := db.TableRowid("hello", c.rowid)
+		row, err := table.Rowid(c.rowid)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -354,8 +381,12 @@ func TestIOTableRowidLong(t *testing.T) {
 		cases[i], cases[j] = cases[j], cases[i]
 	})
 
+	table, err := db.Table("words")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, c := range cases {
-		row, err := db.TableRowid("words", c.rowid)
+		row, err := table.Rowid(c.rowid)
 		if err != nil {
 			t.Fatal(err)
 		}

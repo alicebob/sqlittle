@@ -233,20 +233,6 @@ func (db *Database) master() ([]sqliteMaster, error) {
 	return tables, err
 }
 
-// returns nil if the table isn't found
-func (db *Database) table(name string) (tableBtree, error) {
-	tables, err := db.master()
-	if err != nil {
-		return nil, err
-	}
-	for _, t := range tables {
-		if t.typ == "table" && t.name == name {
-			return db.openTable(t.rootPage)
-		}
-	}
-	return nil, nil
-}
-
 // returns nil if the index isn't found
 func (db *Database) index(name string) (indexBtree, error) {
 	tables, err := db.master()
@@ -290,76 +276,20 @@ func (db *Database) openIndex(page int) (indexBtree, error) {
 // scan should be terminated.
 type TableScanCB func(int64, Record) bool
 
-// TableScan calls cb() for every row in the table. Will be called in 'database
-// order'.
+// Table opens the named table.
 // Will return ErrNoSuchTable when the table isn't there (or isn't a table).
-// The record is given as sqlite stores it; this means:
-//  - float64 columns might be stored as int64
-//  - after an alter table which adds columns a row might miss the new columns
-//  - an "integer primary key" column will be always be nil, and the rowid is
-//  the value
-// If the callback returns true (done) the scan will be stopped.
-func (db *Database) TableScan(table string, cb TableScanCB) error {
-	t, err := db.table(table)
-	if err != nil {
-		return err
-	}
-	if t == nil {
-		return ErrNoSuchTable
-	}
-	_, err = t.Iter(
-		db,
-		func(rowid int64, pl cellPayload) (bool, error) {
-			c, err := addOverflow(db, pl)
-			if err != nil {
-				return false, err
-			}
-
-			rec, err := parseRecord(c)
-			if err != nil {
-				return false, err
-			}
-			return cb(rowid, rec), nil
-		},
-	)
-	return err
-}
-
-// TableRowid finds a single row by rowid. Will return nil if it isn't found.
-// The rowid is an internal id, but if you have an `integer primary key` column
-// that should be the same.
-// Will return ErrNoSuchTable when the table isn't there (or isn't a table).
-func (db *Database) TableRowid(table string, rowid int64) (Record, error) {
-	t, err := db.table(table)
+// Table pointer is always valid if err == nil.
+func (db *Database) Table(name string) (*Table, error) {
+	tables, err := db.master()
 	if err != nil {
 		return nil, err
 	}
-	if t == nil {
-		return nil, ErrNoSuchTable
+	for _, t := range tables {
+		if t.typ == "table" && t.name == name {
+			return &Table{db: db, root: t.rootPage}, nil
+		}
 	}
-
-	var recPl *cellPayload
-	if _, err := t.IterMin(
-		db,
-		rowid,
-		func(k int64, pl cellPayload) (bool, error) {
-			if k == rowid {
-				recPl = &pl
-			}
-			return true, nil
-		},
-	); err != nil {
-		return nil, err
-	}
-	if recPl == nil {
-		return nil, nil
-	}
-
-	c, err := addOverflow(db, *recPl)
-	if err != nil {
-		return nil, err
-	}
-	return parseRecord(c)
+	return nil, ErrNoSuchTable
 }
 
 // IndexScanCB is passed to IndexScan() and IndexScanMin(). It gets the rowid

@@ -8,16 +8,21 @@ import (
 func Benchmark_RandomRowid(b *testing.B) {
 	db, err := OpenFile("test/words.sqlite")
 	if err != nil {
-		panic(err)
+		b.Fatal(err)
 	}
 	defer db.Close()
 
 	r := rand.New(rand.NewSource(42))
 
+	table, err := db.Table("words")
+	if err != nil {
+		b.Fatal(err)
+	}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		n := int64(r.Intn(1000) + 1)
-		row, err := db.TableRowid("words", n)
+		row, err := table.Rowid(n)
 		if err != nil {
 			b.Fatal(err)
 		}

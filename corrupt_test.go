@@ -73,20 +73,21 @@ func readTableWords() ([]string, error) {
 	}
 	defer db.Close()
 
-	tab, err := db.table("words")
+	words, err := db.Table("words")
 	if err != nil {
 		return nil, err
 	}
-	if tab == nil {
-		return nil, errors.New("no table found")
+	root, err := db.openTable(words.root)
+	if err != nil {
+		return nil, err
 	}
 
-	if _, err := tab.Count(db); err != nil {
+	if _, err := root.Count(db); err != nil {
 		return nil, err
 	}
 
 	var rows []string
-	_, err = tab.Iter(
+	_, err = root.Iter(
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
