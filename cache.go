@@ -34,3 +34,9 @@ func (t *tableCache) set(p int, tab tableBtree) {
 	}
 	t.elem[p] = tab
 }
+
+func (t *tableCache) clear() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.elem = make(map[int]tableBtree, t.limit)
+}

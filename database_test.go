@@ -49,6 +49,7 @@ func TestHeader(t *testing.T) {
 			want: header{
 				PageSize:      4096,
 				ReservedSpace: 0,
+				ChangeCounter: 4,
 			},
 		},
 
@@ -96,6 +97,7 @@ func TestHeader(t *testing.T) {
 			want: header{
 				PageSize:      0x010000,
 				ReservedSpace: 0,
+				ChangeCounter: 4,
 			},
 		},
 
@@ -119,6 +121,7 @@ func TestHeader(t *testing.T) {
 			want: header{
 				PageSize:      0x1000,
 				ReservedSpace: 0x10,
+				ChangeCounter: 4,
 			},
 		},
 
@@ -199,6 +202,7 @@ func TestHeader(t *testing.T) {
 			want: header{
 				PageSize:      0x1000,
 				ReservedSpace: 0,
+				ChangeCounter: 4,
 			},
 		},
 
@@ -393,5 +397,34 @@ func TestIOTableRowidLong(t *testing.T) {
 		if have, want := row, c.want; !reflect.DeepEqual(have, want) {
 			t.Errorf("have %#v, want %#v", have, want)
 		}
+	}
+}
+
+func TestDatabaseLock(t *testing.T) {
+	// can we lock at all?
+	db, err := OpenFile("./test/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if err := db.RLock(); err != nil {
+		t.Fatal(err)
+	}
+
+	table, err := db.Table("words")
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := table.Rowid(42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := row, (Record{"aniseed", int64(7)}); !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	if err := db.RUnlock(); err != nil {
+		t.Fatal(err)
 	}
 }

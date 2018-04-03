@@ -30,10 +30,13 @@ type header struct {
 	PageSize int
 	// Bytes of unused "reserved" space at the end of each page. Usually 0.
 	ReservedSpace int
+	// Updated when anything changes (only for non-WAL files).
+	ChangeCounter uint32
 }
 
 type Database struct {
-	l      loader
+	dirty  bool // reload header if true
+	l      pager
 	header header
 	tables *tableCache
 }
@@ -41,34 +44,36 @@ type Database struct {
 // OpenFile opens a .sqlite file. This is the main entry point.
 // Use database.Close() when done.
 func OpenFile(f string) (*Database, error) {
-	l, err := newMMapLoader(f)
+	l, err := newFilePager(f)
 	if err != nil {
 		return nil, err
 	}
 	return newDatabase(l)
 }
 
-func newDatabase(l loader) (*Database, error) {
-	buf, err := l.header()
-	if err != nil {
-		return nil, err
-	}
-	header, err := parseHeader(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	db := &Database{
+func newDatabase(l pager) (*Database, error) {
+	d := &Database{
+		dirty:  true,
 		l:      l,
-		header: header,
 		tables: newTableCache(CacheTables),
 	}
-	return db, nil
+	return d, d.resolveDirty()
 }
 
 // Close the database.
 func (db *Database) Close() error {
 	return db.l.Close()
+}
+
+// Lock database for reading. Blocks. Don't nest RLock() calls.
+func (db *Database) RLock() error {
+	db.dirty = true
+	return db.l.RLock()
+}
+
+// Unlock a read lock. Use a single RUnlock() for every RLock().
+func (db *Database) RUnlock() error {
+	return db.l.RUnlock()
 }
 
 // n starts at 1, sqlite style
@@ -90,7 +95,7 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		MaxFraction          uint8
 		MinFraction          uint8
 		LeafFraction         uint8
-		_                    uint32 // ChangeCounter
+		ChangeCounter        uint32
 		_                    uint32
 		_                    uint32
 		_                    uint32
@@ -142,6 +147,8 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		return h, ErrIncompatible
 	}
 
+	h.ChangeCounter = hs.ChangeCounter
+
 	// 1,2,3,4 are the only valid values. Version 1 ignores 'DESC' on indexes,
 	// so we could support that as long as we ignore any 'DESC' index, but...
 	switch hs.SchemaFormat {
@@ -183,7 +190,33 @@ type sqliteMaster struct {
 	sql                string
 }
 
+func (db *Database) resolveDirty() error {
+	if !db.dirty {
+		return nil
+	}
+
+	buf, err := db.l.header()
+	if err != nil {
+		return err
+	}
+	newHeader, err := parseHeader(buf)
+	if err != nil {
+		return err
+	}
+	db.dirty = false
+	if db.header.ChangeCounter == newHeader.ChangeCounter {
+		return nil
+	}
+	db.header = newHeader
+	db.tables.clear()
+	return nil
+}
+
 func (db *Database) master() ([]sqliteMaster, error) {
+	if err := db.resolveDirty(); err != nil {
+		return nil, err
+	}
+
 	master, err := db.openTable(1)
 	if err != nil {
 		return nil, err
@@ -234,6 +267,10 @@ func (db *Database) master() ([]sqliteMaster, error) {
 }
 
 func (db *Database) openTable(page int) (tableBtree, error) {
+	if err := db.resolveDirty(); err != nil {
+		return nil, err
+	}
+
 	if p := db.tables.get(page); p != nil {
 		return p, nil
 	}
@@ -250,6 +287,10 @@ func (db *Database) openTable(page int) (tableBtree, error) {
 }
 
 func (db *Database) openIndex(page int) (indexBtree, error) {
+	if err := db.resolveDirty(); err != nil {
+		return nil, err
+	}
+
 	buf, err := db.page(page)
 	if err != nil {
 		return nil, err

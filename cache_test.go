@@ -12,4 +12,8 @@ func TestCache(t *testing.T) {
 	if have, want := len(c.elem), 10; have != want {
 		t.Errorf("have %d, want %d", have, want)
 	}
+	c.clear()
+	if have, want := len(c.elem), 0; have != want {
+		t.Errorf("have %d, want %d", have, want)
+	}
 }

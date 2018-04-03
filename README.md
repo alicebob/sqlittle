@@ -25,17 +25,18 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 
 - low level interface to access tables and indices. Full table/index
   scan and basic search are supported
-- behaves nicely on corrupt database files (no panics)
+- behaves nicely on corrupted database files (no panics)
+- files can be used concurrently with sqlite (compatible locks)
 
 
 # constraints
 
 - read-only
-- files can't be written to while sqlittle has them open. But there are no
-  locks to enforce this.
 - only supports UTF8 strings
 - only supports binary string comparisons
 - no joins/sorting/ranges
+- can only read clean files. No corrupted transaction journals can be present
+- does not work with WAL journal mode files (WAL is not the default journal mode)
 
 
 # low level interface
@@ -51,6 +52,13 @@ methods and examples, but the gist of a table scan is:
 			return false // we want all the rows
     })
 
+
+## low level locks
+
+If you somehow know that no-one will change the .sqlite file you don't have to
+use locks. Otherwise sandwich your logic between database.RLock() and
+database.RUnlock() calls. Any *Table or *Index pointer you have is invalid
+after database.RUnlock().
 
 
 # low level sqlite gotchas
@@ -80,5 +88,4 @@ stored in the database by SQLite. Notably that includes:
 
 # less short term todo
 
-- locks
-
+- ~~locks~~

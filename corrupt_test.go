@@ -21,10 +21,10 @@ func twiddleAByte(b []byte) {
 	b[rand.Intn(len(b))] = new
 }
 
-type corrupter mmapLoader
+type corrupter filePager
 
 func corruptDatabase(f string) (*Database, error) {
-	l, err := newMMapLoader(f)
+	l, err := newFilePager(f)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func corruptDatabase(f string) (*Database, error) {
 }
 
 func (c *corrupter) header() ([headerSize]byte, error) {
-	b, err := (*mmapLoader)(c).header()
+	b, err := (*filePager)(c).header()
 	// don't mess too often with the header bytes. It mostly messes up the
 	// magic number, which is a boring test.
 	if err == nil {
@@ -49,7 +49,7 @@ func (c *corrupter) header() ([headerSize]byte, error) {
 }
 
 func (c *corrupter) page(n int, pagesize int) ([]byte, error) {
-	p, err := (*mmapLoader)(c).page(n, pagesize)
+	p, err := (*filePager)(c).page(n, pagesize)
 	if err == nil {
 		if rand.Intn(100) < 40 {
 			for i := 0; i < rand.Intn(10); i++ {
@@ -62,8 +62,17 @@ func (c *corrupter) page(n int, pagesize int) ([]byte, error) {
 	}
 	return p, err
 }
+
+func (c *corrupter) RLock() error {
+	return nil
+}
+
+func (c *corrupter) RUnlock() error {
+	return nil
+}
+
 func (c *corrupter) Close() error {
-	return (*mmapLoader)(c).Close()
+	return (*filePager)(c).Close()
 }
 
 func readTableWords() ([]string, error) {
