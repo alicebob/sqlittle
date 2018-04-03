@@ -57,9 +57,13 @@ func ExampleDatabase_IndexScan() {
 		panic(err)
 	}
 	defer db.Close()
+
+	index, err := db.Index("words_index_1")
+	if err != nil {
+		panic(err)
+	}
 	i := 0
-	if err := db.IndexScan(
-		"words_index_1",
+	if err := index.Scan(
 		func(rowid int64, rec Record) bool {
 			fmt.Printf("row %d: %s\n", rowid, rec[0].(string))
 			i++
@@ -90,8 +94,12 @@ func ExampleDatabase_IndexScanMin() {
 		panic(err)
 	}
 	defer db.Close()
-	if err := db.IndexScanMin(
-		"words_index_1",
+
+	index, err := db.Index("words_index_1")
+	if err != nil {
+		panic(err)
+	}
+	if err := index.ScanMin(
 		Record{"wombat"},
 		func(rowid int64, rec Record) bool {
 			word := rec[0].(string)

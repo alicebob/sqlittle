@@ -25,7 +25,7 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 
 - low level interface to access tables and indices. Full table/index
   scan and basic search are supported
-- behaves nicely on corrupt databases files (no panics)
+- behaves nicely on corrupt database files (no panics)
 
 
 # constraints
@@ -36,6 +36,21 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 - only supports UTF8 strings
 - only supports binary string comparisons
 - no joins/sorting/ranges
+
+
+# low level interface
+
+See [godoc](https://godoc.org/github.com/alicebob/sqlittle) for all available
+methods and examples, but the gist of a table scan is:
+
+	db, _ := OpenFile("test/single.sqlite")
+	defer db.Close()
+	table, _ := db.Table("hello")
+	table.Scan(func(rowid int64, rec Record) bool {
+			fmt.Printf("row %d: %s\n", rowid, rec[0].(string))
+			return false // we want all the rows
+    })
+
 
 
 # low level sqlite gotchas

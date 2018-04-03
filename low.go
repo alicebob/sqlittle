@@ -7,6 +7,16 @@ type Table struct {
 	root int
 }
 
+type Index struct {
+	db   *Database
+	root int
+}
+
+// TableScanCB is the callback for Table.Scan(). It gets the rowid (usually an
+// internal number), and the data of the row. It should return true when the
+// scan should be terminated.
+type TableScanCB func(int64, Record) bool
+
 // Scan calls cb() for every row in the table. Will be called in 'database
 // order'.
 // The record is given as sqlite stores it; this means:
@@ -16,11 +26,11 @@ type Table struct {
 //  the value
 // If the callback returns true (done) the scan will be stopped.
 func (t *Table) Scan(cb TableScanCB) error {
-	td, err := t.db.openTable(t.root)
+	root, err := t.db.openTable(t.root)
 	if err != nil {
 		return err
 	}
-	_, err = td.Iter(
+	_, err = root.Iter(
 		t.db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(t.db, pl)
@@ -43,13 +53,13 @@ func (t *Table) Scan(cb TableScanCB) error {
 // that should be the same.
 // See Table.Scan comments about the Record
 func (t *Table) Rowid(rowid int64) (Record, error) {
-	td, err := t.db.openTable(t.root)
+	root, err := t.db.openTable(t.root)
 	if err != nil {
 		return nil, err
 	}
 
 	var recPl *cellPayload
-	if _, err := td.IterMin(
+	if _, err := root.IterMin(
 		t.db,
 		rowid,
 		func(k int64, pl cellPayload) (bool, error) {
@@ -70,4 +80,62 @@ func (t *Table) Rowid(rowid int64) (Record, error) {
 		return nil, err
 	}
 	return parseRecord(c)
+}
+
+// IndexScanCB is passed to Index.Scan() and Index.ScanMin(). It gets the rowid
+// and the values from the index. It should return true when the scan should be
+// stopped.
+type IndexScanCB func(int64, Record) bool
+
+// Scan calls cb() for every row in the index. These will be called in the
+// index order.
+// The callback gets the rowid the row is about (use Table.Rowid() to load the
+// row, if you need it), and all the columns present in the index.
+// If the callback returns true (done) the scan will be stopped.
+func (in *Index) Scan(cb IndexScanCB) error {
+	root, err := in.db.openIndex(in.root)
+	if err != nil {
+		return err
+	}
+
+	_, err = root.Iter(
+		in.db,
+		func(pl cellPayload) (bool, error) {
+			full, err := addOverflow(in.db, pl)
+			if err != nil {
+				return false, err
+			}
+			rec, err := parseRecord(full)
+			if err != nil {
+				return false, err
+			}
+			rowid, rec, err := chompRowid(rec)
+			if err != nil {
+				return false, err
+			}
+			return cb(rowid, rec), nil
+		},
+	)
+	return err
+}
+
+// ScanMin calls cb() for every row in the index, starting from the first
+// record equal or bigger than the given record. If the type of columns in the given
+// record don't match those in the index an error will be returned.
+// If the callback returns true (done) the scan will be stopped.
+// All comments from Index.Scan are valid here as well.
+func (in *Index) ScanMin(from Record, cb IndexScanCB) error {
+	root, err := in.db.openIndex(in.root)
+	if err != nil {
+		return err
+	}
+
+	_, err = root.IterMin(
+		in.db,
+		from,
+		func(rowid int64, rec Record) (bool, error) {
+			return cb(rowid, rec), nil
+		},
+	)
+	return err
 }

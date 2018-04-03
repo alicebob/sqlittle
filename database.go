@@ -233,20 +233,6 @@ func (db *Database) master() ([]sqliteMaster, error) {
 	return tables, err
 }
 
-// returns nil if the index isn't found
-func (db *Database) index(name string) (indexBtree, error) {
-	tables, err := db.master()
-	if err != nil {
-		return nil, err
-	}
-	for _, t := range tables {
-		if t.typ == "index" && t.name == name {
-			return db.openIndex(t.rootPage)
-		}
-	}
-	return nil, nil
-}
-
 func (db *Database) openTable(page int) (tableBtree, error) {
 	if p := db.tables.get(page); p != nil {
 		return p, nil
@@ -271,11 +257,6 @@ func (db *Database) openIndex(page int) (indexBtree, error) {
 	return newIndexBtree(buf)
 }
 
-// TableScanCB is the callback for TableScan(). It gets the rowid (usually an
-// internal number), and the data of the row. It should return true when the
-// scan should be terminated.
-type TableScanCB func(int64, Record) bool
-
 // Table opens the named table.
 // Will return ErrNoSuchTable when the table isn't there (or isn't a table).
 // Table pointer is always valid if err == nil.
@@ -292,64 +273,18 @@ func (db *Database) Table(name string) (*Table, error) {
 	return nil, ErrNoSuchTable
 }
 
-// IndexScanCB is passed to IndexScan() and IndexScanMin(). It gets the rowid
-// and the values from the index. It should return true when the scan should be
-// stopped.
-type IndexScanCB func(int64, Record) bool
-
-// IndexScan calls cb() for every row in the index. These will be called in the
-// index order.
-// The callback gets the rowid the row is about (use TableRowid() to load the
-// row, if you need it), and all the columns present in the index.
-// If the callback returns true (done) the scan will be stopped.
-func (db *Database) IndexScan(index string, cb IndexScanCB) error {
-	ind, err := db.index(index)
+// Index opens the named index.
+// Will return ErrNoSuchIndex when the index isn't there (or isn't an index).
+// Index pointer is always valid if err == nil.
+func (db *Database) Index(name string) (*Index, error) {
+	tables, err := db.master()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if ind == nil {
-		return ErrNoSuchIndex
+	for _, t := range tables {
+		if t.typ == "index" && t.name == name {
+			return &Index{db: db, root: t.rootPage}, nil
+		}
 	}
-	_, err = ind.Iter(
-		db,
-		func(pl cellPayload) (bool, error) {
-			full, err := addOverflow(db, pl)
-			if err != nil {
-				return false, err
-			}
-			rec, err := parseRecord(full)
-			if err != nil {
-				return false, err
-			}
-			rowid, rec, err := chompRowid(rec)
-			if err != nil {
-				return false, err
-			}
-			return cb(rowid, rec), nil
-		},
-	)
-	return err
-}
-
-// IndexScanMin calls cb() for every row in the index, starting from the first
-// record equal or bigger then the given record. If the type of columns in the given
-// record don't match those in the index a error will be returned.
-// If the callback returns true (done) the scan will be stopped.
-// All comments from IndexScan are valid here as well.
-func (db *Database) IndexScanMin(index string, from Record, cb IndexScanCB) error {
-	ind, err := db.index(index)
-	if err != nil {
-		return err
-	}
-	if ind == nil {
-		return ErrNoSuchIndex
-	}
-	_, err = ind.IterMin(
-		db,
-		from,
-		func(rowid int64, rec Record) (bool, error) {
-			return cb(rowid, rec), nil
-		},
-	)
-	return err
+	return nil, ErrNoSuchIndex
 }

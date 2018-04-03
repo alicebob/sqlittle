@@ -265,15 +265,16 @@ func TestIndexSingle(t *testing.T) {
 	}
 	defer db.Close()
 
-	hello, err := db.index("hello_index")
+	hello, err := db.Index("hello_index")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hello == nil {
-		t.Fatal("no index found")
+	root, err := db.openIndex(hello.root)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	rowCount, err := hello.Count(db)
+	rowCount, err := root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +283,7 @@ func TestIndexSingle(t *testing.T) {
 	}
 
 	var rows []Record
-	if _, err := hello.Iter(
+	if _, err := root.Iter(
 		db,
 		func(pl cellPayload) (bool, error) {
 			pf, err := addOverflow(db, pl)
@@ -316,15 +317,16 @@ func TestIndexWords(t *testing.T) {
 	}
 	defer db.Close()
 
-	index, err := db.index("words_index_1")
+	index, err := db.Index("words_index_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if index == nil {
-		t.Fatal("no index found")
+	root, err := db.openIndex(index.root)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	rowCount, err := index.Count(db)
+	rowCount, err := root.Count(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,7 +335,7 @@ func TestIndexWords(t *testing.T) {
 	}
 
 	var rows []Record
-	if _, err := index.Iter(
+	if _, err := root.Iter(
 		db,
 		func(pl cellPayload) (bool, error) {
 			pf, err := addOverflow(db, pl)
@@ -370,16 +372,17 @@ func TestIndexScanMin(t *testing.T) {
 	}
 	defer db.Close()
 
-	index, err := db.index("words_index_1")
+	index, err := db.Index("words_index_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if index == nil {
-		t.Fatal("no index found")
+	root, err := db.openIndex(index.root)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	var rows []Record
-	if _, err := index.IterMin(
+	if _, err := root.IterMin(
 		db,
 		Record{"improvise"},
 		func(_ int64, r Record) (bool, error) {
@@ -407,17 +410,18 @@ func TestIndexScanMin2(t *testing.T) {
 	}
 	defer db.Close()
 
-	index, err := db.index("words_index_2") // index: length(word), word
+	index, err := db.Index("words_index_2") // index: length(word), word
 	if err != nil {
 		t.Fatal(err)
 	}
-	if index == nil {
-		t.Fatal("no index found")
+	root, err := db.openIndex(index.root)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Load all rows >= 15 chars
 	var rows []Record
-	if _, err := index.IterMin(
+	if _, err := root.IterMin(
 		db,
 		Record{int64(15)},
 		func(_ int64, r Record) (bool, error) {
