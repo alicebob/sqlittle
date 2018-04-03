@@ -73,19 +73,15 @@ stored in the database by SQLite. Notably that includes:
   functions are used. If a column uses any other collating function for strings
   you can't use the index.
 
-# short short term todo
+
+# low level todos
 
 - ~~remove all panics on wrong input~~
-
-
-# short term todo
-
 - ~~fail on non-utf8 encoding~~
 - ~~check all constant header fields~~
 - proper ~~page loading abstraction~~/~~page cache~~/index cache
-- deal with the reserved region
-
-
-# less short term todo
-
 - ~~locks~~
+- deal with the reserved region
+- refuse to open files with a non-committed/failed non-wal journal
+- refuse to open wal journal files
+- parse embedded table and index definitions and make them available
