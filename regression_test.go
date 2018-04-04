@@ -6,6 +6,7 @@ import (
 )
 
 func TestIssue1(t *testing.T) {
+	// go-fuzz: invalid table definition
 	db, err := OpenFile("./test/issue_1.sqlite")
 	if err != nil {
 		t.Fatal(err)
@@ -19,6 +20,7 @@ func TestIssue1(t *testing.T) {
 }
 
 func TestIssue3(t *testing.T) {
+	// go-fuzz: file has a `file change counter` with value 0
 	f, err := ioutil.ReadFile("./test/issue_3.sqlite")
 	if err != nil {
 		t.Fatal(err)
@@ -29,6 +31,8 @@ func TestIssue3(t *testing.T) {
 }
 
 func TestIssue4(t *testing.T) {
+	// go-fuzz: there is a cell which is longer than the payload, which points
+	// to page 0
 	f, err := ioutil.ReadFile("./test/issue_4.sqlite")
 	if err != nil {
 		t.Fatal(err)
@@ -39,6 +43,7 @@ func TestIssue4(t *testing.T) {
 }
 
 func TestIssue5(t *testing.T) {
+	// go-fuzz: internal table btree contains a pointer to itself
 	f, err := ioutil.ReadFile("./test/issue_5.sqlite")
 	if err != nil {
 		t.Fatal(err)
