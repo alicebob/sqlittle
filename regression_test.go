@@ -47,3 +47,14 @@ func TestIssue5(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
+
+func TestIssue7(t *testing.T) {
+	// go-fuzz: negative payload length
+	f, err := ioutil.ReadFile("./test/issue_7.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := fuzz(f), ErrCorrupted; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}

@@ -427,6 +427,9 @@ func (l *indexInterior) Count(db *Database) (int, error) {
 // shared code for parsing payload from cells
 func parsePayload(l int64, c []byte) (cellPayload, error) {
 	overflow := 0
+	if l < 0 {
+		return cellPayload{}, ErrCorrupted
+	}
 	if int64(len(c)) > l {
 		c = c[:l]
 	}
