@@ -58,6 +58,7 @@ func TestTablesFour(t *testing.T) {
 
 	var rows []interface{}
 	if _, err := root.Iter(
+		maxRecursion,
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -109,6 +110,7 @@ func TestTableLong(t *testing.T) {
 
 	var rows []interface{}
 	if _, err := root.Iter(
+		maxRecursion,
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -170,6 +172,7 @@ func TestTableOverflow(t *testing.T) {
 
 	var rows []interface{}
 	if _, err := root.Iter(
+		maxRecursion,
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
@@ -219,6 +222,7 @@ func TestTableValues(t *testing.T) {
 
 	var rows []Record
 	if _, err := root.Iter(
+		maxRecursion,
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)
