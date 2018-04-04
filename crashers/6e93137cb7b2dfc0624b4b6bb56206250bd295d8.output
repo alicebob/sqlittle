@@ -1,0 +1,18 @@
+panic: runtime error: slice bounds out of range
+
+goroutine 1 [running]:
+github.com/alicebob/sqlittle.newTableBtree(0x1201000, 0x0, 0x200000, 0x1, 0x200000, 0x0, 0x0, 0x1098c01)
+	/var/folders/g2/tqw0df3x28s85yymswkd0m0m0000gn/T/go-fuzz-build787899123/gopath/src/github.com/alicebob/sqlittle/btree.go:72 +0x44d
+github.com/alicebob/sqlittle.(*Database).openTable(0xc42004e0c0, 0x1, 0x0, 0x0, 0x0, 0x3030303000000000)
+	/var/folders/g2/tqw0df3x28s85yymswkd0m0m0000gn/T/go-fuzz-build787899123/gopath/src/github.com/alicebob/sqlittle/database.go:286 +0x176
+github.com/alicebob/sqlittle.(*Database).master(0xc42004e0c0, 0x2020403001300010, 0x3030303000000000, 0x3030303030303030, 0x400000030303030, 0x3030303030303030)
+	/var/folders/g2/tqw0df3x28s85yymswkd0m0m0000gn/T/go-fuzz-build787899123/gopath/src/github.com/alicebob/sqlittle/database.go:221 +0xa1
+github.com/alicebob/sqlittle.(*Database).Tables(0xc42004e0c0, 0xc42000a060, 0xc42004e0c0, 0x0, 0x0, 0x0)
+	/var/folders/g2/tqw0df3x28s85yymswkd0m0m0000gn/T/go-fuzz-build787899123/gopath/src/github.com/alicebob/sqlittle/database.go:306 +0x5b
+github.com/alicebob/sqlittle.Fuzz(0x1201000, 0x64, 0x200000, 0xc42003df70)
+	/var/folders/g2/tqw0df3x28s85yymswkd0m0m0000gn/T/go-fuzz-build787899123/gopath/src/github.com/alicebob/sqlittle/fuzz.go:9 +0xda
+go-fuzz-dep.Main(0x10d69b8)
+	/var/folders/g2/tqw0df3x28s85yymswkd0m0m0000gn/T/go-fuzz-build787899123/goroot/src/go-fuzz-dep/main.go:49 +0xad
+main.main()
+	/var/folders/g2/tqw0df3x28s85yymswkd0m0m0000gn/T/go-fuzz-build787899123/gopath/src/github.com/alicebob/sqlittle/go.fuzz.main/main.go:10 +0x2d
+exit status 2

@@ -410,11 +410,17 @@ func (l *indexInterior) Count(db *Database) (int, error) {
 // shared code for parsing payload from cells
 func parsePayload(l int64, c []byte) (cellPayload, error) {
 	overflow := 0
+	if int64(len(c)) > l {
+		c = c[:l]
+	}
 	if int64(len(c)) != l {
 		if len(c) < 4 {
 			return cellPayload{}, ErrCorrupted
 		}
 		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
+		if overflow == 0 {
+			return cellPayload{}, ErrCorrupted
+		}
 	}
 	return cellPayload{l, c, overflow}, nil
 }
