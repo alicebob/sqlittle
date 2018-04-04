@@ -43,9 +43,9 @@ type indexIterCB func(pl cellPayload) (bool, error)
 type indexIterMinCB func(rowid int64, row Record) (bool, error)
 type indexBtree interface {
 	// Iter goes over every record
-	Iter(*Database, indexIterCB) (bool, error)
+	Iter(int, *Database, indexIterCB) (bool, error)
 	// Scan starting from an index value
-	IterMin(*Database, Record, indexIterMinCB) (bool, error)
+	IterMin(int, *Database, Record, indexIterMinCB) (bool, error)
 	// Count counts the number of records. For debugging.
 	Count(*Database) (int, error)
 }
@@ -271,7 +271,7 @@ func newLeafIndex(
 	}, nil
 }
 
-func (l *indexLeaf) Iter(db *Database, cb indexIterCB) (bool, error) {
+func (l *indexLeaf) Iter(_ int, db *Database, cb indexIterCB) (bool, error) {
 	for _, pl := range l.cells {
 		if done, err := cb(pl); done || err != nil {
 			return done, err
@@ -280,7 +280,7 @@ func (l *indexLeaf) Iter(db *Database, cb indexIterCB) (bool, error) {
 	return false, nil
 }
 
-func (l *indexLeaf) IterMin(db *Database, min Record, cb indexIterMinCB) (bool, error) {
+func (l *indexLeaf) IterMin(_ int, db *Database, min Record, cb indexIterMinCB) (bool, error) {
 	for _, pl := range l.cells {
 		cmpRes, rec, err := lazyCmp(db, pl, min)
 		if err != nil {
@@ -338,13 +338,16 @@ func newInteriorIndex(
 	}, nil
 }
 
-func (l *indexInterior) Iter(db *Database, cb indexIterCB) (bool, error) {
+func (l *indexInterior) Iter(r int, db *Database, cb indexIterCB) (bool, error) {
+	if r == 0 {
+		return false, ErrRecursion
+	}
 	for _, c := range l.cells {
 		page, err := db.openIndex(c.left)
 		if err != nil {
 			return false, err
 		}
-		if done, err := page.Iter(db, cb); done || err != nil {
+		if done, err := page.Iter(r-1, db, cb); done || err != nil {
 			return done, err
 		}
 
@@ -358,10 +361,13 @@ func (l *indexInterior) Iter(db *Database, cb indexIterCB) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return page.Iter(db, cb)
+	return page.Iter(r-1, db, cb)
 }
 
-func (l *indexInterior) IterMin(db *Database, min Record, cb indexIterMinCB) (bool, error) {
+func (l *indexInterior) IterMin(r int, db *Database, min Record, cb indexIterMinCB) (bool, error) {
+	if r == 0 {
+		return false, ErrRecursion
+	}
 	for _, c := range l.cells {
 		cmpRes, rec, err := lazyCmp(db, c.payload, min)
 		if err != nil {
@@ -376,7 +382,7 @@ func (l *indexInterior) IterMin(db *Database, min Record, cb indexIterMinCB) (bo
 		if err != nil {
 			return false, err
 		}
-		if done, err := page.IterMin(db, min, cb); done || err != nil {
+		if done, err := page.IterMin(r-1, db, min, cb); done || err != nil {
 			return done, err
 		}
 
@@ -401,7 +407,7 @@ func (l *indexInterior) IterMin(db *Database, min Record, cb indexIterMinCB) (bo
 	if err != nil {
 		return false, err
 	}
-	return page.IterMin(db, min, cb)
+	return page.IterMin(r-1, db, min, cb)
 }
 
 func (l *indexInterior) Count(db *Database) (int, error) {

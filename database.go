@@ -302,19 +302,28 @@ func (db *Database) openIndex(page int) (indexBtree, error) {
 	return newIndexBtree(buf)
 }
 
-// Tables lists the table names.
+// Tables lists all table names. Also sqlite internal ones.
 func (db *Database) Tables() ([]string, error) {
+	return db.objectNames("table")
+}
+
+// Indexes lists all index names.
+func (db *Database) Indexes() ([]string, error) {
+	return db.objectNames("index")
+}
+
+func (db *Database) objectNames(typ string) ([]string, error) {
 	objects, err := db.master()
 	if err != nil {
 		return nil, err
 	}
-	var tables []string
+	var names []string
 	for _, o := range objects {
-		if o.typ == "table" {
-			tables = append(tables, o.name)
+		if o.typ == typ {
+			names = append(names, o.name)
 		}
 	}
-	return tables, nil
+	return names, nil
 }
 
 // Table opens the named table.

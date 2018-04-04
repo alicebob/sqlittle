@@ -288,6 +288,7 @@ func TestIndexSingle(t *testing.T) {
 
 	var rows []Record
 	if _, err := root.Iter(
+		maxRecursion,
 		db,
 		func(pl cellPayload) (bool, error) {
 			pf, err := addOverflow(db, pl)
@@ -340,6 +341,7 @@ func TestIndexWords(t *testing.T) {
 
 	var rows []Record
 	if _, err := root.Iter(
+		maxRecursion,
 		db,
 		func(pl cellPayload) (bool, error) {
 			pf, err := addOverflow(db, pl)
@@ -387,6 +389,7 @@ func TestIndexScanMin(t *testing.T) {
 
 	var rows []Record
 	if _, err := root.IterMin(
+		maxRecursion,
 		db,
 		Record{"improvise"},
 		func(_ int64, r Record) (bool, error) {
@@ -426,6 +429,7 @@ func TestIndexScanMin2(t *testing.T) {
 	// Load all rows >= 15 chars
 	var rows []Record
 	if _, err := root.IterMin(
+		maxRecursion,
 		db,
 		Record{int64(15)},
 		func(_ int64, r Record) (bool, error) {

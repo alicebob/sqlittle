@@ -101,6 +101,7 @@ func (in *Index) Scan(cb IndexScanCB) error {
 	}
 
 	_, err = root.Iter(
+		maxRecursion,
 		in.db,
 		func(pl cellPayload) (bool, error) {
 			full, err := addOverflow(in.db, pl)
@@ -133,6 +134,7 @@ func (in *Index) ScanMin(from Record, cb IndexScanCB) error {
 	}
 
 	_, err = root.IterMin(
+		maxRecursion,
 		in.db,
 		from,
 		func(rowid int64, rec Record) (bool, error) {

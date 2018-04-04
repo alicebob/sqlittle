@@ -33,6 +33,34 @@ func fuzz(data []byte) error {
 			return err
 		}
 	}
+
+	indexes, err := db.Indexes()
+	if err != nil {
+		return err
+	}
+	for _, in := range indexes {
+		index, err := db.Index(in)
+		if err != nil {
+			return err
+		}
+
+		if err := index.Scan(
+			func(rowid int64, rec Record) bool {
+				return false
+			},
+		); err != nil {
+			return err
+		}
+
+		if err := index.ScanMin(
+			Record{"q"},
+			func(rowid int64, rec Record) bool {
+				return false
+			},
+		); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
