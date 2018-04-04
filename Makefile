@@ -12,9 +12,10 @@ format:
 	go fmt
 
 sqlittle-fuzz.zip:
+	go get -v github.com/dvyukov/go-fuzz/...
 	go-fuzz-build github.com/alicebob/sqlittle
 
 fuzz: sqlittle-fuzz.zip
-	mkdir workdir
+	mkdir -p workdir
 	cp -r corpus workdir
 	go-fuzz -bin=sqlittle-fuzz.zip -workdir=workdir
