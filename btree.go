@@ -33,7 +33,7 @@ type tableBtree interface {
 	// Iter goes over every record
 	Iter(int, *Database, iterCB) (bool, error)
 	// Scan starting from a key
-	IterMin(*Database, int64, iterCB) (bool, error)
+	IterMin(int, *Database, int64, iterCB) (bool, error)
 	// Count counts the number of records. For debugging.
 	Count(*Database) (int, error)
 }
@@ -148,7 +148,7 @@ func (l *tableLeaf) Iter(_ int, _ *Database, cb iterCB) (bool, error) {
 	return false, nil
 }
 
-func (l *tableLeaf) IterMin(db *Database, rowid int64, cb iterCB) (bool, error) {
+func (l *tableLeaf) IterMin(_ int, db *Database, rowid int64, cb iterCB) (bool, error) {
 	n := sort.Search(len(l.cells), func(n int) bool {
 		return l.cells[n].left >= rowid
 	})
@@ -237,13 +237,16 @@ func (l *tableInterior) Iter(r int, db *Database, cb iterCB) (bool, error) {
 	})
 }
 
-func (l *tableInterior) IterMin(db *Database, rowid int64, cb iterCB) (bool, error) {
+func (l *tableInterior) IterMin(r int, db *Database, rowid int64, cb iterCB) (bool, error) {
+	if r == 0 {
+		return false, ErrRecursion
+	}
 	return l.cellIterMin(db, rowid, func(pageID int) (bool, error) {
 		page, err := db.openTable(pageID)
 		if err != nil {
 			return false, err
 		}
-		return page.IterMin(db, rowid, cb)
+		return page.IterMin(r-1, db, rowid, cb)
 	})
 }
 

@@ -61,6 +61,7 @@ func (t *Table) Rowid(rowid int64) (Record, error) {
 
 	var recPl *cellPayload
 	if _, err := root.IterMin(
+		maxRecursion,
 		t.db,
 		rowid,
 		func(k int64, pl cellPayload) (bool, error) {

@@ -29,6 +29,9 @@ func fuzz(data []byte) error {
 		); err != nil {
 			return err
 		}
+		if _, err := table.Rowid(42); err != nil {
+			return err
+		}
 	}
 	return nil
 }
