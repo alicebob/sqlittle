@@ -24,6 +24,7 @@ var (
 	ErrIncompatible          = errors.New("incompatible database version")
 	ErrEncoding              = errors.New("unsupported encoding")
 	ErrInvalidDef            = errors.New("invalid object definition")
+	ErrRecursion             = errors.New("tree is too deep")
 )
 
 type header struct {
@@ -223,7 +224,7 @@ func (db *Database) master() ([]sqliteMaster, error) {
 	}
 
 	var tables []sqliteMaster
-	_, err = master.Iter(db, func(rowid int64, pl cellPayload) (bool, error) {
+	_, err = master.Iter(maxRecursion, db, func(rowid int64, pl cellPayload) (bool, error) {
 		c, err := addOverflow(db, pl)
 		if err != nil {
 			return false, err

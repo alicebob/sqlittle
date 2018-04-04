@@ -37,3 +37,13 @@ func TestIssue4(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
+
+func TestIssue5(t *testing.T) {
+	f, err := ioutil.ReadFile("./test/issue_5.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := fuzz(f), ErrRecursion; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
