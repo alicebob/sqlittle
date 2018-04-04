@@ -6,7 +6,7 @@ func Fuzz(data []byte) int {
 	if err != nil {
 		return 0
 	}
-	tables, err := 	db.Tables()
+	tables, err := db.Tables()
 	if err != nil {
 		return 0
 	}

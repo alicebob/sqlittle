@@ -38,7 +38,7 @@ type header struct {
 type Database struct {
 	dirty  bool // reload header if true
 	l      pager
-	header header
+	header *header
 	tables *tableCache
 }
 
@@ -204,12 +204,11 @@ func (db *Database) resolveDirty() error {
 	if err != nil {
 		return err
 	}
-	db.dirty = false
-	if db.header.ChangeCounter == newHeader.ChangeCounter {
-		return nil
+	if db.header != nil && db.header.ChangeCounter != newHeader.ChangeCounter {
+		db.tables.clear()
 	}
-	db.header = newHeader
-	db.tables.clear()
+	db.dirty = false
+	db.header = &newHeader
 	return nil
 }
 
