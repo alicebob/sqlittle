@@ -23,6 +23,7 @@ var (
 	ErrCorrupted             = errors.New("database corrupted")
 	ErrIncompatible          = errors.New("incompatible database version")
 	ErrEncoding              = errors.New("unsupported encoding")
+	ErrInvalidDef            = errors.New("invalid object definition")
 )
 
 type header struct {
@@ -233,30 +234,33 @@ func (db *Database) master() ([]sqliteMaster, error) {
 		if err != nil {
 			return false, err
 		}
+		if len(e) != 5 {
+			return false, ErrInvalidDef
+		}
 
 		m := sqliteMaster{}
 		if s, ok := e[0].(string); !ok {
-			return false, errors.New("wrong column type for sqlite_master")
+			return false, ErrInvalidDef
 		} else {
 			m.typ = s
 		}
 		if s, ok := e[1].(string); !ok {
-			return false, errors.New("wrong column type for sqlite_master")
+			return false, ErrInvalidDef
 		} else {
 			m.name = s
 		}
 		if s, ok := e[2].(string); !ok {
-			return false, errors.New("wrong column type for sqlite_master")
+			return false, ErrInvalidDef
 		} else {
 			m.tblName = s
 		}
 		if n, ok := e[3].(int64); !ok {
-			return false, errors.New("wrong column type for sqlite_master")
+			return false, ErrInvalidDef
 		} else {
 			m.rootPage = int(n)
 		}
 		if s, ok := e[4].(string); !ok {
-			return false, errors.New("wrong column type for sqlite_master")
+			return false, ErrInvalidDef
 		} else {
 			m.sql = s
 		}
