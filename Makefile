@@ -11,11 +11,11 @@ bench:
 format:
 	go fmt
 
-sqlittle-fuzz.zip:
+fuzz:
 	go get -v github.com/dvyukov/go-fuzz/...
-	go-fuzz-build github.com/alicebob/sqlittle
 
-fuzz: sqlittle-fuzz.zip
+	rm sqlittle-fuzz.zip
+	go-fuzz-build github.com/alicebob/sqlittle
 	mkdir -p workdir
 	cp -r corpus workdir
 	go-fuzz -bin=sqlittle-fuzz.zip -workdir=workdir
