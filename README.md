@@ -85,3 +85,11 @@ stored in the database by SQLite. Notably that includes:
 - refuse to open files with a non-committed/failed non-wal journal
 - refuse to open wal journal files
 - parse embedded table and index definitions and make them available
+
+# &c.
+
+[Travis](https://travis-ci.org/alicebob/sqlittle)
+
+https://github.com/alicebob/sqlittle-ci tests sqlite and sqlittle interaction
+
+https://github.com/cznic/sqlite2go/ for another approach to pure Go SQLite
