@@ -352,6 +352,21 @@ func wordList(t *testing.T) []string {
 	}
 }
 
+func shuffle(n int, swap func(i, j int)) {
+	if n < 0 {
+		panic("invalid argument to shuffle")
+	}
+	i := n - 1
+	for ; i > 1<<31-1-1; i-- {
+		j := int(rand.Int63n(int64(i + 1)))
+		swap(i, j)
+	}
+	for ; i > 0; i-- {
+		j := int(rand.Int31n(int32(i + 1)))
+		swap(i, j)
+	}
+}
+
 func TestIOTableRowidLong(t *testing.T) {
 	db, err := OpenFile("./test/words.sqlite")
 	if err != nil {
@@ -381,7 +396,7 @@ func TestIOTableRowidLong(t *testing.T) {
 			},
 		})
 	}
-	rand.Shuffle(len(cases), func(i, j int) {
+	shuffle(len(cases), func(i, j int) {
 		cases[i], cases[j] = cases[j], cases[i]
 	})
 
