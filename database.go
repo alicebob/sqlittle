@@ -302,17 +302,32 @@ func (db *Database) openIndex(page int) (indexBtree, error) {
 	return newIndexBtree(buf)
 }
 
+// Tables lists the table names.
+func (db *Database) Tables() ([]string, error) {
+	objects, err := db.master()
+	if err != nil {
+		return nil, err
+	}
+	var tables []string
+	for _, o := range objects {
+		if o.typ == "table" {
+			tables = append(tables, o.name)
+		}
+	}
+	return tables, nil
+}
+
 // Table opens the named table.
 // Will return ErrNoSuchTable when the table isn't there (or isn't a table).
 // Table pointer is always valid if err == nil.
 func (db *Database) Table(name string) (*Table, error) {
-	tables, err := db.master()
+	objects, err := db.master()
 	if err != nil {
 		return nil, err
 	}
-	for _, t := range tables {
-		if t.typ == "table" && t.name == name {
-			return &Table{db: db, root: t.rootPage}, nil
+	for _, o := range objects {
+		if o.typ == "table" && o.name == name {
+			return &Table{db: db, root: o.rootPage}, nil
 		}
 	}
 	return nil, ErrNoSuchTable
