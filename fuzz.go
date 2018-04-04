@@ -1,29 +1,36 @@
 package sqlittle
 
 func Fuzz(data []byte) int {
+	if err := fuzz(data); err != nil {
+		return 0
+	}
+	return 1
+}
+
+func fuzz(data []byte) error {
 	p := bytePager(data)
 	db, err := newDatabase(&p)
 	if err != nil {
-		return 0
+		return err
 	}
 	tables, err := db.Tables()
 	if err != nil {
-		return 0
+		return err
 	}
 	for _, t := range tables {
 		table, err := db.Table(t)
 		if err != nil {
-			return 0
+			return err
 		}
 		if err := table.Scan(
 			func(rowid int64, rec Record) bool {
 				return false
 			},
 		); err != nil {
-			return 0
+			return err
 		}
 	}
-	return 1
+	return nil
 }
 
 type bytePager []byte

@@ -97,6 +97,7 @@ func readTableWords() ([]string, error) {
 
 	var rows []string
 	_, err = root.Iter(
+		maxRecursion,
 		db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(db, pl)

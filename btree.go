@@ -13,11 +13,25 @@ import (
 	"sort"
 )
 
+const (
+	// "Define the depth of a leaf b-tree to be 1 and the depth of any interior
+	// b-tree to be one more than the maximum depth of any of its children. In
+	// a well-formed database, all children of an interior b-tree have the same
+	// depth."
+	// and:
+	// "A "pointer" in an interior b-tree page is just the 31-bit integer page
+	// number of the child page."
+	// Ergo, in a well-formed database where every interal page only links to a
+	// single left branch (highly unlikely), we can't ever go deeper than 31
+	// levels.
+	maxRecursion = 31
+)
+
 // Iterate callback. Gets rowid and (possibly truncated) payload. Return true when done
 type iterCB func(rowid int64, pl cellPayload) (bool, error)
 type tableBtree interface {
 	// Iter goes over every record
-	Iter(*Database, iterCB) (bool, error)
+	Iter(int, *Database, iterCB) (bool, error)
 	// Scan starting from a key
 	IterMin(*Database, int64, iterCB) (bool, error)
 	// Count counts the number of records. For debugging.
@@ -125,7 +139,7 @@ func (l *tableLeaf) Count(*Database) (int, error) {
 	return len(l.cells), nil
 }
 
-func (l *tableLeaf) Iter(_ *Database, cb iterCB) (bool, error) {
+func (l *tableLeaf) Iter(_ int, _ *Database, cb iterCB) (bool, error) {
 	for _, c := range l.cells {
 		if done, err := cb(c.left, c.payload); done || err != nil {
 			return done, err
@@ -207,13 +221,16 @@ func (l *tableInterior) Count(db *Database) (int, error) {
 	return total, nil
 }
 
-func (l *tableInterior) Iter(db *Database, cb iterCB) (bool, error) {
+func (l *tableInterior) Iter(r int, db *Database, cb iterCB) (bool, error) {
+	if r == 0 {
+		return false, ErrRecursion
+	}
 	return l.cellIter(db, func(p int) (bool, error) {
 		page, err := db.openTable(p)
 		if err != nil {
 			return false, err
 		}
-		if done, err := page.Iter(db, cb); done || err != nil {
+		if done, err := page.Iter(r-1, db, cb); done || err != nil {
 			return done, err
 		}
 		return false, nil

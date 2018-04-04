@@ -31,6 +31,7 @@ func (t *Table) Scan(cb TableScanCB) error {
 		return err
 	}
 	_, err = root.Iter(
+		maxRecursion,
 		t.db,
 		func(rowid int64, pl cellPayload) (bool, error) {
 			c, err := addOverflow(t.db, pl)
