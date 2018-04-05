@@ -5,6 +5,12 @@ type SelectStmt struct {
 	Table   string
 }
 
-type CreatTableStmt struct {
-	Table string
+type ColumnDef struct {
+	Name string
+	Type string
+	Null bool
+}
+type CreateTableStmt struct {
+	Table   string
+	Columns []ColumnDef
 }

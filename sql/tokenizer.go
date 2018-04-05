@@ -13,6 +13,8 @@ var (
 		"FROM":   FROM,
 		"CREATE": CREATE,
 		"TABLE":  TABLE,
+		"NOT":    NOT,
+		"NULL":   NULL,
 	}
 )
 

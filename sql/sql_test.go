@@ -33,8 +33,17 @@ func TestSQL(t *testing.T) {
 
 		// create table
 		{
-			sql:  "CREATE TABLE foo",
-			want: CreatTableStmt{"foo"},
+			sql: "CREATE TABLE foo",
+			err: errors.New("syntax error"),
+		},
+		{
+			sql: "CREATE table animals (name varchar not null, age int)",
+			want: CreateTableStmt{
+				Table: "animals",
+				Columns: []ColumnDef{
+					{"name", "varchar", false}, {"age", "int", true},
+				},
+			},
 		},
 		{
 			sql: "CREATE nothing foo",
