@@ -9,10 +9,10 @@ import (
 
 var (
 	keywords = map[string]int{
-		"SELECT": tSelect,
-		"FROM":   tFrom,
-		"CREATE": tCreate,
-		"TABLE":  tTable,
+		"SELECT": SELECT,
+		"FROM":   FROM,
+		"CREATE": CREATE,
+		"TABLE":  TABLE,
 	}
 )
 

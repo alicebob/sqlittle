@@ -15,16 +15,16 @@ func TestTokens(t *testing.T) {
 		{
 			sql: "create table foo",
 			want: []token{
-				token{tCreate, "create"},
-				token{tTable, "table"},
+				token{CREATE, "create"},
+				token{TABLE, "table"},
 				token{tBare, "foo"},
 			},
 		},
 		{
 			sql: "create table foo (col1, col2, col3)",
 			want: []token{
-				token{tCreate, "create"},
-				token{tTable, "table"},
+				token{CREATE, "create"},
+				token{TABLE, "table"},
 				token{tBare, "foo"},
 				token{'(', "("},
 				token{tBare, "col1"},
@@ -39,9 +39,9 @@ func TestTokens(t *testing.T) {
 			// *
 			sql: "select * from foo",
 			want: []token{
-				token{tSelect, "select"},
+				token{SELECT, "select"},
 				token{'*', "*"},
-				token{tFrom, "from"},
+				token{FROM, "from"},
 				token{tBare, "foo"},
 			},
 		},
@@ -49,9 +49,9 @@ func TestTokens(t *testing.T) {
 			// fancy whitespace
 			sql: "  \tselect\n*\nfrom   foo ",
 			want: []token{
-				token{tSelect, "select"},
+				token{SELECT, "select"},
 				token{'*', "*"},
-				token{tFrom, "from"},
+				token{FROM, "from"},
 				token{tBare, "foo"},
 			},
 		},
