@@ -17,7 +17,7 @@ func (l *Lexer) Lex(lval *yySymType) int {
 	tok := l.tokens[0]
 	l.tokens = l.tokens[1:]
 
-	lval.token = tok
+	lval.identifier = tok.s
 	return tok.typ
 }
 

@@ -7,9 +7,8 @@ import __yyfmt__ "fmt"
 //line parser.go.y:5
 type yySymType struct {
 	yys           int
-	token         token
-	expr          interface{}
 	identifier    string
+	expr          interface{}
 	columnList    []string
 	columnName    string
 	columnDefList []ColumnDef
@@ -452,85 +451,85 @@ yydefault:
 
 	case 3:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:36
+		//line parser.go.y:35
 		{
-			yyVAL.identifier = yyDollar[1].token.s
+			yyVAL.identifier = yyDollar[1].identifier
 		}
 	case 4:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:41
+		//line parser.go.y:40
 		{
 			yyVAL.columnName = yyDollar[1].identifier
 		}
 	case 5:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:44
+		//line parser.go.y:43
 		{
 			yyVAL.columnName = "*"
 		}
 	case 6:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:49
+		//line parser.go.y:48
 		{
 			yyVAL.columnList = []string{yyDollar[1].columnName}
 		}
 	case 7:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:52
+		//line parser.go.y:51
 		{
 			yyVAL.columnList = append(yyDollar[1].columnList, yyDollar[3].columnName)
 		}
 	case 8:
 		yyDollar = yyS[yypt-4 : yypt+1]
-		//line parser.go.y:57
+		//line parser.go.y:56
 		{
 			yylex.(*Lexer).result = SelectStmt{Columns: yyDollar[2].columnList, Table: yyDollar[4].identifier}
 		}
 	case 9:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:62
+		//line parser.go.y:61
 		{
 			yyVAL.columnDefList = []ColumnDef{yyDollar[1].columnDef}
 		}
 	case 10:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:65
+		//line parser.go.y:64
 		{
 			yyVAL.columnDefList = append(yyDollar[1].columnDefList, yyDollar[3].columnDef)
 		}
 	case 11:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:70
+		//line parser.go.y:69
 		{
 			yyVAL.columnDef = ColumnDef{Name: yyDollar[1].identifier, Null: yyDollar[2].null}
 		}
 	case 12:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:73
+		//line parser.go.y:72
 		{
-			yyVAL.columnDef = ColumnDef{Name: yyDollar[1].identifier, Type: yyDollar[2].token.s, Null: yyDollar[3].null}
+			yyVAL.columnDef = ColumnDef{Name: yyDollar[1].identifier, Type: yyDollar[2].identifier, Null: yyDollar[3].null}
 		}
 	case 13:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:78
+		//line parser.go.y:77
 		{
 			yyVAL.null = true
 		}
 	case 14:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:81
+		//line parser.go.y:80
 		{
 			yyVAL.null = false
 		}
 	case 15:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:84
+		//line parser.go.y:83
 		{
 			yyVAL.null = true
 		}
 	case 16:
 		yyDollar = yyS[yypt-6 : yypt+1]
-		//line parser.go.y:90
+		//line parser.go.y:88
 		{
 			yylex.(*Lexer).result = CreateTableStmt{Table: yyDollar[3].identifier, Columns: yyDollar[5].columnDefList}
 		}

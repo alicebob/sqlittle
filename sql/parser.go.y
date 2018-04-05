@@ -3,9 +3,8 @@ package sql
 %}
 
 %union {
-	token token
-	expr interface{}
 	identifier string
+	expr interface{}
 	columnList []string
 	columnName string
 	columnDefList []ColumnDef
@@ -23,8 +22,8 @@ package sql
 %type<columnDef> columnDef
 %type<null> null
 
-%token<token> SELECT FROM CREATE TABLE NOT NULL
-%token<token> tBare
+%token SELECT FROM CREATE TABLE NOT NULL
+%token<identifier> tBare
 
 %%
 
@@ -34,7 +33,7 @@ program:
 
 identifier:
 	tBare {
-		$$ = $1.s
+		$$ = $1
 	}
 
 columnName:
@@ -71,7 +70,7 @@ columnDef:
 		$$ = ColumnDef{Name: $1, Null: $2}
 	} |
 	identifier tBare null {
-		$$ = ColumnDef{Name: $1, Type: $2.s, Null: $3}
+		$$ = ColumnDef{Name: $1, Type: $2, Null: $3}
 	}
 
 null:
