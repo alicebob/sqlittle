@@ -24,13 +24,3 @@ func (l *Lexer) Lex(lval *yySymType) int {
 func (l *Lexer) Error(e string) {
 	l.err = errors.New(e)
 }
-
-func Parse(sql string) (interface{}, error) {
-	ts, err := tokenize(sql)
-	if err != nil {
-		return nil, err
-	}
-	l := &Lexer{tokens: ts}
-	yyParse(l)
-	return l.result, l.err
-}
