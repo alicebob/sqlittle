@@ -82,6 +82,15 @@ func TestCreateTable(t *testing.T) {
 					},
 				},
 			},
+			{
+				sql: "create table 'table' ('table' 'table')",
+				want: CreateTableStmt{
+					Table: "table",
+					Columns: []ColumnDef{
+						{Name: "table", Type: "table", Null: true},
+					},
+				},
+			},
 		},
 	)
 

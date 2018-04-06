@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -74,10 +75,26 @@ func TestTokens(t *testing.T) {
 				token{tBare, "foo"},
 			},
 		},
+		{
+			sql: "from FROM 'from' ''",
+			want: []token{
+				token{FROM, "from"},
+				token{FROM, "FROM"},
+				token{tBare, "from"},
+				token{tBare, ""},
+			},
+		},
+		{
+			sql: "foo 'bar",
+			err: errors.New("no terminating ' found"),
+		},
 	} {
 		ts, err := tokenize(c.sql)
 		if have, want := err, c.err; !reflect.DeepEqual(have, want) {
 			t.Errorf("case %d: have %#v, want %#v", n, have, want)
+			continue
+		}
+		if c.err != nil {
 			continue
 		}
 		if have, want := ts, (c.want); !reflect.DeepEqual(have, want) {

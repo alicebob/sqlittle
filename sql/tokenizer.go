@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"unicode"
@@ -55,6 +56,13 @@ func tokenize(s string) ([]token, error) {
 			i += l - 1
 		case c == '(' || c == ')' || c == ',' || c == '*':
 			res = append(res, token{int(c), string(c)})
+		case c == '\'':
+			bt, bl := readSingleQuoted(s[i+1:])
+			if bl == -1 {
+				return res, errors.New("no terminating ' found")
+			}
+			res = append(res, token{tBare, bt})
+			i += bl
 		default:
 			return nil, fmt.Errorf("unexpected char at pos:%d: %q", i, c)
 		}
@@ -86,4 +94,16 @@ func readSignedNumber(s string) (string, int) {
 		}
 	}
 	return s, len(s)
+}
+
+// parse a 'bareword'. Opening ' is already gone. No escape sequences.
+func readSingleQuoted(s string) (string, int) {
+	for i, r := range s {
+		switch r {
+		case '\'':
+			return s[:i], i + 1
+		default:
+		}
+	}
+	return "", -1
 }
