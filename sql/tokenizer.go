@@ -13,6 +13,8 @@ var (
 		"FROM":          FROM,
 		"CREATE":        CREATE,
 		"TABLE":         TABLE,
+		"INDEX":         INDEX,
+		"ON":            ON,
 		"NOT":           NOT,
 		"NULL":          NULL,
 		"UNIQUE":        UNIQUE,
@@ -39,7 +41,7 @@ func tokenize(s string) ([]token, error) {
 		switch {
 		case unicode.IsSpace(c):
 			// ignore
-		case unicode.IsLetter(c):
+		case unicode.IsLetter(c) || c == '_':
 			bt, bl := readBareword(s[i:])
 			tnr := tBare
 			if n, ok := keywords[strings.ToUpper(bt)]; ok {
@@ -65,6 +67,7 @@ func readBareword(s string) (string, int) {
 		switch {
 		case unicode.IsLetter(r):
 		case i > 0 && unicode.IsDigit(r):
+		case r == '_':
 		default:
 			return s[:i], i
 		}

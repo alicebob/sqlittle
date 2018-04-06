@@ -13,6 +13,25 @@ func TestTokens(t *testing.T) {
 	}
 	for n, c := range []cas{
 		{
+			sql: "foo foo_bar FoObAr foo1 _foo café",
+			want: []token{
+				token{tBare, "foo"},
+				token{tBare, "foo_bar"},
+				token{tBare, "FoObAr"},
+				token{tBare, "foo1"},
+				token{tBare, "_foo"},
+				token{tBare, "café"},
+			},
+		},
+		{
+			sql: "1 -12 +34",
+			want: []token{
+				token{tSignedNumber, "1"},
+				token{tSignedNumber, "-12"},
+				token{tSignedNumber, "+34"},
+			},
+		},
+		{
 			sql: "create table foo",
 			want: []token{
 				token{CREATE, "create"},
@@ -53,14 +72,6 @@ func TestTokens(t *testing.T) {
 				token{'*', "*"},
 				token{FROM, "from"},
 				token{tBare, "foo"},
-			},
-		},
-		{
-			sql: "1 -12 +34",
-			want: []token{
-				token{tSignedNumber, "1"},
-				token{tSignedNumber, "-12"},
-				token{tSignedNumber, "+34"},
 			},
 		},
 	} {

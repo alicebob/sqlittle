@@ -8,7 +8,26 @@ const (
 	PKDesc
 )
 
-// Type of a column, as found by CreateTableStmt
+type SortOrder int
+
+const (
+	Asc SortOrder = iota
+	Desc
+)
+
+// A `SELECT` statement
+type SelectStmt struct {
+	Columns []string
+	Table   string
+}
+
+// A `CREATE TABLE` statement
+type CreateTableStmt struct {
+	Table   string
+	Columns []ColumnDef
+}
+
+// Definition of a column, as found by CreateTableStmt
 type ColumnDef struct {
 	Name          string
 	Type          string
@@ -22,16 +41,20 @@ type ColumnDef struct {
 	// foreign key
 }
 
-// A `SELECT` statement
-type SelectStmt struct {
-	Columns []string
-	Table   string
+// A `CREATE INDEX` statement
+type CreateIndexStmt struct {
+	Index          string
+	Table          string
+	Unique         bool
+	IndexedColumns []IndexDef
+	// Where
 }
 
-// A `CREATE TABLE` statement
-type CreateTableStmt struct {
-	Table   string
-	Columns []ColumnDef
+// Indexed column, for CreateIndexStmt
+type IndexDef struct {
+	Column    string
+	SortOrder SortOrder
+	// Collate
 }
 
 // Parse is the main function. It will return either an error or a *Stmt

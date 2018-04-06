@@ -6,52 +6,14 @@ import (
 	"testing"
 )
 
-func TestSQL(t *testing.T) {
+type sqlCase struct {
+	sql  string
+	want interface{}
+	err  error
+}
 
-	type sqlCase struct {
-		sql  string
-		want interface{}
-		err  error
-	}
-
-	cases := []sqlCase{
-		// unknown
-		{
-			sql: "INSERT INTO FOO",
-			err: errors.New("syntax error"),
-		},
-
-		// select
-		{
-			sql:  "SELECT * FROM foo",
-			want: SelectStmt{Columns: []string{"*"}, Table: "foo"},
-		},
-		{
-			sql:  "SELECT aap,noot, mies FROM foo2",
-			want: SelectStmt{Columns: []string{"aap", "noot", "mies"}, Table: "foo2"},
-		},
-
-		// create table
-		{
-			sql: "CREATE TABLE foo",
-			err: errors.New("syntax error"),
-		},
-		{
-			// See TestCreateTable for more column definition tests
-			sql: "CREATE table animals (name varchar not null, age int)",
-			want: CreateTableStmt{
-				Table: "animals",
-				Columns: []ColumnDef{
-					{Name: "name", Type: "varchar"}, {Name: "age", Type: "int", Null: true},
-				},
-			},
-		},
-		{
-			sql: "CREATE nothing foo",
-			err: errors.New("syntax error"),
-		},
-	}
-
+func testSQL(t *testing.T, cases []sqlCase) {
+	t.Helper()
 	for n, c := range cases {
 		stmt, err := Parse(c.sql)
 		if have, want := err, c.err; !reflect.DeepEqual(have, want) {
@@ -67,7 +29,62 @@ func TestSQL(t *testing.T) {
 	}
 }
 
+func TestSQL(t *testing.T) {
+	testSQL(
+		t,
+		[]sqlCase{
+			// unknown
+			{
+				sql: "INSERT INTO FOO",
+				err: errors.New("syntax error"),
+			},
+		},
+	)
+}
+
+func TestSelect(t *testing.T) {
+	testSQL(
+		t,
+		[]sqlCase{
+			// select
+			{
+				sql:  "SELECT * FROM foo",
+				want: SelectStmt{Columns: []string{"*"}, Table: "foo"},
+			},
+			{
+				sql:  "SELECT aap,noot, mies FROM foo2",
+				want: SelectStmt{Columns: []string{"aap", "noot", "mies"}, Table: "foo2"},
+			},
+
+			// create what?
+			{
+				sql: "CREATE nothing foo",
+				err: errors.New("syntax error"),
+			},
+		},
+	)
+}
+
 func TestCreateTable(t *testing.T) {
+	testSQL(
+		t,
+		[]sqlCase{
+			{
+				sql: "CREATE TABLE foo",
+				err: errors.New("syntax error"),
+			},
+			{
+				sql: "CREATE table animals (name varchar not null, age int)",
+				want: CreateTableStmt{
+					Table: "animals",
+					Columns: []ColumnDef{
+						{Name: "name", Type: "varchar"}, {Name: "age", Type: "int", Null: true},
+					},
+				},
+			},
+		},
+	)
+
 	// CREATE TABLE column definition tests.
 	// a nil value means we expect an error
 	cases := map[string]*ColumnDef{
@@ -113,4 +130,38 @@ func TestCreateTable(t *testing.T) {
 			t.Errorf("case %q: have %#v, want %#v", sql, have, want)
 		}
 	}
+}
+
+func TestCreateIndex(t *testing.T) {
+	testSQL(
+		t,
+		[]sqlCase{
+			{
+				sql: "CREATE INDEX foo",
+				err: errors.New("syntax error"),
+			},
+			{
+				sql: "CREATE INDEX foo_index ON foo (name DESC, age)",
+				want: CreateIndexStmt{
+					Index: "foo_index",
+					Table: "foo",
+					IndexedColumns: []IndexDef{
+						{Column: "name", SortOrder: Desc},
+						{Column: "age", SortOrder: Asc},
+					},
+				},
+			},
+			{
+				sql: "CREATE UNIQUE INDEX foo_index ON foo (name)",
+				want: CreateIndexStmt{
+					Index:  "foo_index",
+					Table:  "foo",
+					Unique: true,
+					IndexedColumns: []IndexDef{
+						{Column: "name", SortOrder: Asc},
+					},
+				},
+			},
+		},
+	)
 }

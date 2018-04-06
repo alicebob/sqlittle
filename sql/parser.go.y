@@ -10,29 +10,36 @@ package sql
 	columnName string
 	columnDefList []ColumnDef
 	columnDef ColumnDef
+	indexedColumnDefList []IndexDef
+	indexedColumnDef IndexDef
 	name string
 	primaryKey PrimaryKey
 	autoIncrement bool
 	unique bool
 	null bool
+	sortOrder SortOrder
 }
 
 %type<expr> program
 %type<expr> selectStmt
 %type<expr> createTableStmt
+%type<expr> createIndexStmt
 %type<identifier> identifier
 %type<signedNumber> signedNumber
 %type<columnList> columnList
 %type<columnName> columnName
 %type<columnDefList> columnDefList
 %type<columnDef> columnDef
+%type<indexedColumnDefList> indexedColumnDefList
+%type<indexedColumnDef> indexedColumnDef
 %type<name> typeName
 %type<primaryKey> primaryKey
 %type<null> null
 %type<unique> unique
 %type<autoIncrement> autoIncrement
+%type<sortOrder> sortOrder
 
-%token SELECT FROM CREATE TABLE PRIMARY KEY ASC DESC AUTOINCREMENT NOT NULL UNIQUE
+%token SELECT FROM CREATE TABLE INDEX ON PRIMARY KEY ASC DESC AUTOINCREMENT NOT NULL UNIQUE
 %token<identifier> tBare
 %token<signedNumber> tSignedNumber
 
@@ -40,7 +47,8 @@ package sql
 
 program:
 	selectStmt |
-	createTableStmt
+	createTableStmt |
+	createIndexStmt
 
 identifier:
 	tBare {
@@ -66,11 +74,6 @@ columnList:
 	} |
 	columnList ',' columnName {
 		$$ = append($1, $3)
-	}
-
-selectStmt:
-	SELECT columnList FROM identifier {
-		yylex.(*Lexer).result = SelectStmt{ Columns: $2, Table: $4 }
 	}
 
 columnDefList:
@@ -121,6 +124,17 @@ primaryKey:
 		$$ = PKDesc
 	}
 
+sortOrder:
+	{
+		$$ = Asc
+	} |
+	ASC {
+		$$ = Asc
+	} |
+	DESC {
+		$$ = Desc
+	}
+
 autoIncrement:
 	{
 		$$ = false
@@ -148,7 +162,38 @@ unique:
 		$$ = true
 	}
 
+indexedColumnDefList:
+	indexedColumnDef {
+		$$ = []IndexDef{$1}
+	} |
+	indexedColumnDefList ',' indexedColumnDef {
+		$$ = append($1, $3)
+	}
+
+indexedColumnDef:
+	identifier sortOrder {
+		$$ = IndexDef{
+			Column: $1,
+			SortOrder: $2,
+		}
+	}
+
+selectStmt:
+	SELECT columnList FROM identifier {
+		yylex.(*Lexer).result = SelectStmt{ Columns: $2, Table: $4 }
+	}
+
 createTableStmt:
 	CREATE TABLE identifier '(' columnDefList ')' {
 		yylex.(*Lexer).result = CreateTableStmt{ Table: $3, Columns: $5 }
+	}
+
+createIndexStmt:
+	CREATE unique INDEX identifier ON identifier '(' indexedColumnDefList ')' {
+		yylex.(*Lexer).result = CreateIndexStmt{
+			Index: $4,
+			Table: $6,
+			Unique: $2,
+			IndexedColumns: $8,
+		}
 	}
