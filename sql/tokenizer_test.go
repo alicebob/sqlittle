@@ -55,6 +55,14 @@ func TestTokens(t *testing.T) {
 				token{tBare, "foo"},
 			},
 		},
+		{
+			sql: "1 -12 +34",
+			want: []token{
+				token{tSignedNumber, "1"},
+				token{tSignedNumber, "-12"},
+				token{tSignedNumber, "+34"},
+			},
+		},
 	} {
 		ts, err := tokenize(c.sql)
 		if have, want := err, c.err; !reflect.DeepEqual(have, want) {

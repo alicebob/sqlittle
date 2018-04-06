@@ -5,11 +5,27 @@ type SelectStmt struct {
 	Table   string
 }
 
+type PrimaryKey int
+
+const (
+	PKNone PrimaryKey = iota
+	PKAsc
+	PKDesc
+)
+
 type ColumnDef struct {
-	Name string
-	Type string
-	Null bool
+	Name          string
+	Type          string
+	PrimaryKey    PrimaryKey
+	AutoIncrement bool
+	Null          bool
+	Unique        bool
+	// Check
+	// Default
+	// Collate
+	// foreign key
 }
+
 type CreateTableStmt struct {
 	Table   string
 	Columns []ColumnDef

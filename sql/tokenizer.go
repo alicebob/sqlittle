@@ -9,12 +9,18 @@ import (
 
 var (
 	keywords = map[string]int{
-		"SELECT": SELECT,
-		"FROM":   FROM,
-		"CREATE": CREATE,
-		"TABLE":  TABLE,
-		"NOT":    NOT,
-		"NULL":   NULL,
+		"SELECT":        SELECT,
+		"FROM":          FROM,
+		"CREATE":        CREATE,
+		"TABLE":         TABLE,
+		"NOT":           NOT,
+		"NULL":          NULL,
+		"UNIQUE":        UNIQUE,
+		"PRIMARY":       PRIMARY,
+		"KEY":           KEY,
+		"ASC":           ASC,
+		"DESC":          DESC,
+		"AUTOINCREMENT": AUTOINCREMENT,
 	}
 )
 
@@ -41,6 +47,10 @@ func tokenize(s string) ([]token, error) {
 			}
 			res = append(res, token{tnr, bt})
 			i += bl - 1
+		case unicode.IsDigit(c) || c == '+' || c == '-':
+			d, l := readSignedNumber(s[i:])
+			res = append(res, token{tSignedNumber, d})
+			i += l - 1
 		case c == '(' || c == ')' || c == ',' || c == '*':
 			res = append(res, token{int(c), string(c)})
 		default:
@@ -55,6 +65,19 @@ func readBareword(s string) (string, int) {
 		switch {
 		case unicode.IsLetter(r):
 		case i > 0 && unicode.IsDigit(r):
+		default:
+			return s[:i], i
+		}
+	}
+	return s, len(s)
+}
+
+func readSignedNumber(s string) (string, int) {
+	// TODO: decimals, scientific notation
+	for i, r := range s {
+		switch {
+		case i == 0 && r == '+' || r == '-':
+		case unicode.IsDigit(r):
 		default:
 			return s[:i], i
 		}
