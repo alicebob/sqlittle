@@ -50,6 +50,7 @@ func TestHeader(t *testing.T) {
 				PageSize:      4096,
 				ReservedSpace: 0,
 				ChangeCounter: 4,
+				SchemaCookie:  1,
 			},
 		},
 
@@ -98,6 +99,7 @@ func TestHeader(t *testing.T) {
 				PageSize:      0x010000,
 				ReservedSpace: 0,
 				ChangeCounter: 4,
+				SchemaCookie:  1,
 			},
 		},
 
@@ -122,6 +124,7 @@ func TestHeader(t *testing.T) {
 				PageSize:      0x1000,
 				ReservedSpace: 0x10,
 				ChangeCounter: 4,
+				SchemaCookie:  1,
 			},
 		},
 
@@ -203,6 +206,7 @@ func TestHeader(t *testing.T) {
 				PageSize:      0x1000,
 				ReservedSpace: 0,
 				ChangeCounter: 4,
+				SchemaCookie:  1,
 			},
 		},
 

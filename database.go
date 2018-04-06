@@ -11,7 +11,7 @@ const (
 	headerMagic = "SQLite format 3\x00"
 	headerSize  = 100
 	// CacheTables is the number of tables pages to keep in memory. Default
-	// size per page is about 4K.
+	// size per page is 4K (1K on older databases).
 	CacheTables = 100
 )
 
@@ -34,13 +34,21 @@ type header struct {
 	ReservedSpace int
 	// Updated when anything changes (only for non-WAL files).
 	ChangeCounter uint32
+	// Updated when any table definition changes
+	SchemaCookie uint32
+}
+
+type objectCache struct {
+	objects []sqliteMaster
+	err     error
 }
 
 type Database struct {
-	dirty  bool // reload header if true
-	l      pager
-	header *header
-	tables *tableCache
+	dirty       bool // reload header if true
+	l           pager
+	header      *header
+	tableCache  *tableCache // table btree page cache
+	objectCache *objectCache
 }
 
 // OpenFile opens a .sqlite file. This is the main entry point.
@@ -55,9 +63,9 @@ func OpenFile(f string) (*Database, error) {
 
 func newDatabase(l pager) (*Database, error) {
 	d := &Database{
-		dirty:  true,
-		l:      l,
-		tables: newTableCache(CacheTables),
+		dirty:      true,
+		l:          l,
+		tableCache: newTableCache(CacheTables),
 	}
 	return d, d.resolveDirty()
 }
@@ -101,7 +109,7 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		_                    uint32
 		_                    uint32
 		_                    uint32
-		_                    uint32 // SchemaCookie
+		SchemaCookie         uint32
 		SchemaFormat         uint32
 		_                    uint32
 		_                    uint32
@@ -151,6 +159,8 @@ func parseHeader(b [headerSize]byte) (header, error) {
 
 	h.ChangeCounter = hs.ChangeCounter
 
+	h.SchemaCookie = hs.SchemaCookie
+
 	// 1,2,3,4 are the only valid values. Version 1 ignores 'DESC' on indexes,
 	// so we could support that as long as we ignore any 'DESC' index, but...
 	switch hs.SchemaFormat {
@@ -178,20 +188,6 @@ func parseHeader(b [headerSize]byte) (header, error) {
 	return h, nil
 }
 
-// master records are defined as:
-// CREATE TABLE sqlite_master(
-//     type text,
-//     name text,
-//     tbl_name text,
-//     rootpage integer,
-//     sql text
-// );
-type sqliteMaster struct {
-	typ, name, tblName string
-	rootPage           int
-	sql                string
-}
-
 func (db *Database) resolveDirty() error {
 	if !db.dirty {
 		return nil
@@ -206,11 +202,28 @@ func (db *Database) resolveDirty() error {
 		return err
 	}
 	if db.header != nil && db.header.ChangeCounter != newHeader.ChangeCounter {
-		db.tables.clear()
+		db.tableCache.clear()
+	}
+	if db.header != nil && db.header.SchemaCookie != newHeader.SchemaCookie {
+		db.objectCache = nil
 	}
 	db.dirty = false
 	db.header = &newHeader
 	return nil
+}
+
+// master records are defined as:
+// CREATE TABLE sqlite_master(
+//     type text,
+//     name text,
+//     tbl_name text,
+//     rootpage integer,
+//     sql text
+// );
+type sqliteMaster struct {
+	typ, name, tblName string
+	rootPage           int
+	sql                string
 }
 
 func (db *Database) master() ([]sqliteMaster, error) {
@@ -218,12 +231,16 @@ func (db *Database) master() ([]sqliteMaster, error) {
 		return nil, err
 	}
 
+	if o := db.objectCache; o != nil {
+		return o.objects, o.err
+	}
+
 	master, err := db.openTable(1)
 	if err != nil {
 		return nil, err
 	}
 
-	var tables []sqliteMaster
+	var objects []sqliteMaster
 	_, err = master.Iter(maxRecursion, db, func(rowid int64, pl cellPayload) (bool, error) {
 		c, err := addOverflow(db, pl)
 		if err != nil {
@@ -264,10 +281,16 @@ func (db *Database) master() ([]sqliteMaster, error) {
 		} else {
 			m.sql = s
 		}
-		tables = append(tables, m)
+		objects = append(objects, m)
 		return false, nil
 	})
-	return tables, err
+
+	db.objectCache = &objectCache{
+		objects: objects,
+		err:     err,
+	}
+
+	return objects, err
 }
 
 func (db *Database) openTable(page int) (tableBtree, error) {
@@ -275,7 +298,7 @@ func (db *Database) openTable(page int) (tableBtree, error) {
 		return nil, err
 	}
 
-	if p := db.tables.get(page); p != nil {
+	if p := db.tableCache.get(page); p != nil {
 		return p, nil
 	}
 
@@ -285,7 +308,7 @@ func (db *Database) openTable(page int) (tableBtree, error) {
 	}
 	p, err := newTableBtree(buf, page == 1)
 	if err == nil {
-		db.tables.set(page, p)
+		db.tableCache.set(page, p)
 	}
 	return p, err
 }
