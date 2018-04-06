@@ -2,9 +2,30 @@
 
 package sqlittle
 
+import (
+	"errors"
+
+	"github.com/alicebob/sqlittle/sql"
+)
+
 type Table struct {
 	db   *Database
 	root int
+	sql  string
+}
+
+// Def returns the table definition. Not everything SQLite supports is
+// supported (yet).
+func (t *Table) Def() (*sql.CreateTableStmt, error) {
+	c, err := sql.Parse(t.sql)
+	if err != nil {
+		return nil, err
+	}
+	stmt, ok := c.(sql.CreateTableStmt)
+	if !ok {
+		return nil, errors.New("no CREATE TABLE attached")
+	}
+	return &stmt, nil
 }
 
 type Index struct {

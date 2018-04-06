@@ -1,7 +1,10 @@
 package sqlittle
 
 import (
+	"reflect"
 	"testing"
+
+	"github.com/alicebob/sqlittle/sql"
 )
 
 func TestLowEmpty(t *testing.T) {
@@ -29,6 +32,34 @@ func TestLowEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 	if have, want := count, 0; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
+
+func TestLowTableDef(t *testing.T) {
+	db, err := OpenFile("./test/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	table, err := db.Table("words")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	def, err := table.Def()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if have, want := def, (&sql.CreateTableStmt{
+		Table: "words",
+		Columns: []sql.ColumnDef{
+			{Name: "word", Type: "varchar", Null: true},
+			{Name: "length", Type: "int", Null: true},
+		},
+	}); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }

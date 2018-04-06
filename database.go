@@ -336,7 +336,7 @@ func (db *Database) Table(name string) (*Table, error) {
 	}
 	for _, o := range objects {
 		if o.typ == "table" && o.name == name {
-			return &Table{db: db, root: o.rootPage}, nil
+			return &Table{db: db, root: o.rootPage, sql: o.sql}, nil
 		}
 	}
 	return nil, ErrNoSuchTable
