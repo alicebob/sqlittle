@@ -53,6 +53,17 @@ methods and examples, but the gist of a table scan is:
     })
 
 
+Printing the columns (see the [sqlittle/sql docs](https://godoc.org/github.com/alicebob/sqlittle/sql) for what's available:
+
+	db, _ := OpenFile("test/single.sqlite")
+	defer db.Close()
+	table, _ := db.Table("hello")
+    d, _ := table.Def()
+    for i, col := range d.Columns {
+        fmt.Printf("col %d: %s\n", i, col.Name)
+    }
+
+
 ## low level locks
 
 If you somehow know that no-one will change the .sqlite file you don't have to
@@ -84,8 +95,9 @@ stored in the database by SQLite. Notably that includes:
 - deal with the reserved region
 - refuse to open files with a non-committed/failed non-wal journal
 - refuse to open wal journal files
-- parse embedded table and index definitions and make them available
+- ~~parse embedded table and index definitions and make them available~~
 - go back to mmap for pager_unix
+- parse more exotic table and index definitions
 
 # &c.
 

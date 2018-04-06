@@ -15,6 +15,17 @@ const (
 	Desc
 )
 
+func (so SortOrder) String() string {
+	switch so {
+	case Asc:
+		return "ASC"
+	case Desc:
+		return "DESC"
+	default:
+		return "???"
+	}
+}
+
 // A `SELECT` statement
 type SelectStmt struct {
 	Columns []string

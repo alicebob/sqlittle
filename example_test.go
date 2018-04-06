@@ -121,3 +121,49 @@ func ExampleDatabase_IndexScanMin() {
 	// writhing
 	// wusses
 }
+
+func ExampleIndex_Def() {
+	db, err := OpenFile("test/words.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	table, err := db.Table("words")
+	if err != nil {
+		panic(err)
+	}
+	d, err := table.Def()
+	if err != nil {
+		panic(err)
+	}
+	for _, c := range d.Columns {
+		fmt.Printf("column %q is a %s\n", c.Name, c.Type)
+	}
+	// output:
+	// column "word" is a varchar
+	// column "length" is a int
+}
+
+func ExampleTable_Def() {
+	db, err := OpenFile("test/words.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_2")
+	if err != nil {
+		panic(err)
+	}
+	ind, err := index.Def()
+	if err != nil {
+		panic(err)
+	}
+	for _, c := range ind.IndexedColumns {
+		fmt.Printf("indexed column: %q (sortorder %s)\n", c.Column, c.SortOrder)
+	}
+	// output:
+	// indexed column: "length" (sortorder ASC)
+	// indexed column: "word" (sortorder ASC)
+}
