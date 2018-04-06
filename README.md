@@ -27,6 +27,7 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
   scan and basic search are supported
 - behaves nicely on corrupted database files (no panics)
 - files can be used concurrently with sqlite (compatible locks)
+- table and index definitions are exposed
 
 
 # constraints
