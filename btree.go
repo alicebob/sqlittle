@@ -119,13 +119,13 @@ func newLeafTableBtree(
 	pointers []byte,
 	content []byte,
 ) (*tableLeaf, error) {
-	cells, err := parseCellpointers(count, pointers, content)
+	cells, err := parseCellpointers(count, pointers, len(content))
 	if err != nil {
 		return nil, err
 	}
 	leafs := make([]tableLeafCell, len(cells))
-	for i, c := range cells {
-		leafs[i], err = parseTableLeaf(c)
+	for i, start := range cells {
+		leafs[i], err = parseTableLeaf(content[start:])
 		if err != nil {
 			return nil, err
 		}
@@ -164,13 +164,13 @@ func newInteriorTableBtree(
 	content []byte,
 	rightmost int,
 ) (*tableInterior, error) {
-	cells, err := parseCellpointers(count, pointers, content)
+	cells, err := parseCellpointers(count, pointers, len(content))
 	if err != nil {
 		return nil, err
 	}
 	cs := make([]tableInteriorCell, len(cells))
-	for i, c := range cells {
-		cs[i], err = parseTableInterior(c)
+	for i, start := range cells {
+		cs[i], err = parseTableInterior(content[start:])
 		if err != nil {
 			return nil, err
 		}
@@ -255,13 +255,13 @@ func newLeafIndex(
 	pointers []byte,
 	content []byte,
 ) (*indexLeaf, error) {
-	cells, err := parseCellpointers(count, pointers, content)
+	cells, err := parseCellpointers(count, pointers, len(content))
 	if err != nil {
 		return nil, err
 	}
 	cs := make([]cellPayload, len(cells))
-	for i, c := range cells {
-		cs[i], err = parseIndexLeaf(c)
+	for i, start := range cells {
+		cs[i], err = parseIndexLeaf(content[start:])
 		if err != nil {
 			return nil, err
 		}
@@ -321,13 +321,13 @@ func newInteriorIndex(
 	content []byte,
 	rightmost int,
 ) (*indexInterior, error) {
-	cells, err := parseCellpointers(count, pointers, content)
+	cells, err := parseCellpointers(count, pointers, len(content))
 	if err != nil {
 		return nil, err
 	}
 	cs := make([]indexInteriorCell, len(cells))
-	for i, c := range cells {
-		cs[i], err = parseIndexInterior(c)
+	for i, start := range cells {
+		cs[i], err = parseIndexInterior(content[start:])
 		if err != nil {
 			return nil, err
 		}
@@ -511,30 +511,27 @@ func parseIndexInterior(c []byte) (indexInteriorCell, error) {
 	}, err
 }
 
-// Parse the list of pointers to cells into a slice of byte slices.
+// Parse the list of pointers to cells into byte offsets for each cell
 // This format is used in all four page types.
 // N is the nr of cells, pointers point to the start of the cells, until end of
-// the page, content points to the whole page (because cell pointers use page
+// the page, maxLen is the length of the page (because cell pointers use page
 // offsets).
 func parseCellpointers(
 	n int,
 	pointers []byte,
-	content []byte,
-) ([][]byte, error) {
+	maxLen int,
+) ([]int, error) {
 	if len(pointers) < n*2 {
 		return nil, errors.New("invalid cell pointer array")
 	}
-	cs := make([][]byte, n)
-	end := len(content)
-	// cell pointers go [p1, p2, p3], contents goes [c3, c2, c1]
-	// SQLite docs aren't too clear about this, though.
+	cs := make([]int, n)
+	// cell pointers go [p1, p2, p3], actual cell content can be in any order.
 	for i := range cs {
 		start := int(binary.BigEndian.Uint16(pointers[2*i : 2*i+2]))
-		if start > len(content) || start > end {
+		if start > maxLen {
 			return nil, errors.New("invalid cell pointer")
 		}
-		cs[i] = content[start:end]
-		end = start
+		cs[i] = start
 	}
 	return cs, nil
 }
