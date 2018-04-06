@@ -44,20 +44,20 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 See [godoc](https://godoc.org/github.com/alicebob/sqlittle) for all available
 methods and examples, but the gist of a table scan is:
 
-	db, _ := OpenFile("test/single.sqlite")
-	defer db.Close()
-	table, _ := db.Table("hello")
-	table.Scan(func(rowid int64, rec Record) bool {
-			fmt.Printf("row %d: %s\n", rowid, rec[0].(string))
-			return false // we want all the rows
+    db, _ := OpenFile("test/single.sqlite")
+    defer db.Close()
+    table, _ := db.Table("hello")
+    table.Scan(func(rowid int64, rec Record) bool {
+        fmt.Printf("row %d: %s\n", rowid, rec[0].(string))
+        return false // we want all the rows
     })
 
 
-Printing the columns (see the [sqlittle/sql docs](https://godoc.org/github.com/alicebob/sqlittle/sql) for what's available:
+Printing the columns (see the [sqlittle/sql docs](https://godoc.org/github.com/alicebob/sqlittle/sql)):
 
-	db, _ := OpenFile("test/single.sqlite")
-	defer db.Close()
-	table, _ := db.Table("hello")
+    db, _ := OpenFile("test/single.sqlite")
+    defer db.Close()
+    table, _ := db.Table("hello")
     d, _ := table.Def()
     for i, col := range d.Columns {
         fmt.Printf("col %d: %s\n", i, col.Name)
