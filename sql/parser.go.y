@@ -180,17 +180,17 @@ indexedColumnDef:
 
 selectStmt:
 	SELECT columnList FROM identifier {
-		yylex.(*Lexer).result = SelectStmt{ Columns: $2, Table: $4 }
+		yylex.(*lexer).result = SelectStmt{ Columns: $2, Table: $4 }
 	}
 
 createTableStmt:
 	CREATE TABLE identifier '(' columnDefList ')' {
-		yylex.(*Lexer).result = CreateTableStmt{ Table: $3, Columns: $5 }
+		yylex.(*lexer).result = CreateTableStmt{ Table: $3, Columns: $5 }
 	}
 
 createIndexStmt:
 	CREATE unique INDEX identifier ON identifier '(' indexedColumnDefList ')' {
-		yylex.(*Lexer).result = CreateIndexStmt{
+		yylex.(*lexer).result = CreateIndexStmt{
 			Index: $4,
 			Table: $6,
 			Unique: $2,

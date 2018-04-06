@@ -690,19 +690,19 @@ yydefault:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		//line parser.go.y:182
 		{
-			yylex.(*Lexer).result = SelectStmt{Columns: yyDollar[2].columnList, Table: yyDollar[4].identifier}
+			yylex.(*lexer).result = SelectStmt{Columns: yyDollar[2].columnList, Table: yyDollar[4].identifier}
 		}
 	case 35:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		//line parser.go.y:187
 		{
-			yylex.(*Lexer).result = CreateTableStmt{Table: yyDollar[3].identifier, Columns: yyDollar[5].columnDefList}
+			yylex.(*lexer).result = CreateTableStmt{Table: yyDollar[3].identifier, Columns: yyDollar[5].columnDefList}
 		}
 	case 36:
 		yyDollar = yyS[yypt-9 : yypt+1]
 		//line parser.go.y:192
 		{
-			yylex.(*Lexer).result = CreateIndexStmt{
+			yylex.(*lexer).result = CreateIndexStmt{
 				Index:          yyDollar[4].identifier,
 				Table:          yyDollar[6].identifier,
 				Unique:         yyDollar[2].unique,

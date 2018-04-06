@@ -75,7 +75,7 @@ func Parse(sql string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	l := &Lexer{tokens: ts}
+	l := &lexer{tokens: ts}
 	yyParse(l)
 	return l.result, l.err
 }

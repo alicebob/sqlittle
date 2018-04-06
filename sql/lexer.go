@@ -4,13 +4,13 @@ import (
 	"errors"
 )
 
-type Lexer struct {
+type lexer struct {
 	tokens []token
 	result interface{}
 	err    error
 }
 
-func (l *Lexer) Lex(lval *yySymType) int {
+func (l *lexer) Lex(lval *yySymType) int {
 	if len(l.tokens) == 0 {
 		return 0
 	}
@@ -21,6 +21,6 @@ func (l *Lexer) Lex(lval *yySymType) int {
 	return tok.typ
 }
 
-func (l *Lexer) Error(e string) {
+func (l *lexer) Error(e string) {
 	l.err = errors.New(e)
 }
