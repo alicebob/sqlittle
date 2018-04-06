@@ -36,7 +36,7 @@ func TestLowEmpty(t *testing.T) {
 	}
 }
 
-func TestLowTableDef(t *testing.T) {
+func TestLowDefs(t *testing.T) {
 	db, err := OpenFile("./test/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
@@ -47,17 +47,34 @@ func TestLowTableDef(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	def, err := table.Def()
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if have, want := def, (&sql.CreateTableStmt{
 		Table: "words",
 		Columns: []sql.ColumnDef{
 			{Name: "word", Type: "varchar", Null: true},
 			{Name: "length", Type: "int", Null: true},
+		},
+	}); !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	index, err := db.Index("words_index_2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	idef, err := index.Def()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := idef, (&sql.CreateIndexStmt{
+		Index: "words_index_2",
+		Table: "words",
+		IndexedColumns: []sql.IndexDef{
+			{Column: "length"},
+			{Column: "word"},
 		},
 	}); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)

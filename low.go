@@ -31,6 +31,20 @@ func (t *Table) Def() (*sql.CreateTableStmt, error) {
 type Index struct {
 	db   *Database
 	root int
+	sql  string
+}
+
+// Def returns the index definition.
+func (t *Index) Def() (*sql.CreateIndexStmt, error) {
+	c, err := sql.Parse(t.sql)
+	if err != nil {
+		return nil, err
+	}
+	stmt, ok := c.(sql.CreateIndexStmt)
+	if !ok {
+		return nil, errors.New("no CREATE INDEX attached")
+	}
+	return &stmt, nil
 }
 
 // TableScanCB is the callback for Table.Scan(). It gets the rowid (usually an

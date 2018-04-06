@@ -369,13 +369,13 @@ func (db *Database) Table(name string) (*Table, error) {
 // Will return ErrNoSuchIndex when the index isn't there (or isn't an index).
 // Index pointer is always valid if err == nil.
 func (db *Database) Index(name string) (*Index, error) {
-	tables, err := db.master()
+	objects, err := db.master()
 	if err != nil {
 		return nil, err
 	}
-	for _, t := range tables {
-		if t.typ == "index" && t.name == name {
-			return &Index{db: db, root: t.rootPage}, nil
+	for _, o := range objects {
+		if o.typ == "index" && o.name == name {
+			return &Index{db: db, root: o.rootPage, sql: o.sql}, nil
 		}
 	}
 	return nil, ErrNoSuchIndex

@@ -3,7 +3,7 @@
 all: format test
 
 test:
-	go test
+	go test ./...
 
 bench:
 	go test -bench .
