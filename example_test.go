@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func ExampleDatabase_TableScan() {
+func ExampleTable_Scan() {
 	db, err := OpenFile("test/single.sqlite")
 	if err != nil {
 		panic(err)
@@ -29,7 +29,7 @@ func ExampleDatabase_TableScan() {
 	// row 3: town
 }
 
-func ExampleDatabase_TableRowid() {
+func ExampleTable_Rowid() {
 	db, err := OpenFile("test/single.sqlite")
 	if err != nil {
 		panic(err)
@@ -49,7 +49,7 @@ func ExampleDatabase_TableRowid() {
 	// row: universe
 }
 
-func ExampleDatabase_IndexScan() {
+func ExampleIndex_Scan() {
 	// This code will iterate over all words in alphabetical order.
 	// The `words` table has: CREATE INDEX words_index_1 ON words (word)
 	db, err := OpenFile("test/words.sqlite")
@@ -85,7 +85,7 @@ func ExampleDatabase_IndexScan() {
 	// row 945: Artaxerxes's
 }
 
-func ExampleDatabase_IndexScanMin() {
+func ExampleIndex_ScanMin() {
 	// This will iterate over all words in alphabetical order, starting from
 	// the first record >= the given record.
 	// The `words` table has: CREATE INDEX words_index_1 ON words (word)
