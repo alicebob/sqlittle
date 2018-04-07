@@ -22,6 +22,7 @@ func fuzz(data []byte) error {
 		if err != nil {
 			return err
 		}
+
 		if err := table.Scan(
 			func(rowid int64, rec Record) bool {
 				return false
@@ -29,7 +30,12 @@ func fuzz(data []byte) error {
 		); err != nil {
 			return err
 		}
+
 		if _, err := table.Rowid(42); err != nil {
+			return err
+		}
+
+		if _, err := table.Def(); err != nil {
 			return err
 		}
 	}
@@ -58,6 +64,10 @@ func fuzz(data []byte) error {
 				return false
 			},
 		); err != nil {
+			return err
+		}
+
+		if _, err := index.Def(); err != nil {
 			return err
 		}
 	}

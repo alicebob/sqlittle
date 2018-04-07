@@ -14,7 +14,7 @@ format:
 fuzz:
 	go get -v github.com/dvyukov/go-fuzz/...
 
-	rm sqlittle-fuzz.zip
+	rm -f sqlittle-fuzz.zip
 	go-fuzz-build github.com/alicebob/sqlittle
 	mkdir -p workdir
 	cp -r corpus workdir
