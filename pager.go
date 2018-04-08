@@ -11,4 +11,6 @@ type pager interface {
 	RLock() error
 	// unlock read lock
 	RUnlock() error
+	// true if there is any 'RESERVED' lock on this file
+	CheckReservedLock() (bool, error)
 }

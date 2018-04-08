@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	seek_set            = 0 // should be defined in syscall
-	sqlite_pending_byte = 0x40000000
-	sqlite_shared_first = sqlite_pending_byte + 2
-	sqlite_shared_size  = 510
+	seek_set             = 0 // should be defined in syscall
+	sqlite_pending_byte  = 0x40000000
+	sqlite_reserved_byte = sqlite_pending_byte + 1
+	sqlite_shared_first  = sqlite_pending_byte + 2
+	sqlite_shared_size   = 510
 )
 
 var (
@@ -103,6 +104,19 @@ func (f *filePager) RUnlock() error {
 	f.lock(f.readLock)
 	f.readLock = nil
 	return nil
+}
+
+// True if there is a 'reserved' lock on the database, by any process.
+func (f *filePager) CheckReservedLock() (bool, error) {
+	// per SQLite's unixCheckReservedLock()
+	lock := &unix.Flock_t{
+		Type:   unix.F_WRLCK,
+		Whence: seek_set,
+		Start:  sqlite_shared_first,
+		Len:    1,
+	}
+	err := unix.FcntlFlock(f.f.Fd(), unix.F_GETLK, lock)
+	return lock.Type != unix.F_UNLCK, err
 }
 
 func (f *filePager) Close() error {
