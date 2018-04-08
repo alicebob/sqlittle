@@ -28,7 +28,7 @@ func corruptDatabase(f string) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newDatabase((*corrupter)(l))
+	return newDatabase((*corrupter)(l), f+"-journal")
 }
 
 func (c *corrupter) header() ([headerSize]byte, error) {
@@ -63,13 +63,9 @@ func (c *corrupter) page(n int, pagesize int) ([]byte, error) {
 	return p, err
 }
 
-func (c *corrupter) RLock() error {
-	return nil
-}
-
-func (c *corrupter) RUnlock() error {
-	return nil
-}
+func (c *corrupter) RLock() error                     { return nil }
+func (c *corrupter) RUnlock() error                   { return nil }
+func (c *corrupter) CheckReservedLock() (bool, error) { return false, nil }
 
 func (c *corrupter) Close() error {
 	return (*filePager)(c).Close()

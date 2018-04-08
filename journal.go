@@ -18,7 +18,6 @@ var (
 
 // validJournal is true if there is a valid -journal file present.
 // `file` should the name of the journal file.
-// This should be called while under a read lockA.
 func validJournal(file string) (bool, error) {
 	fh, err := os.Open(file)
 	if err != nil {

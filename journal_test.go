@@ -20,3 +20,18 @@ func TestJournal(t *testing.T) {
 		}
 	}
 }
+
+func TestOpenHot(t *testing.T) {
+	for file, expect := range map[string]error{
+		"./test/journal_truncate.sqlite": nil,
+		"./test/journal_persist.sqlite":  nil,
+		"./test/journal_hot.sqlite":      ErrHotJournal,
+	} {
+		db, err := OpenFile(file)
+		if have, want := err, expect; have != want {
+			t.Errorf("have %#v, want %#v", have, want)
+			continue
+		}
+		db.Close()
+	}
+}

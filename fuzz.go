@@ -9,7 +9,7 @@ func Fuzz(data []byte) int {
 
 func fuzz(data []byte) error {
 	p := bytePager(data)
-	db, err := newDatabase(&p)
+	db, err := newDatabase(&p, "")
 	if err != nil {
 		return err
 	}
@@ -94,6 +94,7 @@ func (b *bytePager) page(n int, pagesize int) ([]byte, error) {
 	return (*b)[x:y], nil
 }
 
-func (b *bytePager) RLock() error   { return nil }
-func (b *bytePager) RUnlock() error { return nil }
-func (b *bytePager) Close() error   { return nil }
+func (b *bytePager) RLock() error                     { return nil }
+func (b *bytePager) RUnlock() error                   { return nil }
+func (b *bytePager) CheckReservedLock() (bool, error) { return false, nil }
+func (b *bytePager) Close() error                     { return nil }

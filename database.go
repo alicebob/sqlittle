@@ -26,6 +26,7 @@ var (
 	ErrEncoding        = errors.New("unsupported encoding")
 	ErrInvalidDef      = errors.New("invalid object definition")
 	ErrRecursion       = errors.New("tree is too deep")
+	ErrHotJournal      = errors.New("crashed transaction present")
 )
 
 type header struct {
@@ -43,6 +44,7 @@ type objectCache struct {
 }
 
 type Database struct {
+	journal     string
 	dirty       bool // reload header if true
 	l           pager
 	header      *header
@@ -57,11 +59,12 @@ func OpenFile(f string) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newDatabase(l)
+	return newDatabase(l, f+"-journal")
 }
 
-func newDatabase(l pager) (*Database, error) {
+func newDatabase(l pager, journal string) (*Database, error) {
 	d := &Database{
+		journal:    journal,
 		dirty:      true,
 		l:          l,
 		tableCache: newTableCache(CacheTables),
@@ -192,6 +195,24 @@ func parseHeader(b [headerSize]byte) (header, error) {
 func (db *Database) resolveDirty() error {
 	if !db.dirty {
 		return nil
+	}
+
+	if db.journal != "" {
+		hot, err := validJournal(db.journal)
+		if err != nil {
+			return err
+		}
+		if hot {
+			// If something is using the transaction the db will have a RESERVED
+			// lock.
+			locked, err := db.l.CheckReservedLock()
+			if err != nil {
+				return err
+			}
+			if !locked {
+				return ErrHotJournal
+			}
+		}
 	}
 
 	buf, err := db.l.header()
