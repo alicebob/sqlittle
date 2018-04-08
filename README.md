@@ -93,7 +93,7 @@ stored in the database by SQLite. Notably that includes:
 - ~~check all constant header fields~~
 - proper ~~page loading abstraction~~/~~page cache~~/index cache
 - ~~locks~~
-- deal with the reserved region
+- ~~deal with the reserved region~~
 - refuse to open files with a non-committed/failed non-wal journal
 - refuse to open wal journal files
 - ~~parse embedded table and index definitions and make them available~~

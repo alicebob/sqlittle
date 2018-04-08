@@ -16,22 +16,21 @@ const (
 )
 
 var (
-	ErrHeaderInvalidMagic    = errors.New("invalid magic number")
-	ErrHeaderInvalidPageSize = errors.New("invalid page size")
-	ErrNoSuchTable           = errors.New("no such table")
-	ErrNoSuchIndex           = errors.New("no such index")
-	ErrCorrupted             = errors.New("database corrupted")
-	ErrIncompatible          = errors.New("incompatible database version")
-	ErrEncoding              = errors.New("unsupported encoding")
-	ErrInvalidDef            = errors.New("invalid object definition")
-	ErrRecursion             = errors.New("tree is too deep")
+	ErrInvalidMagic    = errors.New("invalid magic number")
+	ErrInvalidPageSize = errors.New("invalid page size")
+	ErrReservedSpace   = errors.New("unsupported database (encrypted?)")
+	ErrNoSuchTable     = errors.New("no such table")
+	ErrNoSuchIndex     = errors.New("no such index")
+	ErrCorrupted       = errors.New("database corrupted")
+	ErrIncompatible    = errors.New("incompatible database version")
+	ErrEncoding        = errors.New("unsupported encoding")
+	ErrInvalidDef      = errors.New("invalid object definition")
+	ErrRecursion       = errors.New("tree is too deep")
 )
 
 type header struct {
 	// The database page size in bytes.
 	PageSize int
-	// Bytes of unused "reserved" space at the end of each page. Usually 0.
-	ReservedSpace int
 	// Updated when anything changes (only for non-WAL files).
 	ChangeCounter uint32
 	// Updated when any table definition changes
@@ -128,7 +127,7 @@ func parseHeader(b [headerSize]byte) (header, error) {
 	h := header{}
 
 	if string(hs.Magic[:]) != headerMagic {
-		return h, ErrHeaderInvalidMagic
+		return h, ErrInvalidMagic
 	}
 
 	{
@@ -140,7 +139,7 @@ func parseHeader(b [headerSize]byte) (header, error) {
 			return bits.OnesCount(n) == 1
 		}
 		if s < 512 || s > 1<<16 || !isPower(s) {
-			return header{}, ErrHeaderInvalidPageSize
+			return header{}, ErrInvalidPageSize
 		}
 		h.PageSize = int(s)
 	}
@@ -149,7 +148,9 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		return h, ErrIncompatible
 	}
 
-	h.ReservedSpace = int(hs.ReservedSpace)
+	if int(hs.ReservedSpace) != 0 {
+		return h, ErrReservedSpace
+	}
 
 	if hs.MaxFraction != 64 ||
 		hs.MinFraction != 32 ||

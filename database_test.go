@@ -48,7 +48,6 @@ func TestHeader(t *testing.T) {
 			},
 			want: header{
 				PageSize:      4096,
-				ReservedSpace: 0,
 				ChangeCounter: 4,
 				SchemaCookie:  1,
 			},
@@ -61,7 +60,7 @@ func TestHeader(t *testing.T) {
 				h[0] = 's'
 				return h
 			},
-			err: ErrHeaderInvalidMagic,
+			err: ErrInvalidMagic,
 		},
 
 		// PageSize
@@ -79,7 +78,7 @@ func TestHeader(t *testing.T) {
 				h[17] = 0x12
 				return h
 			},
-			err: ErrHeaderInvalidPageSize,
+			err: ErrInvalidPageSize,
 		},
 		{
 			// page size 0xffff
@@ -87,7 +86,7 @@ func TestHeader(t *testing.T) {
 				h[16], h[17] = 0xFF, 0xFF
 				return h
 			},
-			err: ErrHeaderInvalidPageSize,
+			err: ErrInvalidPageSize,
 		},
 		{
 			// page size 1 is special case, according to the docs
@@ -97,7 +96,6 @@ func TestHeader(t *testing.T) {
 			},
 			want: header{
 				PageSize:      0x010000,
-				ReservedSpace: 0,
 				ChangeCounter: 4,
 				SchemaCookie:  1,
 			},
@@ -120,12 +118,7 @@ func TestHeader(t *testing.T) {
 				h[20] = 0x10
 				return h
 			},
-			want: header{
-				PageSize:      0x1000,
-				ReservedSpace: 0x10,
-				ChangeCounter: 4,
-				SchemaCookie:  1,
-			},
+			err: ErrReservedSpace,
 		},
 
 		// constants
@@ -204,7 +197,6 @@ func TestHeader(t *testing.T) {
 			},
 			want: header{
 				PageSize:      0x1000,
-				ReservedSpace: 0,
 				ChangeCounter: 4,
 				SchemaCookie:  1,
 			},
@@ -267,7 +259,7 @@ func TestIOTruncated(t *testing.T) {
 
 func TestIOInvalidMagic(t *testing.T) {
 	_, err := OpenFile("./test/magic.sqlite")
-	if have, want := err, ErrHeaderInvalidMagic; have != want {
+	if have, want := err, ErrInvalidMagic; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
