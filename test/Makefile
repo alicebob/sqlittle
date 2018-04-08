@@ -3,6 +3,9 @@
 ALL:=empty.sqlite \
     four.sqlite \
     index.sqlite \
+    journal_hot.sqlite \
+    journal_persist.sqlite \
+    journal_truncate.sqlite \
     magic.sqlite \
     notadatabase.sqlite \
     overflow.sqlite \
