@@ -5,7 +5,7 @@ Pure Go low-level SQLite3 file reader
 This is (for now) a set of low level routines to read SQLite files. Both 
 tables and indices can be read, but there is no support for SQL.
 
-Based on https://sqlite.org/fileformat2.html and empirical evidence.
+Based on https://sqlite.org/fileformat2.html and some SQLite source code reading.
 
 
 # why
@@ -28,6 +28,7 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 - behaves nicely on corrupted database files (no panics)
 - files can be used concurrently with sqlite (compatible locks)
 - table and index definitions are exposed
+- detects corrupt journal files
 
 
 # constraints
@@ -36,7 +37,6 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 - only supports UTF8 strings
 - only supports binary string comparisons
 - no joins/sorting/ranges
-- can only read clean files. No corrupted transaction journals can be present
 - does not work with WAL journal mode files (WAL is not the default journal mode)
 
 
@@ -73,7 +73,7 @@ database.RUnlock() calls. Any *Table or *Index pointer you have is invalid
 after database.RUnlock().
 
 
-# low level sqlite gotchas
+# low level SQLite gotchas
 
 The low level routines don't change any fields, they simply pass on how data is
 stored in the database by SQLite. Notably that includes:
@@ -94,11 +94,12 @@ stored in the database by SQLite. Notably that includes:
 - proper ~~page loading abstraction~~/~~page cache~~/index cache
 - ~~locks~~
 - ~~deal with the reserved region~~
-- refuse to open files with a non-committed/failed non-wal journal
+- ~~refuse to open files with a non-committed/failed non-wal journal~~
 - refuse to open wal journal files
 - ~~parse embedded table and index definitions and make them available~~
 - go back to mmap for pager_unix
 - parse more exotic table and index definitions
+- goroutine safe
 
 # &c.
 
