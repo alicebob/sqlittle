@@ -9,6 +9,7 @@ ALL:=empty.sqlite \
     magic.sqlite \
     notadatabase.sqlite \
     overflow.sqlite \
+    primarykey.sqlite \
     single.sqlite \
     truncated.sqlite \
     values.sqlite \

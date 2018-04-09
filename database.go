@@ -315,10 +315,12 @@ func (db *Database) master() ([]sqliteMaster, error) {
 		} else {
 			m.rootPage = int(n)
 		}
-		if s, ok := e[4].(string); !ok {
-			return false, ErrInvalidDef
-		} else {
+		switch s := e[4].(type) {
+		case string:
 			m.sql = s
+		case nil:
+		default:
+			return false, ErrInvalidDef
 		}
 		objects = append(objects, m)
 		return false, nil

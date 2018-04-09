@@ -271,6 +271,25 @@ func TestIOWal(t *testing.T) {
 	}
 }
 
+func TestMasterNoSQL(t *testing.T) {
+	// primary key creates an index without SQL
+	db, err := OpenFile("./test/primarykey.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	tables, err := db.Tables()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tname := range tables {
+		_, err := db.Table(tname)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestDatabaseTable(t *testing.T) {
 	db, err := OpenFile("./test/index.sqlite")
 	if err != nil {
