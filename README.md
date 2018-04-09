@@ -95,11 +95,12 @@ stored in the database by SQLite. Notably that includes:
 - ~~locks~~
 - ~~deal with the reserved region~~
 - ~~refuse to open files with a non-committed/failed non-wal journal~~
-- refuse to open wal journal files
+- ~~refuse to open wal journal files~~
 - ~~parse embedded table and index definitions and make them available~~
 - go back to mmap for pager_unix
 - parse more exotic table and index definitions
 - goroutine safe
+- support WAL
 
 # &c.
 

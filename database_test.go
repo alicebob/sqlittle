@@ -264,6 +264,13 @@ func TestIOInvalidMagic(t *testing.T) {
 	}
 }
 
+func TestIOWal(t *testing.T) {
+	_, err := OpenFile("./test/wal.sqlite")
+	if have, want := err, ErrWAL; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
+
 func TestDatabaseTable(t *testing.T) {
 	db, err := OpenFile("./test/index.sqlite")
 	if err != nil {

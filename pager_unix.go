@@ -18,10 +18,6 @@ const (
 	sqlite_shared_size   = 510
 )
 
-var (
-	ErrFileTruncated = errors.New("file truncated")
-)
-
 type filePager struct {
 	f        *os.File
 	readLock *unix.Flock_t

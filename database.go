@@ -16,17 +16,28 @@ const (
 )
 
 var (
+	// Various error messages returned when the database is corrupted
 	ErrInvalidMagic    = errors.New("invalid magic number")
 	ErrInvalidPageSize = errors.New("invalid page size")
 	ErrReservedSpace   = errors.New("unsupported database (encrypted?)")
-	ErrNoSuchTable     = errors.New("no such table")
-	ErrNoSuchIndex     = errors.New("no such index")
 	ErrCorrupted       = errors.New("database corrupted")
-	ErrIncompatible    = errors.New("incompatible database version")
-	ErrEncoding        = errors.New("unsupported encoding")
 	ErrInvalidDef      = errors.New("invalid object definition")
 	ErrRecursion       = errors.New("tree is too deep")
-	ErrHotJournal      = errors.New("crashed transaction present")
+	ErrFileTruncated   = errors.New("file truncated")
+
+	// Various error messages returned when the database uses features sqlittle
+	// doesn't support.
+	ErrIncompatible = errors.New("incompatible database version")
+	ErrEncoding     = errors.New("unsupported encoding")
+	// Database is in WAL journal mode, which we don't support. You need to
+	// convert the database to journal mode.
+	ErrWAL = errors.New("WAL journal mode is unsupported")
+	// There is a stale `-journal` file present with an unfinished transaction.
+	// Open the database in sqlite3 to repair the database.
+	ErrHotJournal = errors.New("crashed transaction present")
+
+	ErrNoSuchTable = errors.New("no such table")
+	ErrNoSuchIndex = errors.New("no such index")
 )
 
 type header struct {
@@ -101,7 +112,7 @@ func parseHeader(b [headerSize]byte) (header, error) {
 	hs := struct {
 		Magic                [16]byte
 		PageSize             uint16
-		WriteVersion         uint8
+		_                    uint8 // WriteVersion
 		ReadVersion          uint8
 		ReservedSpace        uint8
 		MaxFraction          uint8
@@ -147,7 +158,13 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		h.PageSize = int(s)
 	}
 
-	if hs.ReadVersion > 2 {
+	switch hs.ReadVersion {
+	case 1:
+		// journal mode
+	case 2:
+		// we don't support WAL
+		return h, ErrWAL
+	default:
 		return h, ErrIncompatible
 	}
 
