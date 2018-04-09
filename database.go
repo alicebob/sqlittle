@@ -10,9 +10,9 @@ import (
 const (
 	headerMagic = "SQLite format 3\x00"
 	headerSize  = 100
-	// CacheTables is the number of tables pages to keep in memory. Default
-	// size per page is 4K (1K on older databases).
-	CacheTables = 100
+	// CachePages is the number of pages to keep in memory. Default size per
+	// page is 4K (1K on older databases).
+	CachePages = 100
 )
 
 var (
@@ -59,7 +59,7 @@ type Database struct {
 	dirty       bool // reload header if true
 	l           pager
 	header      *header
-	tableCache  *tableCache // table btree page cache
+	btreeCache  *btreeCache // table and index page cache
 	objectCache *objectCache
 }
 
@@ -78,7 +78,7 @@ func newDatabase(l pager, journal string) (*Database, error) {
 		journal:    journal,
 		dirty:      true,
 		l:          l,
-		tableCache: newTableCache(CacheTables),
+		btreeCache: newBtreeCache(CachePages),
 	}
 	return d, d.resolveDirty()
 }
@@ -241,7 +241,7 @@ func (db *Database) resolveDirty() error {
 		return err
 	}
 	if db.header != nil && db.header.ChangeCounter != newHeader.ChangeCounter {
-		db.tableCache.clear()
+		db.btreeCache.clear()
 	}
 	if db.header != nil && db.header.SchemaCookie != newHeader.SchemaCookie {
 		db.objectCache = nil
@@ -332,12 +332,13 @@ func (db *Database) master() ([]sqliteMaster, error) {
 	return objects, err
 }
 
-func (db *Database) openTable(page int) (tableBtree, error) {
+// openPage returns a tableBtree or indexBtree
+func (db *Database) openPage(page int) (interface{}, error) {
 	if err := db.resolveDirty(); err != nil {
 		return nil, err
 	}
 
-	if p := db.tableCache.get(page); p != nil {
+	if p := db.btreeCache.get(page); p != nil {
 		return p, nil
 	}
 
@@ -345,23 +346,35 @@ func (db *Database) openTable(page int) (tableBtree, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, err := newTableBtree(buf, page == 1)
+	p, err := newBtree(buf, page == 1)
 	if err == nil {
-		db.tableCache.set(page, p)
+		db.btreeCache.set(page, p)
 	}
 	return p, err
 }
 
-func (db *Database) openIndex(page int) (indexBtree, error) {
-	if err := db.resolveDirty(); err != nil {
-		return nil, err
-	}
-
-	buf, err := db.page(page)
+func (db *Database) openTable(page int) (tableBtree, error) {
+	p, err := db.openPage(page)
 	if err != nil {
 		return nil, err
 	}
-	return newIndexBtree(buf)
+	tb, ok := p.(tableBtree)
+	if !ok {
+		return nil, errors.New("found an index, expected a table")
+	}
+	return tb, nil
+}
+
+func (db *Database) openIndex(page int) (indexBtree, error) {
+	p, err := db.openPage(page)
+	if err != nil {
+		return nil, err
+	}
+	tb, ok := p.(indexBtree)
+	if !ok {
+		return nil, errors.New("found a table, expected an index")
+	}
+	return tb, nil
 }
 
 // Tables lists all table names. Also sqlite internal ones.

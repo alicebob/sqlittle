@@ -1,4 +1,4 @@
-// table/index page cache
+// table and index page cache
 
 package sqlittle
 
@@ -6,37 +6,37 @@ import (
 	"sync"
 )
 
-type tableCache struct {
+type btreeCache struct {
 	limit int
-	elem  map[int]tableBtree
+	elem  map[int]interface{}
 	mu    sync.RWMutex
 }
 
-func newTableCache(limit int) *tableCache {
-	return &tableCache{
+func newBtreeCache(limit int) *btreeCache {
+	return &btreeCache{
 		limit: limit,
-		elem:  make(map[int]tableBtree, limit),
+		elem:  make(map[int]interface{}, limit),
 	}
 }
 
-func (t *tableCache) get(p int) tableBtree {
+func (t *btreeCache) get(p int) interface{} {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.elem[p]
 }
 
-func (t *tableCache) set(p int, tab tableBtree) {
+func (t *btreeCache) set(p int, btree interface{}) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if len(t.elem) >= t.limit {
 		// cache full? Simply drop the whole thing.
-		t.elem = make(map[int]tableBtree, t.limit)
+		t.elem = make(map[int]interface{}, t.limit)
 	}
-	t.elem[p] = tab
+	t.elem[p] = btree
 }
 
-func (t *tableCache) clear() {
+func (t *btreeCache) clear() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.elem = make(map[int]tableBtree, t.limit)
+	t.elem = make(map[int]interface{}, t.limit)
 }

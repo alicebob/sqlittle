@@ -91,7 +91,7 @@ stored in the database by SQLite. Notably that includes:
 - ~~remove all panics on wrong input~~
 - ~~fail on non-utf8 encoding~~
 - ~~check all constant header fields~~
-- proper ~~page loading abstraction~~/~~page cache~~/index cache
+- ~~proper page loading abstraction/page cache/index cache~~
 - ~~locks~~
 - ~~deal with the reserved region~~
 - ~~refuse to open files with a non-committed/failed non-wal journal~~

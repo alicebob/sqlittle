@@ -80,7 +80,7 @@ type indexInterior struct {
 	rightmost int
 }
 
-func newTableBtree(b []byte, isFileHeader bool) (tableBtree, error) {
+func newBtree(b []byte, isFileHeader bool) (interface{}, error) {
 	hb := b
 	if isFileHeader {
 		hb = b[headerSize:]
@@ -92,25 +92,13 @@ func newTableBtree(b []byte, isFileHeader bool) (tableBtree, error) {
 	case 0x05:
 		rightmostPointer := int(binary.BigEndian.Uint32(hb[8:12]))
 		return newInteriorTableBtree(cells, hb[12:], b, rightmostPointer)
-	case 0x0a, 0x02:
-		return nil, errors.New("found an index, expected a table")
-	default:
-		return nil, errors.New("unsupported")
-	}
-}
-
-func newIndexBtree(b []byte) (indexBtree, error) {
-	cells := int(binary.BigEndian.Uint16(b[3:5]))
-	switch typ := int(b[0]); typ {
-	case 0x0d, 0x05:
-		return nil, errors.New("found a table, expected an index")
 	case 0x0a:
 		return newLeafIndex(cells, b[8:], b)
 	case 0x02:
 		rightmostPointer := int(binary.BigEndian.Uint32(b[8:12]))
 		return newInteriorIndex(cells, b[12:], b, rightmostPointer)
 	default:
-		return nil, errors.New("unsupported")
+		return nil, errors.New("unsupported page type")
 	}
 }
 

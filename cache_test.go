@@ -5,7 +5,7 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	c := newTableCache(40)
+	c := newBtreeCache(40)
 	for i := 0; i < 90; i++ {
 		c.set(i, &tableLeaf{})
 	}
