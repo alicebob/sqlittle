@@ -149,10 +149,7 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		if s == 1 {
 			s = 1 << 16
 		}
-		isPower := func(n uint) bool {
-			return bits.OnesCount(n) == 1
-		}
-		if s < 512 || s > 1<<16 || !isPower(s) {
+		if !validPageSize(s) {
 			return header{}, ErrInvalidPageSize
 		}
 		h.PageSize = int(s)
@@ -434,4 +431,8 @@ func (db *Database) Index(name string) (*Index, error) {
 		}
 	}
 	return nil, ErrNoSuchIndex
+}
+
+func validPageSize(s uint) bool {
+	return s >= 512 && s <= 1<<16 && bits.OnesCount(s) == 1
 }
