@@ -149,12 +149,16 @@ func TestHeader(t *testing.T) {
 
 		// Schema format numner
 		{
-			// no support for version 1
+			// we do support version 1
 			change: func(h [headerSize]byte) [headerSize]byte {
 				h[44+3] = 1
 				return h
 			},
-			err: ErrIncompatible,
+			want: header{
+				PageSize:      4096,
+				ChangeCounter: 4,
+				SchemaCookie:  1,
+			},
 		},
 		{
 			// invalid value

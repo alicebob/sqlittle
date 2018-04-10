@@ -182,9 +182,10 @@ func parseHeader(b [headerSize]byte) (header, error) {
 
 	h.SchemaCookie = hs.SchemaCookie
 
-	// 1,2,3,4 are the only valid values. Version 1 ignores 'DESC' on indexes,
-	// so we could support that as long as we ignore any 'DESC' index, but...
+	// 1,2,3,4 are the only valid values.
 	switch hs.SchemaFormat {
+	case 1:
+		// Version 1 ignores 'DESC' on indexes.
 	case 2, 3, 4:
 	default:
 		return h, ErrIncompatible
