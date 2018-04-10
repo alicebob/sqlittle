@@ -112,7 +112,18 @@ func TestCreateTable(t *testing.T) {
 				},
 			},
 			{
-				sql: "create table 'table' ('table' 'table')",
+				sql: `create table "table" ([table] "table")`,
+				want: CreateTableStmt{
+					Table: "table",
+					Columns: []ColumnDef{
+						{Name: "table", Type: "table", Null: true},
+					},
+				},
+			},
+			{
+				// You can sort-of use a string literal as a name
+				sql: `create table "table" ([table] 'table')`,
+				err: errors.New("syntax error"),
 				want: CreateTableStmt{
 					Table: "table",
 					Columns: []ColumnDef{

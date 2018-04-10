@@ -80,8 +80,18 @@ func TestTokens(t *testing.T) {
 			want: []token{
 				token{FROM, "from"},
 				token{FROM, "FROM"},
-				token{tBare, "from"},
-				token{tBare, ""},
+				token{tLiteral, "from"},
+				token{tLiteral, ""},
+			},
+		},
+		{
+			sql: "bare \"id 1\" [id 2] `id 3` 'lit 1'",
+			want: []token{
+				token{tBare, "bare"},
+				token{tIdentifier, "id 1"},
+				token{tIdentifier, "id 2"},
+				token{tIdentifier, "id 3"},
+				token{tLiteral, "lit 1"},
 			},
 		},
 		{

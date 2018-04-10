@@ -40,7 +40,7 @@ package sql
 %type<sortOrder> sortOrder
 
 %token SELECT FROM CREATE TABLE INDEX ON PRIMARY KEY ASC DESC AUTOINCREMENT NOT NULL UNIQUE
-%token<identifier> tBare
+%token<identifier> tBare tLiteral tIdentifier
 %token<signedNumber> tSignedNumber
 
 %%
@@ -52,6 +52,9 @@ program:
 
 identifier:
 	tBare {
+		$$ = $1
+	} |
+	tIdentifier {
 		$$ = $1
 	}
 

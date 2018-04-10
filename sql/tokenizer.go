@@ -61,7 +61,18 @@ func tokenize(s string) ([]token, error) {
 			if bl == -1 {
 				return res, errors.New("no terminating ' found")
 			}
-			res = append(res, token{tBare, bt})
+			res = append(res, token{tLiteral, bt})
+			i += bl
+		case c == '"' || c == '`' || c == '[':
+			close := c
+			if close == '[' {
+				close = ']'
+			}
+			bt, bl := readQuoted(close, s[i+1:])
+			if bl == -1 {
+				return res, fmt.Errorf("no terminating %q found", close)
+			}
+			res = append(res, token{tIdentifier, bt})
 			i += bl
 		default:
 			return nil, fmt.Errorf("unexpected char at pos:%d: %q", i, c)
@@ -101,6 +112,18 @@ func readSingleQuoted(s string) (string, int) {
 	for i, r := range s {
 		switch r {
 		case '\'':
+			return s[:i], i + 1
+		default:
+		}
+	}
+	return "", -1
+}
+
+// parse a quoted string until `close`. Opening char is already gone. No escape sequences.
+func readQuoted(close rune, s string) (string, int) {
+	for i, r := range s {
+		switch r {
+		case close:
 			return s[:i], i + 1
 		default:
 		}
