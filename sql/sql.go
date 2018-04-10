@@ -1,5 +1,9 @@
 package sql
 
+import (
+	"strings"
+)
+
 type PrimaryKey int
 
 const (
@@ -50,6 +54,17 @@ type ColumnDef struct {
 	// Default
 	// Collate
 	// foreign key
+}
+
+// The column is an alias for the rowid, and not stored in a row.
+// https://sqlite.org/lang_createtable.html#rowid
+func (c ColumnDef) IsRowid() bool {
+	// supported:
+	// CREATE TABLE t(x INTEGER PRIMARY KEY ASC, y, z);
+	// TODO:
+	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x ASC));
+	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x DESC));
+	return c.PrimaryKey == PKAsc && strings.ToUpper(c.Type) == "INTEGER"
 }
 
 // A `CREATE INDEX` statement

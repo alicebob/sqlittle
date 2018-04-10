@@ -6,6 +6,35 @@ import (
 	"testing"
 )
 
+func TestColumnIsRowid(t *testing.T) {
+	for d, want := range map[ColumnDef]bool{
+		ColumnDef{
+			Name:       "c 1",
+			Type:       "Integer",
+			PrimaryKey: PKAsc,
+		}: true,
+		ColumnDef{
+			Name:       "c 1",
+			Type:       "Integer",
+			PrimaryKey: PKDesc,
+		}: false,
+		ColumnDef{
+			Name:       "c 1",
+			Type:       "Integer",
+			PrimaryKey: PKNone,
+		}: false,
+		ColumnDef{
+			Name:       "c 1",
+			Type:       "Int",
+			PrimaryKey: PKAsc,
+		}: false,
+	} {
+		if have := d.IsRowid(); have != want {
+			t.Errorf("%#v: have %t, want %t", d, have, want)
+		}
+	}
+}
+
 type sqlCase struct {
 	sql  string
 	want interface{}
