@@ -4,6 +4,7 @@ package sqlittle
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/alicebob/sqlittle/sql"
 )
@@ -19,7 +20,7 @@ type Table struct {
 func (t *Table) Def() (*sql.CreateTableStmt, error) {
 	c, err := sql.Parse(t.sql)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s SQL: %q", err, t.sql)
 	}
 	stmt, ok := c.(sql.CreateTableStmt)
 	if !ok {
@@ -38,7 +39,7 @@ type Index struct {
 func (t *Index) Def() (*sql.CreateIndexStmt, error) {
 	c, err := sql.Parse(t.sql)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s SQL: %q", err, t.sql)
 	}
 	stmt, ok := c.(sql.CreateIndexStmt)
 	if !ok {
