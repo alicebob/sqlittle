@@ -1,6 +1,7 @@
 package sqlittle
 
 import (
+	"encoding/binary"
 	"reflect"
 	"testing"
 )
@@ -24,14 +25,11 @@ func TestWalHeader(t *testing.T) {
 		{
 			change: func(h *[walHeaderSize]byte) {},
 			want: walHeader{
-				Magic:         0x377f0682,
-				FileFormat:    0x2de218,
-				PageSize:      0x1000,
-				CheckpointSeq: 0x0,
-				Salt1:         0x31a602f2,
-				Salt2:         0xe0c1c7fd,
-				Checksum1:     0xc6e9a944,
-				Checksum2:     0x7c9942c9,
+				pageSize: 0x1000,
+				// CheckpointSeq: 0x0,
+				salt1:    0x31a602f2,
+				salt2:    0xe0c1c7fd,
+				checksum: checksum{binary.LittleEndian, 0xc6e9a944, 0x7c9942c9},
 			},
 		},
 		// magic nr
@@ -89,5 +87,23 @@ func TestWalHeader(t *testing.T) {
 		if have, want := h, c.want; have != want {
 			t.Fatalf("case %d: have %#v, want %#v", n, have, want)
 		}
+	}
+}
+
+func TestWalRead(t *testing.T) {
+	file := "./test/wal_crashed.sqlite-wal"
+	w, err := readWal(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer w.Close()
+
+	if err := w.ReadCommits(); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := w.pages, (pageMap{
+		1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7,
+	}); !reflect.DeepEqual(have, want) {
+		t.Fatalf("have %v, want %v", have, want)
 	}
 }
