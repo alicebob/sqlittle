@@ -7,12 +7,16 @@ import (
 
 func TestDBWal(t *testing.T) {
 	file := "./test/wal_crashed.sqlite"
-	db, err := OpenWal(file)
+	db, err := OpenFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
+	if err := db.RLock(); err != nil {
+		t.Fatal(err)
+	}
+	defer db.RUnlock()
 	m, err := db.master()
 	if err != nil {
 		t.Fatal(err)

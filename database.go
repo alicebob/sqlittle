@@ -2,7 +2,6 @@ package sqlittle
 
 import (
 	"errors"
-	"math/bits"
 )
 
 const (
@@ -43,11 +42,9 @@ var (
 // }
 
 type Database struct {
-	journal string
-	// dirty       bool // reload header if true
 	l pager
+	f format
 	// header      *header
-	// btreeCache *btreeCache // table and index page cache
 	// objectCache *objectCache
 }
 
@@ -58,66 +55,48 @@ func OpenFile(f string) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
+	db := &Database{
+		l: l,
+	}
 	h, err := getHeader(l)
+	var fm format
 	switch h.Mode {
 	case ModeJournal:
-		return newJournalDB(l, f+"-journal")
+		fm, err = newFJournal(l, f+"-journal")
+		if err != nil {
+			return nil, err
+		}
 	case ModeWal:
-		return newWalDB(l, f)
+		fm, err = newFormatWal(l, f)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		panic("impossible")
 	}
-}
-
-func newJournalDB(l pager, journal string) (*Database, error) {
-	db := &Database{
-		journal: journal,
-		// dirty:      true,
-		l: l,
-		// btreeCache: newBtreeCache(CachePages),
-		// header: &h,
-	}
-	return db, db.checkJournal()
-}
-
-func (db *Database) checkJournal() error {
-	// this should go elsewhere
-	if db.journal != "" {
-		hot, err := validJournal(db.journal)
-		if err != nil {
-			return err
-		}
-		if hot {
-			// If something is using the transaction the db will have a RESERVED
-			// lock.
-			locked, err := db.l.CheckReservedLock()
-			if err != nil {
-				return err
-			}
-			if !locked {
-				return ErrHotJournal
-			}
-		}
-	}
-	return nil
+	db.f = fm
+	return db, nil
 }
 
 // Close the database.
 func (db *Database) Close() error {
-	return db.l.Close()
+	if err := db.l.Close(); err != nil {
+		return err
+	}
+	if err := db.f.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Lock database for reading. Blocks. Don't nest RLock() calls.
 func (db *Database) RLock() error {
-	if err := db.checkJournal(); err != nil {
-		return err
-	}
-	return db.l.RLock()
+	return db.f.RLock()
 }
 
 // Unlock a read lock. Use a single RUnlock() for every RLock().
 func (db *Database) RUnlock() error {
-	return db.l.RUnlock()
+	return db.f.RUnlock()
 }
 
 // n starts at 1, sqlite style
@@ -126,51 +105,6 @@ func (db *Database) page(id int) ([]byte, error) {
 		return nil, errors.New("invalid page number")
 	}
 	return db.l.page(id)
-}
-
-func (db *Database) resolveDirty() error {
-	return nil
-	/*
-		if !db.dirty {
-			return nil
-		}
-
-		if db.journal != "" {
-			hot, err := validJournal(db.journal)
-			if err != nil {
-				return err
-			}
-			if hot {
-				// If something is using the transaction the db will have a RESERVED
-				// lock.
-				locked, err := db.l.CheckReservedLock()
-				if err != nil {
-					return err
-				}
-				if !locked {
-					return ErrHotJournal
-				}
-			}
-		}
-
-		buf, err := db.l.header()
-		if err != nil {
-			return err
-		}
-		newHeader, err := parseHeader(buf)
-		if err != nil {
-			return err
-		}
-		if db.header != nil && db.header.ChangeCounter != newHeader.ChangeCounter {
-			db.btreeCache.clear()
-		}
-		if db.header != nil && db.header.SchemaCookie != newHeader.SchemaCookie {
-			db.objectCache = nil
-		}
-		db.dirty = false
-		db.header = &newHeader
-		return nil
-	*/
 }
 
 // master records are defined as:
@@ -188,10 +122,6 @@ type sqliteMaster struct {
 }
 
 func (db *Database) master() ([]sqliteMaster, error) {
-	if err := db.resolveDirty(); err != nil {
-		return nil, err
-	}
-
 	// if o := db.objectCache; o != nil {
 	// return o.objects, o.err
 	// }
@@ -256,31 +186,8 @@ func (db *Database) master() ([]sqliteMaster, error) {
 	return objects, err
 }
 
-// openPage returns a tableBtree or indexBtree
-func (db *Database) openPage(page int) (interface{}, error) {
-	if err := db.resolveDirty(); err != nil {
-		return nil, err
-	}
-
-	// if db.btreeCache != nil {
-	// if p := db.btreeCache.get(page); p != nil {
-	// return p, nil
-	// }
-	// }
-
-	buf, err := db.page(page)
-	if err != nil {
-		return nil, err
-	}
-	p, err := newBtree(buf, page == 1)
-	// if err == nil && db.btreeCache != nil {
-	// db.btreeCache.set(page, p)
-	// }
-	return p, err
-}
-
 func (db *Database) openTable(page int) (tableBtree, error) {
-	p, err := db.openPage(page)
+	p, err := db.f.Page(page)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +199,7 @@ func (db *Database) openTable(page int) (tableBtree, error) {
 }
 
 func (db *Database) openIndex(page int) (indexBtree, error) {
-	p, err := db.openPage(page)
+	p, err := db.f.Page(page)
 	if err != nil {
 		return nil, err
 	}
@@ -357,8 +264,4 @@ func (db *Database) Index(name string) (*Index, error) {
 		}
 	}
 	return nil, ErrNoSuchIndex
-}
-
-func validPageSize(s uint) bool {
-	return s >= 512 && s <= 1<<16 && bits.OnesCount(s) == 1
 }

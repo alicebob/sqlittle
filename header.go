@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math/bits"
 )
 
 type header struct {
@@ -137,4 +138,8 @@ func getHeader(l pager) (header, error) {
 	buf := [headerSize]byte{}
 	copy(buf[:], p)
 	return parseHeader(buf)
+}
+
+func validPageSize(s uint) bool {
+	return s >= 512 && s <= 1<<16 && bits.OnesCount(s) == 1
 }

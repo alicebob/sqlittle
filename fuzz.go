@@ -12,10 +12,15 @@ func fuzz(data []byte) error {
 	if err != nil {
 		return err
 	}
-	db, err := newJournalDB(p, "")
+	fm, err := newFJournal(p, "")
 	if err != nil {
 		return err
 	}
+	db := &Database{
+		l: p,
+		f: fm,
+	}
+
 	tables, err := db.Tables()
 	if err != nil {
 		return err
