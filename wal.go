@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"io"
+	"fmt"
+	"os"
 
-	"golang.org/x/exp/mmap"
+	mmap "launchpad.net/gommap"
 )
 
 const (
@@ -24,11 +25,12 @@ var (
 // wal is an open -wal file. pages is the pagenr->framenr map, upto-including
 // the last valid commit found in the wal file.
 type wal struct {
-	f              *mmap.ReaderAt
-	header         walHeader
-	pages          pageMap  // of all frames up to mxFrame
-	mxFrame        int      // last frame nr + 1. Aka the next frame to read
-	commitChecksum checksum // of everything up to mxFrame
+	f      *os.File
+	mm     mmap.MMap
+	header walHeader
+	// pages          pageMap  // of all frames up to mxFrame
+	// mxFrame        int      // last frame nr + 1. Aka the next frame to read
+	// commitChecksum checksum // of everything up to mxFrame
 }
 
 type pageMap map[int]int
@@ -37,6 +39,49 @@ type walHeader struct {
 	pageSize     uint32
 	salt1, salt2 uint32
 	checksum     checksum
+}
+
+// open WAL file. `file` needs to have -wal appended.
+func openWal(file string) (*wal, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err // FIXME
+	}
+	wal := &wal{
+		f: f,
+	}
+
+	if err := wal.Remap(); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("wal mmap error: %s", err)
+	}
+
+	header := [walHeaderSize]byte{}
+	if n := copy(header[:], wal.mm); n != walHeaderSize {
+		wal.mm.UnsafeUnmap()
+		f.Close()
+		return nil, errors.New("wal too small")
+	}
+	h, err := parseWalHeader(header)
+	if err != nil {
+		return nil, err
+	}
+	wal.header = h
+	return wal, nil
+}
+
+func (w *wal) Remap() error {
+	mm, err := mmap.Map(w.f.Fd(), mmap.PROT_READ, mmap.MAP_SHARED)
+	if err != nil {
+		return fmt.Errorf("wal mmap error: %s", err)
+	}
+	w.mm = mm
+	return nil
+}
+
+func (w *wal) Close() {
+	w.mm.UnsafeUnmap()
+	w.f.Close()
 }
 
 func parseWalHeader(b [walHeaderSize]byte) (walHeader, error) {
@@ -84,6 +129,7 @@ func parseWalHeader(b [walHeaderSize]byte) (walHeader, error) {
 	}, nil
 }
 
+/*
 func readWal(file string) (*wal, error) {
 	f, err := mmap.Open(file)
 	if err != nil {
@@ -108,11 +154,9 @@ func readWal(file string) (*wal, error) {
 		commitChecksum: h.checksum,
 	}, nil
 }
+*/
 
-func (w *wal) Close() {
-	w.f.Close()
-}
-
+/*
 // Read all (new) valid commits and update w.pages. You can call this as often
 // as you like, as long as the main wal header has not changed.
 // Not calling this function will effectively give you a read transaction.
@@ -132,6 +176,7 @@ func (w *wal) ReadCommits() error {
 		w.commitChecksum = check
 	}
 }
+*/
 
 // read the list of pages starting at frame `frame`. Will return at the first
 // commit frame. If there is no (final) commit frame it will return an empty
@@ -171,16 +216,12 @@ func (w *wal) readCommit(frame int, check checksum) ([]int, checksum, error) {
 	}
 }
 
-// return bytes of frame nr (starts counting at 0)
+// return content bytes of frame nr (starts counting at 1)
 func (w *wal) frame(i int) ([]byte, error) {
-	buf := make([]byte, walFrameHeaderSize+w.header.pageSize)
-	if _, err := w.f.ReadAt(buf, walHeaderSize+int64(i)*int64(len(buf))); err != nil {
-		if err == io.EOF {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return buf, nil
+	size := walFrameHeaderSize + int64(w.header.pageSize)
+	offset := walHeaderSize + int64(i-1)*size
+	fmt.Printf("load frame %d [%d->%d]\n", i, offset, size)
+	return w.mm[offset+walFrameHeaderSize : offset+size], nil
 }
 
 type checksum struct {

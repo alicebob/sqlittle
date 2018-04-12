@@ -1,10 +1,8 @@
 package sqlittle
 
 type pager interface {
-	// read the file header bytes. Page size is unknown yet.
-	header() ([headerSize]byte, error)
-	// load a page from storage.
-	page(n int, pagesize int) ([]byte, error)
+	// load a page from storage. Starts at 1.
+	page(n int) ([]byte, error)
 	// as it says
 	Close() error
 	// read lock
