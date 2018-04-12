@@ -1,10 +1,7 @@
 package sqlittle
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
-	"math/bits"
 )
 
 const (
@@ -13,6 +10,9 @@ const (
 	// CachePages is the number of pages to keep in memory. Default size per
 	// page is 4K (1K on older databases).
 	CachePages = 100
+
+	ModeJournal = 1
+	ModeWal     = 2
 )
 
 var (
@@ -28,10 +28,6 @@ var (
 	// Various error messages returned when the database uses features sqlittle
 	// doesn't support.
 	ErrIncompatible = errors.New("incompatible database version")
-	ErrEncoding     = errors.New("unsupported encoding")
-	// Database is in WAL journal mode, which we don't support. You need to
-	// convert the database to journal mode.
-	ErrWAL = errors.New("WAL journal mode is unsupported")
 	// There is a stale `-journal` file present with an unfinished transaction.
 	// Open the database in sqlite3 to repair the database.
 	ErrHotJournal = errors.New("crashed transaction present")
@@ -40,27 +36,16 @@ var (
 	ErrNoSuchIndex = errors.New("no such index")
 )
 
-type header struct {
-	// The database page size in bytes.
-	PageSize int
-	// Updated when anything changes (only for non-WAL files).
-	ChangeCounter uint32
-	// Updated when any table definition changes
-	SchemaCookie uint32
-}
-
-type objectCache struct {
-	objects []sqliteMaster
-	err     error
-}
+// type objectCache struct {
+// objects []sqliteMaster
+// err     error
+// }
 
 type Database struct {
-	journal     string
-	dirty       bool // reload header if true
-	l           pager
-	header      *header
-	btreeCache  *btreeCache // table and index page cache
-	objectCache *objectCache
+	l pager
+	f format
+	// header      *header
+	// objectCache *objectCache
 }
 
 // OpenFile opens a .sqlite file. This is the main entry point.
@@ -70,33 +55,48 @@ func OpenFile(f string) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newDatabase(l, f+"-journal")
-}
-
-func newDatabase(l pager, journal string) (*Database, error) {
-	d := &Database{
-		journal:    journal,
-		dirty:      true,
-		l:          l,
-		btreeCache: newBtreeCache(CachePages),
+	db := &Database{
+		l: l,
 	}
-	return d, d.resolveDirty()
+	h, err := getHeader(l)
+	var fm format
+	switch h.Mode {
+	case ModeJournal:
+		fm, err = newFJournal(l, f+"-journal")
+		if err != nil {
+			return nil, err
+		}
+	case ModeWal:
+		fm, err = newFormatWal(l, f)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		panic("impossible")
+	}
+	db.f = fm
+	return db, nil
 }
 
 // Close the database.
 func (db *Database) Close() error {
-	return db.l.Close()
+	if err := db.l.Close(); err != nil {
+		return err
+	}
+	if err := db.f.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Lock database for reading. Blocks. Don't nest RLock() calls.
 func (db *Database) RLock() error {
-	db.dirty = true
-	return db.l.RLock()
+	return db.f.RLock()
 }
 
 // Unlock a read lock. Use a single RUnlock() for every RLock().
 func (db *Database) RUnlock() error {
-	return db.l.RUnlock()
+	return db.f.RUnlock()
 }
 
 // n starts at 1, sqlite style
@@ -104,152 +104,7 @@ func (db *Database) page(id int) ([]byte, error) {
 	if id < 1 {
 		return nil, errors.New("invalid page number")
 	}
-	return db.l.page(id, db.header.PageSize)
-}
-
-// the file header, as described in "1.2. The Database Header"
-func parseHeader(b [headerSize]byte) (header, error) {
-	hs := struct {
-		Magic                [16]byte
-		PageSize             uint16
-		_                    uint8 // WriteVersion
-		ReadVersion          uint8
-		ReservedSpace        uint8
-		MaxFraction          uint8
-		MinFraction          uint8
-		LeafFraction         uint8
-		ChangeCounter        uint32
-		_                    uint32
-		_                    uint32
-		_                    uint32
-		SchemaCookie         uint32
-		SchemaFormat         uint32
-		_                    uint32
-		_                    uint32
-		TextEncoding         uint32
-		_                    uint32
-		_                    uint32
-		_                    uint32
-		ReservedForExpansion [20]byte
-		_                    uint32
-		_                    uint32
-	}{}
-	if err := binary.Read(bytes.NewBuffer(b[:]), binary.BigEndian, &hs); err != nil {
-		return header{}, err
-	}
-
-	h := header{}
-
-	if string(hs.Magic[:]) != headerMagic {
-		return h, ErrInvalidMagic
-	}
-
-	{
-		s := uint(hs.PageSize)
-		if s == 1 {
-			s = 1 << 16
-		}
-		isPower := func(n uint) bool {
-			return bits.OnesCount(n) == 1
-		}
-		if s < 512 || s > 1<<16 || !isPower(s) {
-			return header{}, ErrInvalidPageSize
-		}
-		h.PageSize = int(s)
-	}
-
-	switch hs.ReadVersion {
-	case 1:
-		// journal mode
-	case 2:
-		// we don't support WAL
-		return h, ErrWAL
-	default:
-		return h, ErrIncompatible
-	}
-
-	if int(hs.ReservedSpace) != 0 {
-		return h, ErrReservedSpace
-	}
-
-	if hs.MaxFraction != 64 ||
-		hs.MinFraction != 32 ||
-		hs.LeafFraction != 32 {
-		return h, ErrIncompatible
-	}
-
-	h.ChangeCounter = hs.ChangeCounter
-
-	h.SchemaCookie = hs.SchemaCookie
-
-	// 1,2,3,4 are the only valid values.
-	switch hs.SchemaFormat {
-	case 1:
-		// Version 1 ignores 'DESC' on indexes.
-	case 2, 3, 4:
-	default:
-		return h, ErrIncompatible
-	}
-
-	switch hs.TextEncoding {
-	case 1:
-		// UTF8. It's the only thing we currently support
-	case 2, 3:
-		// UTF16le and UTF16be
-		return h, ErrEncoding
-	default:
-		return h, ErrIncompatible
-	}
-
-	for _, v := range hs.ReservedForExpansion {
-		if v != 0 {
-			return h, ErrIncompatible
-		}
-	}
-
-	return h, nil
-}
-
-func (db *Database) resolveDirty() error {
-	if !db.dirty {
-		return nil
-	}
-
-	if db.journal != "" {
-		hot, err := validJournal(db.journal)
-		if err != nil {
-			return err
-		}
-		if hot {
-			// If something is using the transaction the db will have a RESERVED
-			// lock.
-			locked, err := db.l.CheckReservedLock()
-			if err != nil {
-				return err
-			}
-			if !locked {
-				return ErrHotJournal
-			}
-		}
-	}
-
-	buf, err := db.l.header()
-	if err != nil {
-		return err
-	}
-	newHeader, err := parseHeader(buf)
-	if err != nil {
-		return err
-	}
-	if db.header != nil && db.header.ChangeCounter != newHeader.ChangeCounter {
-		db.btreeCache.clear()
-	}
-	if db.header != nil && db.header.SchemaCookie != newHeader.SchemaCookie {
-		db.objectCache = nil
-	}
-	db.dirty = false
-	db.header = &newHeader
-	return nil
+	return db.l.page(id)
 }
 
 // master records are defined as:
@@ -267,13 +122,9 @@ type sqliteMaster struct {
 }
 
 func (db *Database) master() ([]sqliteMaster, error) {
-	if err := db.resolveDirty(); err != nil {
-		return nil, err
-	}
-
-	if o := db.objectCache; o != nil {
-		return o.objects, o.err
-	}
+	// if o := db.objectCache; o != nil {
+	// return o.objects, o.err
+	// }
 
 	master, err := db.openTable(1)
 	if err != nil {
@@ -327,37 +178,16 @@ func (db *Database) master() ([]sqliteMaster, error) {
 		return false, nil
 	})
 
-	db.objectCache = &objectCache{
-		objects: objects,
-		err:     err,
-	}
+	// db.objectCache = &objectCache{
+	// objects: objects,
+	// err:     err,
+	// }
 
 	return objects, err
 }
 
-// openPage returns a tableBtree or indexBtree
-func (db *Database) openPage(page int) (interface{}, error) {
-	if err := db.resolveDirty(); err != nil {
-		return nil, err
-	}
-
-	if p := db.btreeCache.get(page); p != nil {
-		return p, nil
-	}
-
-	buf, err := db.page(page)
-	if err != nil {
-		return nil, err
-	}
-	p, err := newBtree(buf, page == 1)
-	if err == nil {
-		db.btreeCache.set(page, p)
-	}
-	return p, err
-}
-
 func (db *Database) openTable(page int) (tableBtree, error) {
-	p, err := db.openPage(page)
+	p, err := db.f.Page(page)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +199,7 @@ func (db *Database) openTable(page int) (tableBtree, error) {
 }
 
 func (db *Database) openIndex(page int) (indexBtree, error) {
-	p, err := db.openPage(page)
+	p, err := db.f.Page(page)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ package sqlittle
 
 import (
 	"errors"
+	"io"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -21,26 +22,34 @@ const (
 type filePager struct {
 	f        *os.File
 	readLock *unix.Flock_t
+	header   *header
 }
 
 func newFilePager(file string) (*filePager, error) {
 	f, err := os.Open(file)
-	return &filePager{f: f}, err
-}
-
-func (f *filePager) header() ([headerSize]byte, error) {
-	buf := [headerSize]byte{}
-	n, err := f.f.ReadAt(buf[:], 0)
-	if n != headerSize {
-		return buf, ErrFileTruncated
+	if err != nil {
+		return nil, err
 	}
-	return buf, err
+
+	buf := [headerSize]byte{}
+	if _, err := f.ReadAt(buf[:], 0); err != nil {
+		if err == io.EOF {
+			err = ErrFileTruncated
+		}
+		return nil, err
+	}
+	h, err := parseHeader(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &filePager{f: f, header: &h}, err
 }
 
-func (f *filePager) page(id int, pagesize int) ([]byte, error) {
-	buf := make([]byte, pagesize)
+func (f *filePager) page(id int) ([]byte, error) {
+	buf := make([]byte, f.header.PageSize)
 	// pages start counting at 1
-	n, err := f.f.ReadAt(buf[:], int64(id-1)*int64(pagesize))
+	n, err := f.f.ReadAt(buf[:], int64(id-1)*int64(f.header.PageSize))
 	if err != nil {
 		return buf, err
 	}

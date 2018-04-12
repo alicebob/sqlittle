@@ -32,6 +32,8 @@ func TestOpenHot(t *testing.T) {
 			t.Errorf("have %#v, want %#v", have, want)
 			continue
 		}
-		db.Close()
+		if err == nil {
+			db.Close()
+		}
 	}
 }
