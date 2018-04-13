@@ -41,12 +41,6 @@ func newFilePager(file string) (*filePager, error) {
 	}, nil
 }
 
-func (f *filePager) header() ([headerSize]byte, error) {
-	buf := [headerSize]byte{}
-	_, err := f.mm.ReadAt(buf[:], 0)
-	return buf, err
-}
-
 // pages start counting at 1
 func (f *filePager) page(id int, pagesize int) ([]byte, error) {
 	buf := make([]byte, pagesize)

@@ -107,7 +107,7 @@ func (db *Database) page(id int) ([]byte, error) {
 }
 
 // the file header, as described in "1.2. The Database Header"
-func parseHeader(b [headerSize]byte) (header, error) {
+func parseHeader(b []byte) (header, error) {
 	hs := struct {
 		Magic                [16]byte
 		PageSize             uint16
@@ -133,7 +133,7 @@ func parseHeader(b [headerSize]byte) (header, error) {
 		_                    uint32
 		_                    uint32
 	}{}
-	if err := binary.Read(bytes.NewBuffer(b[:]), binary.BigEndian, &hs); err != nil {
+	if err := binary.Read(bytes.NewBuffer(b), binary.BigEndian, &hs); err != nil {
 		return header{}, err
 	}
 
@@ -232,7 +232,7 @@ func (db *Database) resolveDirty() error {
 		}
 	}
 
-	buf, err := db.l.header()
+	buf, err := db.l.page(1, headerSize)
 	if err != nil {
 		return err
 	}

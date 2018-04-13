@@ -76,15 +76,6 @@ func fuzz(data []byte) error {
 
 type bytePager []byte
 
-func (b *bytePager) header() ([headerSize]byte, error) {
-	if len(*b) < headerSize {
-		return [headerSize]byte{}, ErrCorrupted
-	}
-	var bb [headerSize]byte
-	copy(bb[:], (*b)[:headerSize])
-	return bb, nil
-}
-
 func (b *bytePager) page(n int, pagesize int) ([]byte, error) {
 	x := pagesize * (n - 1)
 	y := x + pagesize

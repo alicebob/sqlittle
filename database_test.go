@@ -216,7 +216,8 @@ func TestHeader(t *testing.T) {
 			err: ErrIncompatible,
 		},
 	} {
-		h, err := parseHeader(c.change(base))
+		hb := c.change(base)
+		h, err := parseHeader(hb[:])
 		if have, want := err, c.err; !reflect.DeepEqual(have, want) {
 			t.Fatalf("case %d: have %v, want %v", n, have, want)
 		}
