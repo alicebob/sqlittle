@@ -10,20 +10,22 @@ import (
 
 var (
 	keywords = map[string]int{
-		"SELECT":        SELECT,
-		"FROM":          FROM,
+		"ASC":           ASC,
+		"AUTOINCREMENT": AUTOINCREMENT,
 		"CREATE":        CREATE,
-		"TABLE":         TABLE,
+		"DESC":          DESC,
+		"FROM":          FROM,
 		"INDEX":         INDEX,
-		"ON":            ON,
+		"KEY":           KEY,
 		"NOT":           NOT,
 		"NULL":          NULL,
-		"UNIQUE":        UNIQUE,
+		"ON":            ON,
 		"PRIMARY":       PRIMARY,
-		"KEY":           KEY,
-		"ASC":           ASC,
-		"DESC":          DESC,
-		"AUTOINCREMENT": AUTOINCREMENT,
+		"ROWID":         ROWID,
+		"SELECT":        SELECT,
+		"TABLE":         TABLE,
+		"UNIQUE":        UNIQUE,
+		"WITHOUT":       WITHOUT,
 	}
 )
 

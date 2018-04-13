@@ -4,14 +4,6 @@ import (
 	"strings"
 )
 
-type PrimaryKey int
-
-const (
-	PKNone PrimaryKey = iota
-	PKAsc
-	PKDesc
-)
-
 type SortOrder int
 
 const (
@@ -38,15 +30,17 @@ type SelectStmt struct {
 
 // A `CREATE TABLE` statement
 type CreateTableStmt struct {
-	Table   string
-	Columns []ColumnDef
+	Table        string
+	Columns      []ColumnDef
+	WithoutRowid bool
 }
 
 // Definition of a column, as found by CreateTableStmt
 type ColumnDef struct {
 	Name          string
 	Type          string
-	PrimaryKey    PrimaryKey
+	PrimaryKey    bool
+	PrimaryKeyDir SortOrder
 	AutoIncrement bool
 	Null          bool
 	Unique        bool
@@ -54,6 +48,37 @@ type ColumnDef struct {
 	// Default
 	// Collate
 	// foreign key
+}
+
+// Column constraints
+type primaryKey SortOrder
+type unique bool
+type null bool
+type autoincrement bool
+
+// make a ColumnDef with a list of constraints
+func makeDef(name string, typ string, cs []interface{}) ColumnDef {
+	cd := ColumnDef{
+		Name: name,
+		Type: typ,
+		Null: true,
+	}
+	for _, c := range cs {
+		switch v := c.(type) {
+		case null:
+			cd.Null = bool(v)
+		case primaryKey:
+			cd.PrimaryKey = true
+			cd.PrimaryKeyDir = SortOrder(v)
+		case unique:
+			cd.Unique = bool(v)
+		case autoincrement:
+			cd.AutoIncrement = bool(v)
+		default:
+			panic("unhandled constraint")
+		}
+	}
+	return cd
 }
 
 // The column is an alias for the rowid, and not stored in a row.
@@ -64,7 +89,7 @@ func (c ColumnDef) IsRowid() bool {
 	// TODO:
 	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x ASC));
 	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x DESC));
-	return c.PrimaryKey == PKAsc && strings.ToUpper(c.Type) == "INTEGER"
+	return c.PrimaryKey && c.PrimaryKeyDir == Asc && strings.ToUpper(c.Type) == "INTEGER"
 }
 
 // A `CREATE INDEX` statement

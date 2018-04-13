@@ -9,24 +9,26 @@ import (
 func TestColumnIsRowid(t *testing.T) {
 	for d, want := range map[ColumnDef]bool{
 		ColumnDef{
-			Name:       "c 1",
-			Type:       "Integer",
-			PrimaryKey: PKAsc,
+			Name:          "c 1",
+			Type:          "Integer",
+			PrimaryKey:    true,
+			PrimaryKeyDir: Asc,
 		}: true,
 		ColumnDef{
-			Name:       "c 1",
-			Type:       "Integer",
-			PrimaryKey: PKDesc,
+			Name:          "c 1",
+			Type:          "Integer",
+			PrimaryKey:    true,
+			PrimaryKeyDir: Desc,
 		}: false,
 		ColumnDef{
-			Name:       "c 1",
-			Type:       "Integer",
-			PrimaryKey: PKNone,
+			Name: "c 1",
+			Type: "Integer",
 		}: false,
 		ColumnDef{
-			Name:       "c 1",
-			Type:       "Int",
-			PrimaryKey: PKAsc,
+			Name:          "c 1",
+			Type:          "Int",
+			PrimaryKey:    true,
+			PrimaryKeyDir: Asc,
 		}: false,
 	} {
 		if have := d.IsRowid(); have != want {
@@ -124,11 +126,16 @@ func TestCreateTable(t *testing.T) {
 				// You can sort-of use a string literal as a name
 				sql: `create table "table" ([table] 'table')`,
 				err: errors.New("syntax error"),
+			},
+			{
+				// WITHOUT ROWID
+				sql: "CREATE TABLE foo (name NOT NULL PRIMARY KEY) WITHOUT ROWID",
 				want: CreateTableStmt{
-					Table: "table",
+					Table: "foo",
 					Columns: []ColumnDef{
-						{Name: "table", Type: "table", Null: true},
+						{Name: "name", Type: "", PrimaryKey: true},
 					},
+					WithoutRowid: true,
 				},
 			},
 		},
@@ -149,10 +156,13 @@ func TestCreateTable(t *testing.T) {
 
 		// constraints
 		"age int not null":                     &ColumnDef{Name: "age", Type: "int"},
-		"i0 integer primary key":               &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: PKAsc, Null: true},
-		"i0 integer primary key desc":          &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: PKDesc, Null: true},
-		"i0 integer primary key autoincrement": &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: PKAsc, AutoIncrement: true, Null: true},
+		"age int not null not null null":       &ColumnDef{Name: "age", Type: "int", Null: true},
+		"i0 integer primary key":               &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Asc, Null: true},
+		"i0 integer primary key desc":          &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Desc, Null: true},
+		"i0 integer primary key autoincrement": &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Asc, AutoIncrement: true, Null: true},
 		"i1 not null unique":                   &ColumnDef{Name: "i1", Unique: true},
+		"i1 unique not null":                   &ColumnDef{Name: "i1", Unique: true},
+		"i0 NOT NULL primary key":              &ColumnDef{Name: "i0", Type: "", PrimaryKey: true, PrimaryKeyDir: Asc},
 	}
 
 	for sql, col := range cases {

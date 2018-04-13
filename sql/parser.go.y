@@ -13,11 +13,11 @@ package sql
 	indexedColumnDefList []IndexDef
 	indexedColumnDef IndexDef
 	name string
-	primaryKey PrimaryKey
-	autoIncrement bool
+	withoutRowid bool
 	unique bool
-	null bool
 	sortOrder SortOrder
+	iface interface{}
+	ifaceList []interface{}
 }
 
 %type<expr> program
@@ -33,13 +33,14 @@ package sql
 %type<indexedColumnDefList> indexedColumnDefList
 %type<indexedColumnDef> indexedColumnDef
 %type<name> typeName
-%type<primaryKey> primaryKey
-%type<null> null
 %type<unique> unique
-%type<autoIncrement> autoIncrement
+%type<withoutRowid> withoutRowid
 %type<sortOrder> sortOrder
+%type<iface> columnConstraint
+%type<ifaceList> columnConstraintList
 
-%token SELECT FROM CREATE TABLE INDEX ON PRIMARY KEY ASC DESC AUTOINCREMENT NOT NULL UNIQUE
+%token SELECT FROM CREATE TABLE INDEX ON PRIMARY KEY ASC DESC
+%token AUTOINCREMENT NOT NULL UNIQUE WITHOUT ROWID
 %token<identifier> tBare tLiteral tIdentifier
 %token<signedNumber> tSignedNumber
 
@@ -79,6 +80,40 @@ columnList:
 		$$ = append($1, $3)
 	}
 
+columnConstraint:
+	PRIMARY KEY ASC {
+		$$ = primaryKey(Asc)
+	} |
+	PRIMARY KEY DESC {
+		$$ = primaryKey(Desc)
+	} |
+	PRIMARY KEY {
+		$$ = primaryKey(Asc)
+	} |
+	UNIQUE {
+		$$ = unique(true)
+	} |
+	NULL {
+		$$ = null(true)
+	} |
+	NOT NULL {
+		$$ = null(false)
+	} |
+	AUTOINCREMENT {
+		$$ = autoincrement(true)
+	}
+
+columnConstraintList:
+	{
+		$$ = nil
+	} |
+	columnConstraint {
+		$$ = []interface{}{$1}
+	} |
+	columnConstraintList columnConstraint {
+		$$ = append($1, $2)
+	}
+
 columnDefList:
 	columnDef {
 		$$ = []ColumnDef{$1}
@@ -88,15 +123,8 @@ columnDefList:
 	}
 
 columnDef:
-	identifier typeName primaryKey autoIncrement null unique {
-		$$ = ColumnDef{
-			Name: $1,
-			Type: $2,
-			PrimaryKey: $3,
-			AutoIncrement: $4,
-			Null: $5,
-			Unique: $6,
-		}
+	identifier typeName columnConstraintList {
+		$$ = makeDef($1, $2, $3)
 	}
 
 typeName:
@@ -113,20 +141,6 @@ typeName:
 		$$ = $1
 	}
 
-primaryKey:
-	{
-		$$ = PKNone
-	} |
-	PRIMARY KEY {
-		$$ = PKAsc
-	} |
-	PRIMARY KEY ASC {
-		$$ = PKAsc
-	} |
-	PRIMARY KEY DESC {
-		$$ = PKDesc
-	}
-
 sortOrder:
 	{
 		$$ = Asc
@@ -138,22 +152,11 @@ sortOrder:
 		$$ = Desc
 	}
 
-autoIncrement:
+withoutRowid:
 	{
 		$$ = false
 	} |
-	AUTOINCREMENT {
-		$$ = true
-	}
-
-null:
-	{
-		$$ = true
-	} |
-	NOT NULL {
-		$$ = false
-	} |
-	NULL {
+	WITHOUT ROWID {
 		$$ = true
 	}
 
@@ -187,8 +190,12 @@ selectStmt:
 	}
 
 createTableStmt:
-	CREATE TABLE identifier '(' columnDefList ')' {
-		yylex.(*lexer).result = CreateTableStmt{ Table: $3, Columns: $5 }
+	CREATE TABLE identifier '(' columnDefList ')' withoutRowid {
+		yylex.(*lexer).result = CreateTableStmt{
+			Table: $3,
+			Columns: $5,
+			WithoutRowid: $7,
+		}
 	}
 
 createIndexStmt:
