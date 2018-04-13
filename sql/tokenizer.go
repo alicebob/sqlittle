@@ -12,6 +12,7 @@ var (
 	keywords = map[string]int{
 		"ASC":           ASC,
 		"AUTOINCREMENT": AUTOINCREMENT,
+		"COLLATE":       COLLATE,
 		"CREATE":        CREATE,
 		"DESC":          DESC,
 		"FROM":          FROM,

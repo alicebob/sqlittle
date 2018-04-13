@@ -36,11 +36,12 @@ package sql
 %type<unique> unique
 %type<withoutRowid> withoutRowid
 %type<sortOrder> sortOrder
-%type<iface> columnConstraint
+%type<iface> autoincrement
+%type<ifaceList> columnConstraint
 %type<ifaceList> columnConstraintList
 
 %token SELECT FROM CREATE TABLE INDEX ON PRIMARY KEY ASC DESC
-%token AUTOINCREMENT NOT NULL UNIQUE WITHOUT ROWID
+%token AUTOINCREMENT NOT NULL UNIQUE COLLATE WITHOUT ROWID
 %token<identifier> tBare tLiteral tIdentifier
 %token<signedNumber> tSignedNumber
 
@@ -81,26 +82,20 @@ columnList:
 	}
 
 columnConstraint:
-	PRIMARY KEY ASC {
-		$$ = primaryKey(Asc)
-	} |
-	PRIMARY KEY DESC {
-		$$ = primaryKey(Desc)
-	} |
-	PRIMARY KEY {
-		$$ = primaryKey(Asc)
+	PRIMARY KEY sortOrder autoincrement {
+		$$ = []interface{}{primaryKey($3), $4}
 	} |
 	UNIQUE {
-		$$ = unique(true)
+		$$ = []interface{}{unique(true)}
 	} |
 	NULL {
-		$$ = null(true)
+		$$ = []interface{}{null(true)}
 	} |
 	NOT NULL {
-		$$ = null(false)
+		$$ = []interface{}{null(false)}
 	} |
-	AUTOINCREMENT {
-		$$ = autoincrement(true)
+	COLLATE identifier {
+		$$ = []interface{}{collate($2)}
 	}
 
 columnConstraintList:
@@ -108,10 +103,18 @@ columnConstraintList:
 		$$ = nil
 	} |
 	columnConstraint {
-		$$ = []interface{}{$1}
+		$$ = $1
 	} |
 	columnConstraintList columnConstraint {
-		$$ = append($1, $2)
+		$$ = append($1, $2...)
+	}
+
+autoincrement:
+	{
+		$$ = autoincrement(false)
+	} |
+	AUTOINCREMENT {
+		$$ = autoincrement(true)
 	}
 
 columnDefList:

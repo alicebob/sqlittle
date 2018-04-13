@@ -44,17 +44,18 @@ type ColumnDef struct {
 	AutoIncrement bool
 	Null          bool
 	Unique        bool
+	Collate       string
 	// Check
 	// Default
-	// Collate
 	// foreign key
 }
 
-// Column constraints
+// column constraints, used while parsing a constrainst list
 type primaryKey SortOrder
 type unique bool
 type null bool
 type autoincrement bool
+type collate string
 
 // make a ColumnDef with a list of constraints
 func makeDef(name string, typ string, cs []interface{}) ColumnDef {
@@ -74,6 +75,8 @@ func makeDef(name string, typ string, cs []interface{}) ColumnDef {
 			cd.Unique = bool(v)
 		case autoincrement:
 			cd.AutoIncrement = bool(v)
+		case collate:
+			cd.Collate = string(v)
 		default:
 			panic("unhandled constraint")
 		}

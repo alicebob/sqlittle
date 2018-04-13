@@ -160,9 +160,12 @@ func TestCreateTable(t *testing.T) {
 		"i0 integer primary key":               &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Asc, Null: true},
 		"i0 integer primary key desc":          &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Desc, Null: true},
 		"i0 integer primary key autoincrement": &ColumnDef{Name: "i0", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Asc, AutoIncrement: true, Null: true},
+		"i0 integer autoincrement":             nil,
 		"i1 not null unique":                   &ColumnDef{Name: "i1", Unique: true},
 		"i1 unique not null":                   &ColumnDef{Name: "i1", Unique: true},
 		"i0 NOT NULL primary key":              &ColumnDef{Name: "i0", Type: "", PrimaryKey: true, PrimaryKeyDir: Asc},
+		"i0 not null collate rtrim":            &ColumnDef{Name: "i0", Collate: "rtrim"},
+		"i0 not null collate rtrim rtrim":      nil,
 	}
 
 	for sql, col := range cases {
