@@ -23,7 +23,6 @@ var (
 	ErrCorrupted       = errors.New("database corrupted")
 	ErrInvalidDef      = errors.New("invalid object definition")
 	ErrRecursion       = errors.New("tree is too deep")
-	ErrFileTruncated   = errors.New("file truncated")
 
 	// Various error messages returned when the database uses features sqlittle
 	// doesn't support.

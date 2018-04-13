@@ -249,14 +249,14 @@ func TestIONoSuch(t *testing.T) {
 
 func TestIOZero(t *testing.T) {
 	_, err := OpenFile("./test/zerolength.sqlite")
-	if have, want := err, ErrFileTruncated; have != want {
+	if have, want := err, errors.New("mmap: closed"); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOTruncated(t *testing.T) {
 	_, err := OpenFile("./test/truncated.sqlite")
-	if have, want := err, ErrFileTruncated; have != want {
+	if have, want := err, io.EOF; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 
+	"golang.org/x/exp/mmap"
 	"golang.org/x/sys/unix"
 )
 
@@ -21,33 +22,36 @@ const (
 type filePager struct {
 	f        *os.File
 	readLock *unix.Flock_t
+	mm       *mmap.ReaderAt
 }
 
 func newFilePager(file string) (*filePager, error) {
 	f, err := os.Open(file)
-	return &filePager{f: f}, err
+	if err != nil {
+		return nil, err
+	}
+	mm, err := mmap.Open(file)
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	return &filePager{
+		f:  f,
+		mm: mm,
+	}, nil
 }
 
 func (f *filePager) header() ([headerSize]byte, error) {
 	buf := [headerSize]byte{}
-	n, err := f.f.ReadAt(buf[:], 0)
-	if n != headerSize {
-		return buf, ErrFileTruncated
-	}
+	_, err := f.mm.ReadAt(buf[:], 0)
 	return buf, err
 }
 
+// pages start counting at 1
 func (f *filePager) page(id int, pagesize int) ([]byte, error) {
 	buf := make([]byte, pagesize)
-	// pages start counting at 1
-	n, err := f.f.ReadAt(buf[:], int64(id-1)*int64(pagesize))
-	if err != nil {
-		return buf, err
-	}
-	if n != len(buf) {
-		return buf, ErrFileTruncated
-	}
-	return buf, nil
+	_, err := f.mm.ReadAt(buf[:], int64(id-1)*int64(pagesize))
+	return buf, err
 }
 
 func (f *filePager) lock(flock *unix.Flock_t) error {
@@ -116,5 +120,6 @@ func (f *filePager) CheckReservedLock() (bool, error) {
 }
 
 func (f *filePager) Close() error {
-	return f.f.Close()
+	f.f.Close()
+	return f.mm.Close()
 }
