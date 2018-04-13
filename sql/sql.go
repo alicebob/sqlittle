@@ -44,9 +44,9 @@ type ColumnDef struct {
 	AutoIncrement bool
 	Null          bool
 	Unique        bool
+	Default       interface{}
 	Collate       string
 	// Check
-	// Default
 	// foreign key
 }
 
@@ -56,6 +56,7 @@ type unique bool
 type null bool
 type autoincrement bool
 type collate string
+type defaul interface{}
 
 // make a ColumnDef with a list of constraints
 func makeDef(name string, typ string, cs []interface{}) ColumnDef {
@@ -77,6 +78,8 @@ func makeDef(name string, typ string, cs []interface{}) ColumnDef {
 			cd.AutoIncrement = bool(v)
 		case collate:
 			cd.Collate = string(v)
+		case defaul:
+			cd.Default = interface{}(v)
 		default:
 			panic("unhandled constraint")
 		}

@@ -166,6 +166,10 @@ func TestCreateTable(t *testing.T) {
 		"i0 NOT NULL primary key":              &ColumnDef{Name: "i0", Type: "", PrimaryKey: true, PrimaryKeyDir: Asc},
 		"i0 not null collate rtrim":            &ColumnDef{Name: "i0", Collate: "rtrim"},
 		"i0 not null collate rtrim rtrim":      nil,
+		"i0 not null default 1":                &ColumnDef{Name: "i0", Default: int64(1)},
+		"i0 not null default foo":              &ColumnDef{Name: "i0", Default: "foo"},
+		"i0 not null default 'foo'":            &ColumnDef{Name: "i0", Default: "foo"},
+		"i0 not null default [foo]":            nil,
 	}
 
 	for sql, col := range cases {

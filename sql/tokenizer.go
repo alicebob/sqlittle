@@ -3,6 +3,7 @@ package sql
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -14,6 +15,7 @@ var (
 		"AUTOINCREMENT": AUTOINCREMENT,
 		"COLLATE":       COLLATE,
 		"CREATE":        CREATE,
+		"DEFAULT":       DEFAULT,
 		"DESC":          DESC,
 		"FROM":          FROM,
 		"INDEX":         INDEX,
@@ -33,6 +35,21 @@ var (
 type token struct {
 	typ int
 	s   string
+	n   int64
+}
+
+func stoken(typ int, s string) token {
+	return token{
+		typ: typ,
+		s:   s,
+	}
+}
+
+func ntoken(typ int, n int64) token {
+	return token{
+		typ: typ,
+		n:   n,
+	}
 }
 
 func tokenize(s string) ([]token, error) {
@@ -51,20 +68,23 @@ func tokenize(s string) ([]token, error) {
 			if n, ok := keywords[strings.ToUpper(bt)]; ok {
 				tnr = n
 			}
-			res = append(res, token{tnr, bt})
+			res = append(res, token{tnr, bt, 0})
 			i += bl - 1
 		case unicode.IsDigit(c) || c == '+' || c == '-':
-			d, l := readSignedNumber(s[i:])
-			res = append(res, token{tSignedNumber, d})
+			n, l := readSignedNumber(s[i:])
+			if l == -1 {
+				return res, errors.New("unsupported number")
+			}
+			res = append(res, token{tSignedNumber, "", n})
 			i += l - 1
 		case c == '(' || c == ')' || c == ',' || c == '*':
-			res = append(res, token{int(c), string(c)})
+			res = append(res, token{int(c), string(c), 0})
 		case c == '\'':
 			bt, bl := readSingleQuoted(s[i+1:])
 			if bl == -1 {
 				return res, errors.New("no terminating ' found")
 			}
-			res = append(res, token{tLiteral, bt})
+			res = append(res, token{tLiteral, bt, 0})
 			i += bl
 		case c == '"' || c == '`' || c == '[':
 			close := c
@@ -75,7 +95,7 @@ func tokenize(s string) ([]token, error) {
 			if bl == -1 {
 				return res, fmt.Errorf("no terminating %q found", close)
 			}
-			res = append(res, token{tIdentifier, bt})
+			res = append(res, token{tIdentifier, bt, 0})
 			i += bl
 		default:
 			return nil, fmt.Errorf("unexpected char at pos:%d: %q", i, c)
@@ -97,17 +117,23 @@ func readBareword(s string) (string, int) {
 	return s, len(s)
 }
 
-func readSignedNumber(s string) (string, int) {
+func readSignedNumber(s string) (int64, int) {
 	// TODO: decimals, scientific notation
+loop:
 	for i, r := range s {
 		switch {
 		case i == 0 && r == '+' || r == '-':
 		case unicode.IsDigit(r):
 		default:
-			return s[:i], i
+			s = s[:i]
+			break loop
 		}
 	}
-	return s, len(s)
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, -1
+	}
+	return n, len(s)
 }
 
 // parse a 'bareword'. Opening ' is already gone. No escape sequences.

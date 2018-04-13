@@ -3,8 +3,9 @@ package sql
 %}
 
 %union {
+	literal string
 	identifier string
-	signedNumber string
+	signedNumber int64
 	expr interface{}
 	columnList []string
 	columnName string
@@ -25,6 +26,7 @@ package sql
 %type<expr> createTableStmt
 %type<expr> createIndexStmt
 %type<identifier> identifier
+%type<literal> literal
 %type<signedNumber> signedNumber
 %type<columnList> columnList
 %type<columnName> columnName
@@ -41,7 +43,7 @@ package sql
 %type<ifaceList> columnConstraintList
 
 %token SELECT FROM CREATE TABLE INDEX ON PRIMARY KEY ASC DESC
-%token AUTOINCREMENT NOT NULL UNIQUE COLLATE WITHOUT ROWID
+%token AUTOINCREMENT NOT NULL UNIQUE COLLATE WITHOUT ROWID DEFAULT
 %token<identifier> tBare tLiteral tIdentifier
 %token<signedNumber> tSignedNumber
 
@@ -51,6 +53,14 @@ program:
 	selectStmt |
 	createTableStmt |
 	createIndexStmt
+
+literal:
+	tBare {
+		$$ = $1
+	} |
+	tLiteral {
+		$$ = $1
+	}
 
 identifier:
 	tBare {
@@ -96,6 +106,12 @@ columnConstraint:
 	} |
 	COLLATE identifier {
 		$$ = []interface{}{collate($2)}
+	} |
+	DEFAULT signedNumber {
+		$$ = []interface{}{defaul($2)}
+	} |
+	DEFAULT literal {
+		$$ = []interface{}{defaul($2)}
 	}
 
 columnConstraintList:

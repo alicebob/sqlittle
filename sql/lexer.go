@@ -18,6 +18,7 @@ func (l *lexer) Lex(lval *yySymType) int {
 	l.tokens = l.tokens[1:]
 
 	lval.identifier = tok.s
+	lval.signedNumber = tok.n
 	return tok.typ
 }
 
