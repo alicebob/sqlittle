@@ -41,7 +41,7 @@ package sql
 %type<columnDef> columnDef
 %type<indexedColumnList> indexedColumnList
 %type<indexedColumn> indexedColumn
-%type<name> typeName
+%type<name> typeName constraintName
 %type<unique> unique
 %type<withoutRowid> withoutRowid
 %type<collate> collate
@@ -60,6 +60,7 @@ package sql
 %token AUTOINCREMENT
 %token CASCADE
 %token COLLATE
+%token CONSTRAINT
 %token CREATE
 %token DEFAULT
 %token DELETE
@@ -197,13 +198,18 @@ tableConstraint:
 		}
 	}
 
+constraintName:
+	{ } |
+	CONSTRAINT identifier {
+	}
+
 tableConstraintList:
 	{ } |
-	',' tableConstraint {
-		$$ = []TableConstraint{$2}
+	',' constraintName tableConstraint {
+		$$ = []TableConstraint{$3}
 	} |
-	tableConstraintList ',' tableConstraint {
-		$$ = append($1, $3)
+	tableConstraintList ',' constraintName tableConstraint {
+		$$ = append($1, $4)
 	}
 
 

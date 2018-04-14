@@ -157,6 +157,21 @@ func TestCreateTable(t *testing.T) {
 				},
 			},
 			{
+				// constraint names (ignored)
+				sql: "CREATE TABLE aap (noot, mies, CONSTRAINT foo PRIMARY KEY (noot), CONSTRAINT bar UNIQUE (mies))",
+				want: CreateTableStmt{
+					Table: "aap",
+					Columns: []ColumnDef{
+						{Name: "noot", Null: true},
+						{Name: "mies", Null: true},
+					},
+					Constraints: []TableConstraint{
+						TablePrimaryKey{IndexedColumns: []IndexedColumn{{Column: "noot"}}},
+						TableUnique{IndexedColumns: []IndexedColumn{{Column: "mies"}}},
+					},
+				},
+			},
+			{
 				sql: "CREATE TABLE aap (noot, mies, UNIQUE (mies DESC), UNIQUE (noot))",
 				want: CreateTableStmt{
 					Table: "aap",
