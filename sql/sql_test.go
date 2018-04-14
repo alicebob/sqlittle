@@ -123,7 +123,7 @@ func TestCreateTable(t *testing.T) {
 				},
 			},
 			{
-				// You can sort-of use a string literal as a name
+				// (you can sort-of use a string literal as a name in sqlite)
 				sql: `create table "table" ([table] 'table')`,
 				err: errors.New("syntax error"),
 			},
@@ -136,6 +136,46 @@ func TestCreateTable(t *testing.T) {
 						{Name: "name", Type: "", PrimaryKey: true},
 					},
 					WithoutRowid: true,
+				},
+			},
+			{
+				sql: "CREATE TABLE aap (noot, mies, PRIMARY KEY (noot, mies DESC))",
+				want: CreateTableStmt{
+					Table: "aap",
+					Columns: []ColumnDef{
+						{Name: "noot", Null: true},
+						{Name: "mies", Null: true},
+					},
+					Constraints: []TableConstraint{
+						TablePrimaryKey{
+							IndexedColumns: []IndexedColumn{
+								{Column: "noot", SortOrder: Asc},
+								{Column: "mies", SortOrder: Desc},
+							},
+						},
+					},
+				},
+			},
+			{
+				sql: "CREATE TABLE aap (noot, mies, UNIQUE (mies DESC), UNIQUE (noot))",
+				want: CreateTableStmt{
+					Table: "aap",
+					Columns: []ColumnDef{
+						{Name: "noot", Null: true},
+						{Name: "mies", Null: true},
+					},
+					Constraints: []TableConstraint{
+						TableUnique{
+							IndexedColumns: []IndexedColumn{
+								{Column: "mies", SortOrder: Desc},
+							},
+						},
+						TableUnique{
+							IndexedColumns: []IndexedColumn{
+								{Column: "noot", SortOrder: Asc},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -211,7 +251,7 @@ func TestCreateIndex(t *testing.T) {
 				want: CreateIndexStmt{
 					Index: "foo_index",
 					Table: "foo",
-					IndexedColumns: []IndexDef{
+					IndexedColumns: []IndexedColumn{
 						{Column: "name", SortOrder: Desc},
 						{Column: "age", SortOrder: Asc},
 					},
@@ -223,8 +263,19 @@ func TestCreateIndex(t *testing.T) {
 					Index:  "foo_index",
 					Table:  "foo",
 					Unique: true,
-					IndexedColumns: []IndexDef{
+					IndexedColumns: []IndexedColumn{
 						{Column: "name", SortOrder: Asc},
+					},
+				},
+			},
+			{
+				sql: "CREATE UNIQUE INDEX foo_index ON foo (name COLLATE RTRIM DESC)",
+				want: CreateIndexStmt{
+					Index:  "foo_index",
+					Table:  "foo",
+					Unique: true,
+					IndexedColumns: []IndexedColumn{
+						{Column: "name", Collate: "RTRIM", SortOrder: Desc},
 					},
 				},
 			},

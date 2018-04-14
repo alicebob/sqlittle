@@ -72,7 +72,7 @@ func TestLowDefs(t *testing.T) {
 	if have, want := idef, (&sql.CreateIndexStmt{
 		Index: "words_index_2",
 		Table: "words",
-		IndexedColumns: []sql.IndexDef{
+		IndexedColumns: []sql.IndexedColumn{
 			{Column: "length"},
 			{Column: "word"},
 		},

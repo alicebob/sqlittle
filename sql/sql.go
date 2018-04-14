@@ -32,6 +32,7 @@ type SelectStmt struct {
 type CreateTableStmt struct {
 	Table        string
 	Columns      []ColumnDef
+	Constraints  []TableConstraint
 	WithoutRowid bool
 }
 
@@ -50,16 +51,19 @@ type ColumnDef struct {
 	// foreign key
 }
 
-// column constraints, used while parsing a constrainst list
-type primaryKey SortOrder
-type unique bool
-type null bool
-type autoincrement bool
-type collate string
-type defaul interface{}
+// column constraints, used while parsing a constraint list
+type columnConstraint interface{}
+type ccPrimaryKey struct {
+	sort          SortOrder
+	autoincrement bool
+}
+type ccUnique bool
+type ccNull bool
+type ccAutoincrement bool
+type ccCollate string
+type ccDefault interface{}
 
-// make a ColumnDef with a list of constraints
-func makeDef(name string, typ string, cs []interface{}) ColumnDef {
+func makeColumnDef(name string, typ string, cs []columnConstraint) ColumnDef {
 	cd := ColumnDef{
 		Name: name,
 		Type: typ,
@@ -67,18 +71,17 @@ func makeDef(name string, typ string, cs []interface{}) ColumnDef {
 	}
 	for _, c := range cs {
 		switch v := c.(type) {
-		case null:
+		case ccNull:
 			cd.Null = bool(v)
-		case primaryKey:
+		case ccPrimaryKey:
 			cd.PrimaryKey = true
-			cd.PrimaryKeyDir = SortOrder(v)
-		case unique:
+			cd.PrimaryKeyDir = SortOrder(v.sort)
+			cd.AutoIncrement = v.autoincrement
+		case ccUnique:
 			cd.Unique = bool(v)
-		case autoincrement:
-			cd.AutoIncrement = bool(v)
-		case collate:
+		case ccCollate:
 			cd.Collate = string(v)
-		case defaul:
+		case ccDefault:
 			cd.Default = interface{}(v)
 		default:
 			panic("unhandled constraint")
@@ -87,15 +90,13 @@ func makeDef(name string, typ string, cs []interface{}) ColumnDef {
 	return cd
 }
 
-// The column is an alias for the rowid, and not stored in a row.
-// https://sqlite.org/lang_createtable.html#rowid
-func (c ColumnDef) IsRowid() bool {
-	// supported:
-	// CREATE TABLE t(x INTEGER PRIMARY KEY ASC, y, z);
-	// TODO:
-	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x ASC));
-	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x DESC));
-	return c.PrimaryKey && c.PrimaryKeyDir == Asc && strings.ToUpper(c.Type) == "INTEGER"
+// CREATE TABLE constraint (primary key, index)
+type TableConstraint interface{}
+type TablePrimaryKey struct {
+	IndexedColumns []IndexedColumn
+}
+type TableUnique struct {
+	IndexedColumns []IndexedColumn
 }
 
 // A `CREATE INDEX` statement
@@ -103,15 +104,15 @@ type CreateIndexStmt struct {
 	Index          string
 	Table          string
 	Unique         bool
-	IndexedColumns []IndexDef
+	IndexedColumns []IndexedColumn
 	// Where
 }
 
-// Indexed column, for CreateIndexStmt
-type IndexDef struct {
+// Indexed column, for CreateIndexStmt, and index table constraints
+type IndexedColumn struct {
 	Column    string
+	Collate   string
 	SortOrder SortOrder
-	// Collate
 }
 
 // Parse is the main function. It will return either an error or a *Stmt
@@ -124,4 +125,15 @@ func Parse(sql string) (interface{}, error) {
 	l := &lexer{tokens: ts}
 	yyParse(l)
 	return l.result, l.err
+}
+
+// The column is an alias for the rowid, and not stored in a row.
+// https://sqlite.org/lang_createtable.html#rowid
+func (c ColumnDef) IsRowid() bool {
+	// supported:
+	// CREATE TABLE t(x INTEGER PRIMARY KEY ASC, y, z);
+	// TODO:
+	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x ASC));
+	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x DESC));
+	return c.PrimaryKey && c.PrimaryKeyDir == Asc && strings.ToUpper(c.Type) == "INTEGER"
 }

@@ -11,14 +11,18 @@ package sql
 	columnName string
 	columnDefList []ColumnDef
 	columnDef ColumnDef
-	indexedColumnDefList []IndexDef
-	indexedColumnDef IndexDef
+	indexedColumnList []IndexedColumn
+	indexedColumn IndexedColumn
 	name string
 	withoutRowid bool
 	unique bool
+	bool bool
+	collate string
 	sortOrder SortOrder
-	iface interface{}
-	ifaceList []interface{}
+	columnConstraint columnConstraint
+	columnConstraintList []columnConstraint
+	tableConstraint TableConstraint
+	tableConstraintList []TableConstraint
 }
 
 %type<expr> program
@@ -32,15 +36,18 @@ package sql
 %type<columnName> columnName
 %type<columnDefList> columnDefList
 %type<columnDef> columnDef
-%type<indexedColumnDefList> indexedColumnDefList
-%type<indexedColumnDef> indexedColumnDef
+%type<indexedColumnList> indexedColumnList
+%type<indexedColumn> indexedColumn
 %type<name> typeName
 %type<unique> unique
 %type<withoutRowid> withoutRowid
+%type<collate> collate
 %type<sortOrder> sortOrder
-%type<iface> autoincrement
-%type<ifaceList> columnConstraint
-%type<ifaceList> columnConstraintList
+%type<bool> autoincrement
+%type<columnConstraint> columnConstraint
+%type<columnConstraintList> columnConstraintList
+%type<tableConstraint> tableConstraint
+%type<tableConstraintList> tableConstraintList
 
 %token SELECT FROM CREATE TABLE INDEX ON PRIMARY KEY ASC DESC
 %token AUTOINCREMENT NOT NULL UNIQUE COLLATE WITHOUT ROWID DEFAULT
@@ -93,44 +100,59 @@ columnList:
 
 columnConstraint:
 	PRIMARY KEY sortOrder autoincrement {
-		$$ = []interface{}{primaryKey($3), $4}
+		$$ = ccPrimaryKey{$3, $4}
 	} |
 	UNIQUE {
-		$$ = []interface{}{unique(true)}
+		$$ = ccUnique(true)
 	} |
 	NULL {
-		$$ = []interface{}{null(true)}
+		$$ = ccNull(true)
 	} |
 	NOT NULL {
-		$$ = []interface{}{null(false)}
+		$$ = ccNull(false)
 	} |
 	COLLATE identifier {
-		$$ = []interface{}{collate($2)}
+		$$ = ccCollate($2)
 	} |
 	DEFAULT signedNumber {
-		$$ = []interface{}{defaul($2)}
+		$$ = ccDefault($2)
 	} |
 	DEFAULT literal {
-		$$ = []interface{}{defaul($2)}
+		$$ = ccDefault($2)
 	}
 
 columnConstraintList:
 	{
-		$$ = nil
 	} |
 	columnConstraint {
-		$$ = $1
+		$$ = []columnConstraint{$1}
 	} |
 	columnConstraintList columnConstraint {
-		$$ = append($1, $2...)
+		$$ = append($1, $2)
 	}
 
-autoincrement:
-	{
-		$$ = autoincrement(false)
+tableConstraint:
+	PRIMARY KEY '(' indexedColumnList ')' {
+		$$ = TablePrimaryKey{$4}
 	} |
+	UNIQUE '(' indexedColumnList ')' {
+		$$ = TableUnique{$3}
+	}
+
+tableConstraintList:
+	{ } |
+	',' tableConstraint {
+		$$ = []TableConstraint{$2}
+	} |
+	tableConstraintList ',' tableConstraint {
+		$$ = append($1, $3)
+	}
+
+
+autoincrement:
+	{ } |
 	AUTOINCREMENT {
-		$$ = autoincrement(true)
+		$$ = true
 	}
 
 columnDefList:
@@ -143,7 +165,7 @@ columnDefList:
 
 columnDef:
 	identifier typeName columnConstraintList {
-		$$ = makeDef($1, $2, $3)
+		$$ = makeColumnDef($1, $2, $3)
 	}
 
 typeName:
@@ -158,6 +180,12 @@ typeName:
 	} |
 	identifier '(' signedNumber ',' signedNumber ')' {
 		$$ = $1
+	}
+
+collate:
+	{ } |
+	COLLATE literal {
+		$$ = $2
 	}
 
 sortOrder:
@@ -187,19 +215,20 @@ unique:
 		$$ = true
 	}
 
-indexedColumnDefList:
-	indexedColumnDef {
-		$$ = []IndexDef{$1}
+indexedColumnList:
+	indexedColumn {
+		$$ = []IndexedColumn{$1}
 	} |
-	indexedColumnDefList ',' indexedColumnDef {
+	indexedColumnList ',' indexedColumn {
 		$$ = append($1, $3)
 	}
 
-indexedColumnDef:
-	identifier sortOrder {
-		$$ = IndexDef{
+indexedColumn:
+	identifier collate sortOrder {
+		$$ = IndexedColumn{
 			Column: $1,
-			SortOrder: $2,
+			Collate: $2,
+			SortOrder: $3,
 		}
 	}
 
@@ -209,16 +238,17 @@ selectStmt:
 	}
 
 createTableStmt:
-	CREATE TABLE identifier '(' columnDefList ')' withoutRowid {
+	CREATE TABLE identifier '(' columnDefList tableConstraintList ')' withoutRowid {
 		yylex.(*lexer).result = CreateTableStmt{
 			Table: $3,
 			Columns: $5,
-			WithoutRowid: $7,
+			Constraints: $6,
+			WithoutRowid: $8,
 		}
 	}
 
 createIndexStmt:
-	CREATE unique INDEX identifier ON identifier '(' indexedColumnDefList ')' {
+	CREATE unique INDEX identifier ON identifier '(' indexedColumnList ')' {
 		yylex.(*lexer).result = CreateIndexStmt{
 			Index: $4,
 			Table: $6,
