@@ -11,23 +11,32 @@ import (
 
 var (
 	keywords = map[string]int{
+		"ACTION":        ACTION,
 		"ASC":           ASC,
 		"AUTOINCREMENT": AUTOINCREMENT,
+		"CASCADE":       CASCADE,
 		"COLLATE":       COLLATE,
 		"CREATE":        CREATE,
 		"DEFAULT":       DEFAULT,
+		"DELETE":        DELETE,
 		"DESC":          DESC,
+		"FOREIGN":       FOREIGN,
 		"FROM":          FROM,
 		"INDEX":         INDEX,
 		"KEY":           KEY,
+		"NO":            NO,
 		"NOT":           NOT,
 		"NULL":          NULL,
 		"ON":            ON,
 		"PRIMARY":       PRIMARY,
+		"REFERENCES":    REFERENCES,
+		"RESTRICT":      RESTRICT,
 		"ROWID":         ROWID,
 		"SELECT":        SELECT,
+		"SET":           SET,
 		"TABLE":         TABLE,
 		"UNIQUE":        UNIQUE,
+		"UPDATE":        UPDATE,
 		"WITHOUT":       WITHOUT,
 	}
 )

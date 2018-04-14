@@ -7,7 +7,7 @@ package sql
 	identifier string
 	signedNumber int64
 	expr interface{}
-	columnList []string
+	columnNameList []string
 	columnName string
 	columnDefList []ColumnDef
 	columnDef ColumnDef
@@ -23,6 +23,9 @@ package sql
 	columnConstraintList []columnConstraint
 	tableConstraint TableConstraint
 	tableConstraintList []TableConstraint
+	triggerAction TriggerAction
+	trigger Trigger
+	triggerList []Trigger
 }
 
 %type<expr> program
@@ -32,8 +35,8 @@ package sql
 %type<identifier> identifier
 %type<literal> literal
 %type<signedNumber> signedNumber
-%type<columnList> columnList
-%type<columnName> columnName
+%type<columnName> columnName resultColumn
+%type<columnNameList> columnNameList optColumnNameList resultColumnList
 %type<columnDefList> columnDefList
 %type<columnDef> columnDef
 %type<indexedColumnList> indexedColumnList
@@ -48,9 +51,37 @@ package sql
 %type<columnConstraintList> columnConstraintList
 %type<tableConstraint> tableConstraint
 %type<tableConstraintList> tableConstraintList
+%type<triggerAction> triggerAction
+%type<trigger> trigger
+%type<triggerList> triggerList
 
-%token SELECT FROM CREATE TABLE INDEX ON PRIMARY KEY ASC DESC
-%token AUTOINCREMENT NOT NULL UNIQUE COLLATE WITHOUT ROWID DEFAULT
+%token ACTION
+%token ASC
+%token AUTOINCREMENT
+%token CASCADE
+%token COLLATE
+%token CREATE
+%token DEFAULT
+%token DELETE
+%token DESC
+%token FOREIGN
+%token FROM
+%token INDEX
+%token KEY
+%token NO
+%token NOT
+%token NULL
+%token ON
+%token PRIMARY
+%token REFERENCES
+%token RESTRICT
+%token ROWID
+%token SELECT
+%token SET
+%token TABLE
+%token UNIQUE
+%token UPDATE
+%token WITHOUT
 %token<identifier> tBare tLiteral tIdentifier
 %token<signedNumber> tSignedNumber
 
@@ -85,18 +116,37 @@ signedNumber:
 columnName:
 	identifier {
 		$$ = $1
+	}
+
+columnNameList:
+	columnName {
+		$$ = []string{$1}
+	} |
+	columnNameList ',' columnName {
+		$$ = append($1, $3)
+	}
+
+optColumnNameList:
+	'(' columnNameList ')' {
+		$$ = $2
+	}
+
+resultColumn:
+	columnName {
+		$$ = $1
 	} |
 	'*' {
 		$$ = "*"
 	}
 
-columnList:
-	columnName {
+resultColumnList:
+	resultColumn {
 		$$ = []string{$1}
 	} |
-	columnList ',' columnName {
+	resultColumnList ',' resultColumn {
 		$$ = append($1, $3)
 	}
+
 
 columnConstraint:
 	PRIMARY KEY sortOrder autoincrement {
@@ -137,6 +187,14 @@ tableConstraint:
 	} |
 	UNIQUE '(' indexedColumnList ')' {
 		$$ = TableUnique{$3}
+	} |
+	FOREIGN KEY '(' columnNameList ')' REFERENCES identifier optColumnNameList triggerList {
+		$$ = TableForeignKey{
+			Columns: $4,
+			ForeignTable: $7,
+			ForeignColumns: $8,
+			Triggers: $9,
+		}
 	}
 
 tableConstraintList:
@@ -232,8 +290,39 @@ indexedColumn:
 		}
 	}
 
+triggerAction:
+	SET NULL {
+		$$ = ActionSetNull
+	} |
+	SET DEFAULT {
+		$$ = ActionSetDefault
+	} |
+	CASCADE {
+		$$ = ActionCascade
+	} |
+	RESTRICT {
+		$$ = ActionRestrict
+	} |
+	NO ACTION {
+		$$ = ActionNoAction
+	}
+
+trigger:
+	ON DELETE triggerAction {
+		$$ = TriggerOnDelete($3)
+	} |
+	ON UPDATE triggerAction {
+		$$ = TriggerOnUpdate($3)
+	}
+
+triggerList:
+	{ } |
+	triggerList trigger {
+		$$ = append($1, $2)
+	}
+
 selectStmt:
-	SELECT columnList FROM identifier {
+	SELECT resultColumnList FROM identifier {
 		yylex.(*lexer).result = SelectStmt{ Columns: $2, Table: $4 }
 	}
 

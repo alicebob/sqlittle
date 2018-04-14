@@ -98,6 +98,27 @@ type TablePrimaryKey struct {
 type TableUnique struct {
 	IndexedColumns []IndexedColumn
 }
+type TableForeignKey struct {
+	Columns        []string
+	ForeignTable   string
+	ForeignColumns []string
+	Triggers       []Trigger
+}
+type Trigger interface{}
+type TriggerOnDelete TriggerAction
+type TriggerOnUpdate TriggerAction
+
+type TriggerAction int
+
+const (
+	ActionSetNull TriggerAction = iota
+	ActionSetDefault
+	ActionCascade
+	ActionRestrict
+	ActionNoAction
+)
+
+// TriggerMatch string
 
 // A `CREATE INDEX` statement
 type CreateIndexStmt struct {

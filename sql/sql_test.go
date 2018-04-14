@@ -178,6 +178,29 @@ func TestCreateTable(t *testing.T) {
 					},
 				},
 			},
+			{
+				sql: "CREATE TABLE aap (noot, FOREIGN KEY (noot) REFERENCES something (fnoot) ON DELETE NO ACTION ON UPDATE CASCADE ON UPDATE RESTRICT ON DELETE SET NULL ON UPDATE SET DEFAULT)",
+				want: CreateTableStmt{
+					Table: "aap",
+					Columns: []ColumnDef{
+						{Name: "noot", Null: true},
+					},
+					Constraints: []TableConstraint{
+						TableForeignKey{
+							Columns:        []string{"noot"},
+							ForeignTable:   "something",
+							ForeignColumns: []string{"fnoot"},
+							Triggers: []Trigger{
+								TriggerOnDelete(ActionNoAction),
+								TriggerOnUpdate(ActionCascade),
+								TriggerOnUpdate(ActionRestrict),
+								TriggerOnDelete(ActionSetNull),
+								TriggerOnUpdate(ActionSetDefault),
+							},
+						},
+					},
+				},
+			},
 		},
 	)
 
