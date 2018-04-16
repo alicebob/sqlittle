@@ -236,15 +236,8 @@ func TestIOBasic(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if have, want := db.header.PageSize, 4096; have != want {
-		t.Errorf("have %#v, want %#v", have, want)
-	}
 
-	s, err := db.Schema("hello")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if have, want := len(s.Columns), 1; have != want {
+	if have, want := db.header.PageSize, 4096; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
@@ -285,12 +278,13 @@ func TestIOWal(t *testing.T) {
 }
 
 func TestMasterNoSQL(t *testing.T) {
-	// primary key creates an index without SQL
+	// primary key creates an index without SQL statement
 	db, err := OpenFile("./test/primarykey.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
+
 	tables, err := db.Tables()
 	if err != nil {
 		t.Fatal(err)
@@ -476,5 +470,24 @@ func TestDatabaseLock(t *testing.T) {
 
 	if err := db.RUnlock(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDatabaseSchema(t *testing.T) {
+	db, err := OpenFile("./test/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	s, err := db.Schema("words")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := len(s.Columns), 2; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+	if have, want := len(s.Indexes), 2; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
 	}
 }

@@ -73,6 +73,17 @@ func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
 	}
 
 	st := newCreateTable(ct)
+
+	for _, m := range master {
+		if m.typ == "index" && m.tblName == table && m.sql != "" {
+			// silently ignore indexes we don't understand
+			if t, err := sql.Parse(m.sql); err == nil {
+				if ci, ok := t.(sql.CreateIndexStmt); ok {
+					st.addCreateIndex(ci)
+				}
+			}
+		}
+	}
 	return st, nil
 }
 
@@ -160,6 +171,23 @@ constraint:
 		}
 	}
 	return st
+}
+
+// add `CREATE INDEX` statement to a table
+// Does not check for duplicate indexes.
+func (st *SchemaTable) addCreateIndex(ci sql.CreateIndexStmt) {
+	var cs []IndexColumn
+	for _, col := range ci.IndexedColumns {
+		cs = append(cs, IndexColumn{
+			Column:    col.Column,
+			Collate:   col.Collate,
+			SortOrder: col.SortOrder,
+		})
+	}
+	st.Indexes = append(st.Indexes, SchemaIndex{
+		Name:    ci.Index,
+		Columns: cs,
+	})
 }
 
 // add an index. This is a noop if an equivalent index already exists. Returns

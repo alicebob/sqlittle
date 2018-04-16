@@ -265,3 +265,38 @@ func TestSchemaWithoutRowid3(t *testing.T) {
 		nil,
 	)
 }
+
+func TestSchemaIndex(t *testing.T) {
+	testSchema(
+		t,
+		"foo9",
+		[]sqliteMaster{
+			{"table", "foo9", "foo9", 42, `CREATE TABLE foo9 (a, b, c, unique(c, b))`},
+			{"index", "fooi", "foo9", 42, `CREATE INDEX fooi ON foo9 (c, b)`},
+			{"index", "fooi2", "foo9", 42, `CREATE INDEX fooi2 ON foo9 (c, b)`},
+		},
+		&SchemaTable{
+			Table: "foo9",
+			Columns: []TableColumn{
+				{Name: "a", Null: true},
+				{Name: "b", Null: true},
+				{Name: "c", Null: true},
+			},
+			Indexes: []SchemaIndex{
+				{
+					Name:    "sqlite_autoindex_foo9_1",
+					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
+				},
+				{
+					Name:    "fooi",
+					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
+				},
+				{
+					Name:    "fooi2",
+					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
+				},
+			},
+		},
+		nil,
+	)
+}
