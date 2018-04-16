@@ -1,9 +1,5 @@
 package sql
 
-import (
-	"strings"
-)
-
 type SortOrder int
 
 const (
@@ -146,15 +142,4 @@ func Parse(sql string) (interface{}, error) {
 	l := &lexer{tokens: ts}
 	yyParse(l)
 	return l.result, l.err
-}
-
-// The column is an alias for the rowid, and not stored in a row.
-// https://sqlite.org/lang_createtable.html#rowid
-func (c ColumnDef) IsRowid() bool {
-	// supported:
-	// CREATE TABLE t(x INTEGER PRIMARY KEY ASC, y, z);
-	// TODO:
-	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x ASC));
-	// CREATE TABLE t(x INTEGER, y, z, PRIMARY KEY(x DESC));
-	return c.PrimaryKey && c.PrimaryKeyDir == Asc && strings.ToUpper(c.Type) == "INTEGER"
 }

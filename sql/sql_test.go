@@ -9,37 +9,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-func TestColumnIsRowid(t *testing.T) {
-	for d, want := range map[ColumnDef]bool{
-		ColumnDef{
-			Name:          "c 1",
-			Type:          "Integer",
-			PrimaryKey:    true,
-			PrimaryKeyDir: Asc,
-		}: true,
-		ColumnDef{
-			Name:          "c 1",
-			Type:          "Integer",
-			PrimaryKey:    true,
-			PrimaryKeyDir: Desc,
-		}: false,
-		ColumnDef{
-			Name: "c 1",
-			Type: "Integer",
-		}: false,
-		ColumnDef{
-			Name:          "c 1",
-			Type:          "Int",
-			PrimaryKey:    true,
-			PrimaryKeyDir: Asc,
-		}: false,
-	} {
-		if have := d.IsRowid(); have != want {
-			t.Errorf("%#v: have %t, want %t", d, have, want)
-		}
-	}
-}
-
 type sqlCase struct {
 	sql  string
 	want interface{}
@@ -61,7 +30,7 @@ func testSQL(t *testing.T, cases []sqlCase) {
 			spew.Config.DisablePointerAddresses = true
 			spew.Config.DisableCapacities = true
 			spew.Config.SortKeys = true
-			t.Errorf("case %d: diff:\n%s", n, diff.LineDiff(spew.Sdump(have), spew.Sdump(want)))
+			t.Errorf("case %d: diff:\n%s", n, diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 		}
 	}
 }

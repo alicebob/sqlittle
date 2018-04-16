@@ -455,6 +455,15 @@ func (db *Database) Index(name string) (*Index, error) {
 	return nil, ErrNoSuchIndex
 }
 
+// Schema gives the definition of a table and all associated indexes.
+func (db *Database) Schema(table string) (*SchemaTable, error) {
+	m, err := db.master()
+	if err != nil {
+		return nil, err
+	}
+	return newSchema(table, m)
+}
+
 // Info gives some debugging info about the open database
 func (db *Database) Info() (string, error) {
 	b := &strings.Builder{}
@@ -464,6 +473,38 @@ func (db *Database) Info() (string, error) {
 	}
 	for _, o := range oo {
 		fmt.Fprintf(b, "- %s (%s)\n  owner: %s\n  sql: %s\n", o.name, o.typ, o.tblName, o.sql)
+		switch o.typ {
+		case "table":
+			fmt.Fprintf(b, "  first rows:\n")
+			if ind, err := db.Table(o.name); err != nil {
+				fmt.Fprintf(b, "    error: %s\n", err)
+			} else {
+				i := 0
+				ind.Scan(func(rowid int64, rec Record) bool {
+					fmt.Fprintf(b, "    %d: %v\n", rowid, rec)
+					i++
+					return i > 5
+				})
+				if i == 0 {
+					fmt.Fprintf(b, "    (no rows)\n")
+				}
+			}
+		case "index":
+			fmt.Fprintf(b, "  first rows:\n")
+			if ind, err := db.Index(o.name); err != nil {
+				fmt.Fprintf(b, "    error: %s\n", err)
+			} else {
+				i := 0
+				ind.Scan(func(rowid int64, rec Record) bool {
+					fmt.Fprintf(b, "    %d: %v\n", rowid, rec)
+					i++
+					return i > 5
+				})
+				if i == 0 {
+					fmt.Fprintf(b, "    (no rows)\n")
+				}
+			}
+		}
 	}
 	return b.String(), nil
 }

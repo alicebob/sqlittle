@@ -231,12 +231,20 @@ func TestHeader(t *testing.T) {
 }
 
 func TestIOBasic(t *testing.T) {
-	f, err := OpenFile("./test/single.sqlite")
+	db, err := OpenFile("./test/single.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
-	if have, want := f.header.PageSize, 4096; have != want {
+	defer db.Close()
+	if have, want := db.header.PageSize, 4096; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	s, err := db.Schema("hello")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := len(s.Columns), 1; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }

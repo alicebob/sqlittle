@@ -103,6 +103,7 @@ stored in the database by SQLite. Notably that includes:
 - parse more exotic table and index definitions
 - goroutine safe
 - support WAL
+- scan functions for `without rowid` tables and indexes
 
 # &c.
 

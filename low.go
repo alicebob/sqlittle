@@ -46,6 +46,7 @@ type IndexScanCB func(Record) bool
 
 // Def returns the table definition. Not everything SQLite supports is
 // supported (yet).
+// See Database.Schema() for a friendlier interface.
 func (t *Table) Def() (*sql.CreateTableStmt, error) {
 	c, err := sql.Parse(t.sql)
 	if err != nil {
