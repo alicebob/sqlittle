@@ -174,6 +174,7 @@ columnConstraint:
 
 columnConstraintList:
 	{
+		$$ = nil
 	} |
 	columnConstraint {
 		$$ = []columnConstraint{$1}

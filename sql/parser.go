@@ -695,34 +695,35 @@ yydefault:
 		yyDollar = yyS[yypt-0 : yypt+1]
 		//line parser.go.y:176
 		{
+			yyVAL.columnConstraintList = nil
 		}
 	case 25:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:178
+		//line parser.go.y:179
 		{
 			yyVAL.columnConstraintList = []columnConstraint{yyDollar[1].columnConstraint}
 		}
 	case 26:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:181
+		//line parser.go.y:182
 		{
 			yyVAL.columnConstraintList = append(yyDollar[1].columnConstraintList, yyDollar[2].columnConstraint)
 		}
 	case 27:
 		yyDollar = yyS[yypt-5 : yypt+1]
-		//line parser.go.y:186
+		//line parser.go.y:187
 		{
 			yyVAL.tableConstraint = TablePrimaryKey{yyDollar[4].indexedColumnList}
 		}
 	case 28:
 		yyDollar = yyS[yypt-4 : yypt+1]
-		//line parser.go.y:189
+		//line parser.go.y:190
 		{
 			yyVAL.tableConstraint = TableUnique{yyDollar[3].indexedColumnList}
 		}
 	case 29:
 		yyDollar = yyS[yypt-9 : yypt+1]
-		//line parser.go.y:192
+		//line parser.go.y:193
 		{
 			yyVAL.tableConstraint = TableForeignKey{
 				Columns:        yyDollar[4].columnNameList,
@@ -733,152 +734,152 @@ yydefault:
 		}
 	case 30:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:202
+		//line parser.go.y:203
 		{
 		}
 	case 31:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:203
+		//line parser.go.y:204
 		{
 		}
 	case 32:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:207
+		//line parser.go.y:208
 		{
 		}
 	case 33:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:208
+		//line parser.go.y:209
 		{
 			yyVAL.tableConstraintList = []TableConstraint{yyDollar[3].tableConstraint}
 		}
 	case 34:
 		yyDollar = yyS[yypt-4 : yypt+1]
-		//line parser.go.y:211
+		//line parser.go.y:212
 		{
 			yyVAL.tableConstraintList = append(yyDollar[1].tableConstraintList, yyDollar[4].tableConstraint)
 		}
 	case 35:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:217
+		//line parser.go.y:218
 		{
 		}
 	case 36:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:218
+		//line parser.go.y:219
 		{
 			yyVAL.bool = true
 		}
 	case 37:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:223
+		//line parser.go.y:224
 		{
 			yyVAL.columnDefList = []ColumnDef{yyDollar[1].columnDef}
 		}
 	case 38:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:226
+		//line parser.go.y:227
 		{
 			yyVAL.columnDefList = append(yyDollar[1].columnDefList, yyDollar[3].columnDef)
 		}
 	case 39:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:231
+		//line parser.go.y:232
 		{
 			yyVAL.columnDef = makeColumnDef(yyDollar[1].identifier, yyDollar[2].name, yyDollar[3].columnConstraintList)
 		}
 	case 40:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:236
+		//line parser.go.y:237
 		{
 			yyVAL.name = ""
 		}
 	case 41:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:239
+		//line parser.go.y:240
 		{
 			yyVAL.name = yyDollar[1].identifier
 		}
 	case 42:
 		yyDollar = yyS[yypt-4 : yypt+1]
-		//line parser.go.y:242
+		//line parser.go.y:243
 		{
 			yyVAL.name = yyDollar[1].identifier
 		}
 	case 43:
 		yyDollar = yyS[yypt-6 : yypt+1]
-		//line parser.go.y:245
+		//line parser.go.y:246
 		{
 			yyVAL.name = yyDollar[1].identifier
 		}
 	case 44:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:250
+		//line parser.go.y:251
 		{
 		}
 	case 45:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:251
+		//line parser.go.y:252
 		{
 			yyVAL.collate = yyDollar[2].literal
 		}
 	case 46:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:256
+		//line parser.go.y:257
 		{
 			yyVAL.sortOrder = Asc
 		}
 	case 47:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:259
+		//line parser.go.y:260
 		{
 			yyVAL.sortOrder = Asc
 		}
 	case 48:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:262
+		//line parser.go.y:263
 		{
 			yyVAL.sortOrder = Desc
 		}
 	case 49:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:267
+		//line parser.go.y:268
 		{
 			yyVAL.withoutRowid = false
 		}
 	case 50:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:270
+		//line parser.go.y:271
 		{
 			yyVAL.withoutRowid = true
 		}
 	case 51:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:275
+		//line parser.go.y:276
 		{
 			yyVAL.unique = false
 		}
 	case 52:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:278
+		//line parser.go.y:279
 		{
 			yyVAL.unique = true
 		}
 	case 53:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:283
+		//line parser.go.y:284
 		{
 			yyVAL.indexedColumnList = []IndexedColumn{yyDollar[1].indexedColumn}
 		}
 	case 54:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:286
+		//line parser.go.y:287
 		{
 			yyVAL.indexedColumnList = append(yyDollar[1].indexedColumnList, yyDollar[3].indexedColumn)
 		}
 	case 55:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:291
+		//line parser.go.y:292
 		{
 			yyVAL.indexedColumn = IndexedColumn{
 				Column:    yyDollar[1].identifier,
@@ -888,66 +889,66 @@ yydefault:
 		}
 	case 56:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:300
+		//line parser.go.y:301
 		{
 			yyVAL.triggerAction = ActionSetNull
 		}
 	case 57:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:303
+		//line parser.go.y:304
 		{
 			yyVAL.triggerAction = ActionSetDefault
 		}
 	case 58:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:306
+		//line parser.go.y:307
 		{
 			yyVAL.triggerAction = ActionCascade
 		}
 	case 59:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line parser.go.y:309
+		//line parser.go.y:310
 		{
 			yyVAL.triggerAction = ActionRestrict
 		}
 	case 60:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:312
+		//line parser.go.y:313
 		{
 			yyVAL.triggerAction = ActionNoAction
 		}
 	case 61:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:317
+		//line parser.go.y:318
 		{
 			yyVAL.trigger = TriggerOnDelete(yyDollar[3].triggerAction)
 		}
 	case 62:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line parser.go.y:320
+		//line parser.go.y:321
 		{
 			yyVAL.trigger = TriggerOnUpdate(yyDollar[3].triggerAction)
 		}
 	case 63:
 		yyDollar = yyS[yypt-0 : yypt+1]
-		//line parser.go.y:325
+		//line parser.go.y:326
 		{
 		}
 	case 64:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line parser.go.y:326
+		//line parser.go.y:327
 		{
 			yyVAL.triggerList = append(yyDollar[1].triggerList, yyDollar[2].trigger)
 		}
 	case 65:
 		yyDollar = yyS[yypt-4 : yypt+1]
-		//line parser.go.y:331
+		//line parser.go.y:332
 		{
 			yylex.(*lexer).result = SelectStmt{Columns: yyDollar[2].columnNameList, Table: yyDollar[4].identifier}
 		}
 	case 66:
 		yyDollar = yyS[yypt-8 : yypt+1]
-		//line parser.go.y:336
+		//line parser.go.y:337
 		{
 			yylex.(*lexer).result = CreateTableStmt{
 				Table:        yyDollar[3].identifier,
@@ -958,7 +959,7 @@ yydefault:
 		}
 	case 67:
 		yyDollar = yyS[yypt-9 : yypt+1]
-		//line parser.go.y:346
+		//line parser.go.y:347
 		{
 			yylex.(*lexer).result = CreateIndexStmt{
 				Index:          yyDollar[4].identifier,

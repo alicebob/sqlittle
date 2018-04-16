@@ -4,6 +4,9 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/andreyvit/diff"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestColumnIsRowid(t *testing.T) {
@@ -55,7 +58,10 @@ func testSQL(t *testing.T, cases []sqlCase) {
 			continue
 		}
 		if have, want := stmt, c.want; !reflect.DeepEqual(have, want) {
-			t.Errorf("case %d: have %#v, want %#v", n, have, want)
+			spew.Config.DisablePointerAddresses = true
+			spew.Config.DisableCapacities = true
+			spew.Config.SortKeys = true
+			t.Errorf("case %d: diff:\n%s", n, diff.LineDiff(spew.Sdump(have), spew.Sdump(want)))
 		}
 	}
 }
@@ -211,6 +217,29 @@ func TestCreateTable(t *testing.T) {
 								TriggerOnUpdate(ActionRestrict),
 								TriggerOnDelete(ActionSetNull),
 								TriggerOnUpdate(ActionSetDefault),
+							},
+						},
+					},
+				},
+			},
+			{
+				sql: "create table foo3 (a unique, b PRIMARY KEY, c, unique(a), unique(c))",
+				want: CreateTableStmt{
+					Table: "foo3",
+					Columns: []ColumnDef{
+						{Name: "a", Null: true, Unique: true},
+						{Name: "b", Null: true, PrimaryKey: true},
+						{Name: "c", Null: true},
+					},
+					Constraints: []TableConstraint{
+						TableUnique{
+							IndexedColumns: []IndexedColumn{
+								{Column: "a", SortOrder: Asc},
+							},
+						},
+						TableUnique{
+							IndexedColumns: []IndexedColumn{
+								{Column: "c", SortOrder: Asc},
 							},
 						},
 					},
