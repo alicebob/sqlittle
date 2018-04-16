@@ -20,6 +20,8 @@ for example be storing app configuration in read-only sqlite files.
 
 https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 
+See [CODE.md] for an overview how the code is structured.
+
 
 # features
 
