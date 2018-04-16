@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math/bits"
+	"strings"
 )
 
 const (
@@ -433,4 +435,17 @@ func (db *Database) Index(name string) (*Index, error) {
 		}
 	}
 	return nil, ErrNoSuchIndex
+}
+
+// Info gives some debugging info about the open database
+func (db *Database) Info() (string, error) {
+	b := &strings.Builder{}
+	oo, err := db.master()
+	if err != nil {
+		return "", err
+	}
+	for _, o := range oo {
+		fmt.Fprintf(b, "- %s (%s)\n  owner: %s\n  sql: %s\n", o.name, o.typ, o.tblName, o.sql)
+	}
+	return b.String(), nil
 }
