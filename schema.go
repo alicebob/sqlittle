@@ -222,13 +222,22 @@ func (st *SchemaTable) addIndexed(name string, cols []sql.IndexedColumn) bool {
 	return st.addIndex(name, cs)
 }
 
-func (st *SchemaTable) column(name string) *TableColumn {
+// Returns the index of the named column, or -1.
+func (st *SchemaTable) Column(name string) int {
 	for i, col := range st.Columns {
 		if col.Name == name {
-			return &st.Columns[i]
+			return i
 		}
 	}
-	return nil // you're asking for non-exising columns and for trouble
+	return -1
+}
+
+func (st *SchemaTable) column(name string) *TableColumn {
+	n := st.Column(name)
+	if n < 0 {
+		return nil // you're asking for non-exising columns and for trouble
+	}
+	return &st.Columns[n]
 }
 
 // A primary key can be an alias for the rowid iff:
