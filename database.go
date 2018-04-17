@@ -476,11 +476,11 @@ func (db *Database) Info() (string, error) {
 		switch o.typ {
 		case "table":
 			fmt.Fprintf(b, "  first rows:\n")
-			if ind, err := db.Table(o.name); err != nil {
+			if tab, err := db.Table(o.name); err != nil {
 				fmt.Fprintf(b, "    error: %s\n", err)
 			} else {
 				i := 0
-				ind.Scan(func(rowid int64, rec Record) bool {
+				tab.Scan(func(rowid int64, rec Record) bool {
 					fmt.Fprintf(b, "    %d: %v\n", rowid, rec)
 					i++
 					return i > 5
@@ -495,8 +495,8 @@ func (db *Database) Info() (string, error) {
 				fmt.Fprintf(b, "    error: %s\n", err)
 			} else {
 				i := 0
-				ind.Scan(func(rowid int64, rec Record) bool {
-					fmt.Fprintf(b, "    %d: %v\n", rowid, rec)
+				ind.Scan(func(rec Record) bool {
+					fmt.Fprintf(b, "    %v\n", rec)
 					i++
 					return i > 5
 				})
