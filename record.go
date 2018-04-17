@@ -117,10 +117,10 @@ func parseRecord(r []byte) ([]interface{}, error) {
 	return res, nil
 }
 
-// removes the rowid column from an index value (that's the last value from a
+// Removes the rowid column from an index value (that's the last value from a
 // Record).
 // Returns: rowid, record, error
-func chompRowid(rec Record) (int64, Record, error) {
+func ChompRowid(rec Record) (int64, Record, error) {
 	if len(rec) == 0 {
 		return 0, nil, errors.New("no fields in index")
 	}

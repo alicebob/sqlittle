@@ -299,7 +299,7 @@ func TestIndexSingle(t *testing.T) {
 			if err != nil {
 				return false, err
 			}
-			_, row, err := chompRowid(irec)
+			_, row, err := ChompRowid(irec)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
@@ -352,7 +352,7 @@ func TestIndexWords(t *testing.T) {
 			if err != nil {
 				return false, err
 			}
-			_, row, err := chompRowid(irec)
+			_, row, err := ChompRowid(irec)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
@@ -392,7 +392,7 @@ func TestIndexScanMin(t *testing.T) {
 		maxRecursion,
 		db,
 		Record{"improvise"},
-		func(_ int64, r Record) (bool, error) {
+		func(r Record) (bool, error) {
 			rows = append(rows, r)
 			return false, err
 		}); err != nil {
@@ -432,7 +432,7 @@ func TestIndexScanMin2(t *testing.T) {
 		maxRecursion,
 		db,
 		Record{int64(15)},
-		func(_ int64, r Record) (bool, error) {
+		func(r Record) (bool, error) {
 			rows = append(rows, r)
 			return false, err
 		}); err != nil {
@@ -446,5 +446,68 @@ func TestIndexScanMin2(t *testing.T) {
 	}
 	if have, want := rows[20-1][1].(string), "internationalism's"; have != want {
 		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+}
+
+func TestScanNoRowid(t *testing.T) {
+	db, err := OpenFile("./test/worowid.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	/*
+		schema, err := db.Schema("words")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if have, want := schema.WithoutRowid, true; have != want {
+			t.Errorf("have %#v, want %#v", have, want)
+		}
+	*/
+
+	testWords := func(rootPage int) {
+		root, err := db.openIndex(rootPage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rows []Record
+		if _, err := root.Iter(
+			maxRecursion,
+			db,
+			func(pl cellPayload) (bool, error) {
+				pf, err := addOverflow(db, pl)
+				if err != nil {
+					return false, err
+				}
+				row, err := parseRecord(pf)
+				if err != nil {
+					return false, err
+				}
+				rows = append(rows, row)
+				return false, err
+			}); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := len(rows), 1000; have != want {
+			t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+		}
+	}
+
+	{
+		table, err := db.Table("words")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// WITHOUT ROWID table are stored as an index
+		testWords(table.root)
+	}
+
+	{
+		ind, err := db.Index("words_l")
+		if err != nil {
+			t.Fatal(err)
+		}
+		testWords(ind.root)
 	}
 }

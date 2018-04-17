@@ -408,6 +408,7 @@ func (db *Database) objectNames(typ string) ([]string, error) {
 // Table opens the named table.
 // Will return ErrNoSuchTable when the table isn't there (or isn't a table).
 // Table pointer is always valid if err == nil.
+// See also TableWithoutRowid()
 func (db *Database) Table(name string) (*Table, error) {
 	objects, err := db.master()
 	if err != nil {
@@ -421,9 +422,26 @@ func (db *Database) Table(name string) (*Table, error) {
 	return nil, ErrNoSuchTable
 }
 
+// Same as Table(), but for 'CREAT TABLE ... WITHOUT ROWID'.
+func (db *Database) TableWithoutRowid(name string) (*TableWithoutRowid, error) {
+	objects, err := db.master()
+	if err != nil {
+		return nil, err
+	}
+	for _, o := range objects {
+		if o.typ == "table" && o.name == name {
+			return &TableWithoutRowid{db: db, root: o.rootPage, sql: o.sql}, nil
+		}
+	}
+	return nil, ErrNoSuchTable
+}
+
 // Index opens the named index.
 // Will return ErrNoSuchIndex when the index isn't there (or isn't an index).
 // Index pointer is always valid if err == nil.
+//
+// Indexes work for normal and WITHOUT ROWID tables. The columns the callback
+// gets depends on the type of table.
 func (db *Database) Index(name string) (*Index, error) {
 	objects, err := db.master()
 	if err != nil {

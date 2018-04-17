@@ -38,9 +38,9 @@ type tableBtree interface {
 	Count(*Database) (int, error)
 }
 
-// IndexIterCB gets the (possibly truncated) payload
+// indexIterCB gets the (possibly truncated) payload
 type indexIterCB func(pl cellPayload) (bool, error)
-type indexIterMinCB func(rowid int64, row Record) (bool, error)
+type indexIterMinCB func(row Record) (bool, error)
 type indexBtree interface {
 	// Iter goes over every record
 	Iter(int, *Database, indexIterCB) (bool, error)
@@ -288,11 +288,7 @@ func (l *indexLeaf) IterMin(_ int, db *Database, min Record, cb indexIterMinCB) 
 			}
 		}
 
-		rowid, rec, err := chompRowid(rec)
-		if err != nil {
-			return false, err
-		}
-		if done, err := cb(rowid, rec); done || err != nil {
+		if done, err := cb(rec); done || err != nil {
 			return done, err
 		}
 	}
@@ -383,11 +379,7 @@ func (l *indexInterior) IterMin(r int, db *Database, min Record, cb indexIterMin
 				return false, err
 			}
 		}
-		rowid, rec, err := chompRowid(rec)
-		if err != nil {
-			return false, err
-		}
-		if done, err := cb(rowid, rec); done || err != nil {
+		if done, err := cb(rec); done || err != nil {
 			return done, err
 		}
 	}

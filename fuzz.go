@@ -51,7 +51,7 @@ func fuzz(data []byte) error {
 		}
 
 		if err := index.Scan(
-			func(rowid int64, rec Record) bool {
+			func(rec Record) bool {
 				return false
 			},
 		); err != nil {
@@ -60,7 +60,7 @@ func fuzz(data []byte) error {
 
 		if err := index.ScanMin(
 			Record{"q"},
-			func(rowid int64, rec Record) bool {
+			func(rec Record) bool {
 				return false
 			},
 		); err != nil {

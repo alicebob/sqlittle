@@ -16,6 +16,7 @@ ALL:=empty.sqlite \
     wal.sqlite \
     wal_crashed.sqlite \
     words.sqlite \
+    worowid.sqlite \
     zerolength.sqlite \
 
 

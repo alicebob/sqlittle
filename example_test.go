@@ -64,8 +64,8 @@ func ExampleIndex_Scan() {
 	}
 	i := 0
 	if err := index.Scan(
-		func(rowid int64, rec Record) bool {
-			fmt.Printf("row %d: %s\n", rowid, rec[0].(string))
+		func(rec Record) bool {
+			fmt.Printf("row %d: %s\n", rec[1].(int64), rec[0].(string))
 			i++
 			return i >= 10
 		},
@@ -101,7 +101,7 @@ func ExampleIndex_ScanMin() {
 	}
 	if err := index.ScanMin(
 		Record{"wombat"},
-		func(rowid int64, rec Record) bool {
+		func(rec Record) bool {
 			word := rec[0].(string)
 			if word >= "y" {
 				return true

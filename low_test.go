@@ -80,3 +80,32 @@ func TestLowDefs(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
+
+func TestLowWORowid(t *testing.T) {
+	db, err := OpenFile("./test/worowid.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	table, err := db.TableWithoutRowid("words")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := 0
+	table.Scan(func(r Record) bool {
+		rows++
+		return false
+	})
+	if have, want := rows, 1000; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+	row, err := table.Rowid(Record{"crankiest"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := row, (Record{"crankiest", int64(9)}); !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
