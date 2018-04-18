@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-DB=./worowid.sqlite
+DB=./withoutrowid.sqlite
 
 rm -f $DB
 (

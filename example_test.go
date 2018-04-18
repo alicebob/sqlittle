@@ -5,7 +5,7 @@ import (
 )
 
 func ExampleTable_Scan() {
-	db, err := OpenFile("test/single.sqlite")
+	db, err := OpenFile("testdata/single.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -29,8 +29,42 @@ func ExampleTable_Scan() {
 	// row 3: town
 }
 
+func ExampleTable_WithoutRowidScan() {
+	db, err := OpenFile("testdata/withoutrowid.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	table, err := db.Table("words")
+	if err != nil {
+		panic(err)
+	}
+	i := 10
+	if err := table.WithoutRowidScan(
+		func(rec Record) bool {
+			fmt.Printf("row %s\n", rec[0].(string))
+			i--
+			return i <= 0
+		},
+	); err != nil {
+		panic(err)
+	}
+	// output:
+	// row Adams
+	// row Ahmadinejad
+	// row Alabaman
+	// row Algonquin
+	// row Amy
+	// row Andersen
+	// row Annette's
+	// row Antipas's
+	// row Arizonan
+	// row Artaxerxes's
+}
+
 func ExampleTable_Rowid() {
-	db, err := OpenFile("test/single.sqlite")
+	db, err := OpenFile("testdata/single.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -49,10 +83,30 @@ func ExampleTable_Rowid() {
 	// row: universe
 }
 
+func ExampleTable_WithoutRowidPK() {
+	db, err := OpenFile("testdata/withoutrowid.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	table, err := db.Table("words")
+	if err != nil {
+		panic(err)
+	}
+	row, err := table.WithoutRowidPK(Record{"awesomely"})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("row: %v\n", row)
+	// output:
+	// row: [awesomely 9]
+}
+
 func ExampleIndex_Scan() {
 	// This code will iterate over all words in alphabetical order.
 	// The `words` table has: CREATE INDEX words_index_1 ON words (word)
-	db, err := OpenFile("test/words.sqlite")
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -89,7 +143,7 @@ func ExampleIndex_ScanMin() {
 	// This will iterate over all words in alphabetical order, starting from
 	// the first record >= the given record.
 	// The `words` table has: CREATE INDEX words_index_1 ON words (word)
-	db, err := OpenFile("test/words.sqlite")
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -122,31 +176,43 @@ func ExampleIndex_ScanMin() {
 	// wusses
 }
 
-func ExampleIndex_Def() {
-	db, err := OpenFile("test/words.sqlite")
+func ExampleDatabase_Schema() {
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
 
-	table, err := db.Table("words")
+	schema, err := db.Schema("words")
 	if err != nil {
 		panic(err)
 	}
-	d, err := table.Def()
-	if err != nil {
-		panic(err)
+	fmt.Printf("columns:\n")
+	for _, c := range schema.Columns {
+		fmt.Printf(" - %q is a %s\n", c.Name, c.Type)
 	}
-	for _, c := range d.Columns {
-		fmt.Printf("column %q is a %s\n", c.Name, c.Type)
+	fmt.Printf("available indexes:\n")
+	for _, ind := range schema.Indexes {
+		fmt.Printf(" - %q (", ind.Name)
+		for i, c := range ind.Columns {
+			if i > 0 {
+				fmt.Printf(", ")
+			}
+			fmt.Print(c.Column)
+		}
+		fmt.Print(")\n")
 	}
 	// output:
-	// column "word" is a varchar
-	// column "length" is a int
+	// columns:
+	//  - "word" is a varchar
+	//  - "length" is a int
+	// available indexes:
+	//  - "words_index_1" (word)
+	//  - "words_index_2" (length, word)
 }
 
 func ExampleTable_Def() {
-	db, err := OpenFile("test/words.sqlite")
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		panic(err)
 	}

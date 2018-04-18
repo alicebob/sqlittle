@@ -9,7 +9,7 @@ import (
 
 func TestLowEmpty(t *testing.T) {
 	// table without any row
-	db, err := OpenFile("./test/empty.sqlite")
+	db, err := OpenFile("./testdata/empty.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestLowEmpty(t *testing.T) {
 }
 
 func TestLowDefs(t *testing.T) {
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,19 +81,19 @@ func TestLowDefs(t *testing.T) {
 	}
 }
 
-func TestLowWORowid(t *testing.T) {
-	db, err := OpenFile("./test/worowid.sqlite")
+func TestLowWithoutRowid(t *testing.T) {
+	db, err := OpenFile("./testdata/withoutrowid.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	table, err := db.TableWithoutRowid("words")
+	table, err := db.Table("words")
 	if err != nil {
 		t.Fatal(err)
 	}
 	rows := 0
-	table.Scan(func(r Record) bool {
+	table.WithoutRowidScan(func(r Record) bool {
 		rows++
 		return false
 	})
@@ -101,7 +101,7 @@ func TestLowWORowid(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	row, err := table.Rowid(Record{"crankiest"})
+	row, err := table.WithoutRowidPK(Record{"crankiest"})
 	if err != nil {
 		t.Fatal(err)
 	}
