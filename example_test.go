@@ -176,27 +176,39 @@ func ExampleIndex_ScanMin() {
 	// wusses
 }
 
-func ExampleIndex_Def() {
+func ExampleDatabase_Schema() {
 	db, err := OpenFile("test/words.sqlite")
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
 
-	table, err := db.Table("words")
+	schema, err := db.Schema("words")
 	if err != nil {
 		panic(err)
 	}
-	d, err := table.Def()
-	if err != nil {
-		panic(err)
+	fmt.Printf("columns:\n")
+	for _, c := range schema.Columns {
+		fmt.Printf(" - %q is a %s\n", c.Name, c.Type)
 	}
-	for _, c := range d.Columns {
-		fmt.Printf("column %q is a %s\n", c.Name, c.Type)
+	fmt.Printf("available indexes:\n")
+	for _, ind := range schema.Indexes {
+		fmt.Printf(" - %q (", ind.Name)
+		for i, c := range ind.Columns {
+			if i > 0 {
+				fmt.Printf(", ")
+			}
+			fmt.Print(c.Column)
+		}
+		fmt.Print(")\n")
 	}
 	// output:
-	// column "word" is a varchar
-	// column "length" is a int
+	// columns:
+	//  - "word" is a varchar
+	//  - "length" is a int
+	// available indexes:
+	//  - "words_index_1" (word)
+	//  - "words_index_2" (length, word)
 }
 
 func ExampleTable_Def() {

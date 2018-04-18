@@ -56,14 +56,14 @@ methods and examples, but the gist of a table scan is:
     })
 
 
-Printing the columns (see the [sqlittle/sql docs](https://godoc.org/github.com/alicebob/sqlittle/sql)):
+Printing the columns:
 
     db, _ := OpenFile("test/single.sqlite")
     defer db.Close()
-    table, _ := db.Table("hello")
-    d, _ := table.Def()
-    for i, col := range d.Columns {
-        fmt.Printf("col %d: %s\n", i, col.Name)
+    schema, _ := db.Schema("words")
+    fmt.Printf("columns:\n")
+    for _, c := range schema.Columns {
+        fmt.Printf(" - %q is a %s\n", c.Name, c.Type)
     }
 
 
@@ -103,7 +103,7 @@ stored in the database by SQLite. Notably that includes:
 - parse more exotic table and index definitions
 - goroutine safe
 - support WAL
-- scan functions for `without rowid` tables and indexes
+- ~~scan functions for `without rowid` tables and indexes~~
 
 # &c.
 
