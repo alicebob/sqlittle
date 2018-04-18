@@ -1,61 +1,130 @@
 package db
 
 import (
-	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 )
 
-func TestScanString(t *testing.T) {
-	row := Row{nil, int64(42), float64(3.14), "world", []byte("hello")}
-	vs := [5]string{}
-	if err := row.Scan(&vs[0], &vs[1], &vs[2], &vs[3], &vs[4]); err != nil {
+func TestScanNil(t *testing.T) {
+	// nil skips the column
+	if err := (Row{123}).Scan(nil); err != nil {
 		t.Fatal(err)
-	}
-	if have, want := vs[0], ""; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-	if have, want := vs[1], "42"; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-	if have, want := vs[2], "3.14"; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-	if have, want := vs[3], "world"; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-	if have, want := vs[4], "hello"; have != want {
-		t.Errorf("have %v, want %v", have, want)
 	}
 }
 
-func TestScanInt(t *testing.T) {
-	row := Row{nil, int64(42), float64(3.14), "3.1415", []byte("2.71828")}
-	vs := [5]int{}
-	if err := row.Scan(&vs[0], &vs[1], &vs[2], &vs[3], &vs[4]); err != nil {
-		t.Fatal(err)
-	}
-	if have, want := vs[0], 0; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-	if have, want := vs[1], 42; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-	if have, want := vs[2], 3; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-	if have, want := vs[3], 3; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-	if have, want := vs[4], 2; have != want {
-		t.Errorf("have %v, want %v", have, want)
+func TestScanString(t *testing.T) {
+	test := func(v interface{}, want string) {
+		t.Helper()
+		n := ""
+		if err := (Row{v}).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := n, want; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
 	}
 
-	var n int
-	if have, want := (Row{"hi"}.Scan(&n)), errors.New(`invalid number: "hi"`); !reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
+	test(nil, "")
+	test(int64(42), "42")
+	test(float64(3.14), "3.14")
+	test("world", "world")
+	test([]byte("hello"), "hello")
+}
+
+func TestScanInt64(t *testing.T) {
+	test := func(v interface{}, want int64) {
+		t.Helper()
+		var n int64
+		if err := (Row{v}).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := n, want; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
 	}
-	if have, want := (Row{[]byte("bye")}.Scan(&n)), errors.New(`invalid number: "bye"`); !reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
+	fail := func(v interface{}) {
+		t.Helper()
+		var n int64
+		if have, want := (Row{v}).Scan(&n), fmt.Errorf("invalid number: %q", v); !reflect.DeepEqual(have, want) {
+			t.Errorf("have %v, want %v", have, want)
+		}
 	}
+	test(nil, 0)
+	test(int64(42), 42)
+	test(float64(3.14), 3)
+	test("-3.14", -3)
+	test([]byte("2.71828"), 2)
+	fail("hi")
+	fail([]byte("bye"))
+	fail("123world")
+}
+
+func TestScanInt32(t *testing.T) {
+	test := func(v interface{}, want int32) {
+		t.Helper()
+		var n int32
+		if err := (Row{v}).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := n, want; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+	test(nil, 0)
+	test(int64(42), 42)
+	test(int64(1<<42+1<<4), 1<<4)
+	test(float64(3.14), 3)
+	test("-3.14", -3)
+	test([]byte("2.71828"), 2)
+}
+
+func TestScanInt(t *testing.T) {
+	test := func(v interface{}, want int) {
+		t.Helper()
+		var n int
+		if err := (Row{v}).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := n, want; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+	test(nil, 0)
+	test(int64(42), 42)
+	test(float64(3.14), 3)
+	test("3.1415", 3)
+	test([]byte("2.71828"), 2)
+}
+
+func TestScanBool(t *testing.T) {
+	test := func(v interface{}, want bool) {
+		t.Helper()
+		var n bool
+		if err := (Row{v}).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := n, want; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+	fail := func(v interface{}) {
+		t.Helper()
+		var n bool
+		if have, want := (Row{v}).Scan(&n), fmt.Errorf("invalid boolean: %q", v); !reflect.DeepEqual(have, want) {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+	test(nil, false)
+	test(int64(42), true)
+	test(int64(0), false)
+	test(float64(3.14), true)
+	test(float64(0.0), false)
+	test(float64(-0.0), false)
+	test("3.1414", true)
+	test("0.0", false)
+	test([]byte("2.71828"), true)
+	test([]byte("0.0"), false)
+	fail("hi")
+	fail("0hi")
 }

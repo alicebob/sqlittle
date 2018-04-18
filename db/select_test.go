@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -12,9 +11,25 @@ func TestSelect(t *testing.T) {
 	}
 	defer db.Close()
 
-	cb := func(r Row) { fmt.Printf("row: %+v\n", r) }
-	if err := db.Select("words", cb, "length"); err != nil {
+	var words []string
+	cb := func(r Row) {
+		var w string
+		if err := r.Scan(nil, &w); err != nil {
+			t.Fatal(err)
+		}
+		words = append(words, w)
+	}
+	if err := db.Select("words", cb, "length", "word"); err != nil {
 		t.Fatal(err)
+	}
+	if have, want := len(words), 1000; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+	if have, want := words[0], "hangdog"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := words[999], "ideologist"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
 	}
 
 	// where := WhereEq{"length", 4}
