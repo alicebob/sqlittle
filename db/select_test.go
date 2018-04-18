@@ -6,7 +6,7 @@ import (
 )
 
 func TestSelect(t *testing.T) {
-	db, err := Open("../test/words.sqlite")
+	db, err := Open("../testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
