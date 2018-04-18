@@ -1,6 +1,8 @@
 .PHONY: all clean
 
-ALL:=empty.sqlite \
+ALL:= \
+    alter.sqlite \
+    empty.sqlite \
     four.sqlite \
     index.sqlite \
     journal_hot.sqlite \

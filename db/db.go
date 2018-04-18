@@ -24,6 +24,9 @@ func (db *DB) Close() error {
 
 type RowCB func(Row)
 
+// Select all column rows from the given tables. For rowid tables the special
+// values "rowid", "oid", and "_rowid_" will load the rowid (unless there is a
+// column with that name).
 func (db *DB) Select(table string, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
