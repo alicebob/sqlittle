@@ -9,7 +9,7 @@ import (
 
 func TestLowEmpty(t *testing.T) {
 	// table without any row
-	db, err := OpenFile("./test/empty.sqlite")
+	db, err := OpenFile("./testdata/empty.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestLowEmpty(t *testing.T) {
 }
 
 func TestLowDefs(t *testing.T) {
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestLowDefs(t *testing.T) {
 }
 
 func TestLowWithoutRowid(t *testing.T) {
-	db, err := OpenFile("./test/withoutrowid.sqlite")
+	db, err := OpenFile("./testdata/withoutrowid.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}

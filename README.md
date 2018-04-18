@@ -47,7 +47,7 @@ See [CODE.md](CODE.md) for an overview how the code is structured.
 See [godoc](https://godoc.org/github.com/alicebob/sqlittle) for all available
 methods and examples, but the gist of a table scan is:
 
-    db, _ := OpenFile("test/single.sqlite")
+    db, _ := OpenFile("testdata/single.sqlite")
     defer db.Close()
     table, _ := db.Table("hello")
     table.Scan(func(rowid int64, rec Record) bool {
@@ -58,7 +58,7 @@ methods and examples, but the gist of a table scan is:
 
 Printing the columns:
 
-    db, _ := OpenFile("test/single.sqlite")
+    db, _ := OpenFile("testdata/single.sqlite")
     defer db.Close()
     schema, _ := db.Schema("words")
     fmt.Printf("columns:\n")

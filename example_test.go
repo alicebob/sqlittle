@@ -5,7 +5,7 @@ import (
 )
 
 func ExampleTable_Scan() {
-	db, err := OpenFile("test/single.sqlite")
+	db, err := OpenFile("testdata/single.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +30,7 @@ func ExampleTable_Scan() {
 }
 
 func ExampleTable_WithoutRowidScan() {
-	db, err := OpenFile("test/withoutrowid.sqlite")
+	db, err := OpenFile("testdata/withoutrowid.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +64,7 @@ func ExampleTable_WithoutRowidScan() {
 }
 
 func ExampleTable_Rowid() {
-	db, err := OpenFile("test/single.sqlite")
+	db, err := OpenFile("testdata/single.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -84,7 +84,7 @@ func ExampleTable_Rowid() {
 }
 
 func ExampleTable_WithoutRowidPK() {
-	db, err := OpenFile("test/withoutrowid.sqlite")
+	db, err := OpenFile("testdata/withoutrowid.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -106,7 +106,7 @@ func ExampleTable_WithoutRowidPK() {
 func ExampleIndex_Scan() {
 	// This code will iterate over all words in alphabetical order.
 	// The `words` table has: CREATE INDEX words_index_1 ON words (word)
-	db, err := OpenFile("test/words.sqlite")
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -143,7 +143,7 @@ func ExampleIndex_ScanMin() {
 	// This will iterate over all words in alphabetical order, starting from
 	// the first record >= the given record.
 	// The `words` table has: CREATE INDEX words_index_1 ON words (word)
-	db, err := OpenFile("test/words.sqlite")
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -177,7 +177,7 @@ func ExampleIndex_ScanMin() {
 }
 
 func ExampleDatabase_Schema() {
-	db, err := OpenFile("test/words.sqlite")
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -212,7 +212,7 @@ func ExampleDatabase_Schema() {
 }
 
 func ExampleTable_Def() {
-	db, err := OpenFile("test/words.sqlite")
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		panic(err)
 	}

@@ -6,10 +6,10 @@ import (
 
 func TestJournal(t *testing.T) {
 	for file, expect := range map[string]bool{
-		"./test/journal_truncate.sqlite-journal": false,
-		"./test/journal_persist.sqlite-journal":  false,
-		"./test/journal_hot.sqlite-journal":      true,
-		"./test/nosuch":                          false,
+		"./testdata/journal_truncate.sqlite-journal": false,
+		"./testdata/journal_persist.sqlite-journal":  false,
+		"./testdata/journal_hot.sqlite-journal":      true,
+		"./testdata/nosuch":                          false,
 	} {
 		valid, err := validJournal(file)
 		if err != nil {
@@ -23,9 +23,9 @@ func TestJournal(t *testing.T) {
 
 func TestOpenHot(t *testing.T) {
 	for file, expect := range map[string]error{
-		"./test/journal_truncate.sqlite": nil,
-		"./test/journal_persist.sqlite":  nil,
-		"./test/journal_hot.sqlite":      ErrHotJournal,
+		"./testdata/journal_truncate.sqlite": nil,
+		"./testdata/journal_persist.sqlite":  nil,
+		"./testdata/journal_hot.sqlite":      ErrHotJournal,
 	} {
 		db, err := OpenFile(file)
 		if have, want := err, expect; have != want {

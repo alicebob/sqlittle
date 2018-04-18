@@ -18,7 +18,7 @@ func init() {
 }
 
 func TestHeader(t *testing.T) {
-	// hexdump -v -e '/1 "0x%02x, "' -n 100 test/single.sqlite
+	// hexdump -v -e '/1 "0x%02x, "' -n 100 testdata/single.sqlite
 	base := [headerSize]byte{
 		0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66,
 		0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00,
@@ -231,7 +231,7 @@ func TestHeader(t *testing.T) {
 }
 
 func TestIOBasic(t *testing.T) {
-	db, err := OpenFile("./test/single.sqlite")
+	db, err := OpenFile("./testdata/single.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,35 +243,35 @@ func TestIOBasic(t *testing.T) {
 }
 
 func TestIONoSuch(t *testing.T) {
-	_, err := OpenFile("./test/nosuch.sqlite")
-	if have, want := err.Error(), "open ./test/nosuch.sqlite: no such file or directory"; have != want {
+	_, err := OpenFile("./testdata/nosuch.sqlite")
+	if have, want := err.Error(), "open ./testdata/nosuch.sqlite: no such file or directory"; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOZero(t *testing.T) {
-	_, err := OpenFile("./test/zerolength.sqlite")
+	_, err := OpenFile("./testdata/zerolength.sqlite")
 	if have, want := err, errors.New("mmap: closed"); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOTruncated(t *testing.T) {
-	_, err := OpenFile("./test/truncated.sqlite")
+	_, err := OpenFile("./testdata/truncated.sqlite")
 	if have, want := err, io.EOF; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOInvalidMagic(t *testing.T) {
-	_, err := OpenFile("./test/magic.sqlite")
+	_, err := OpenFile("./testdata/magic.sqlite")
 	if have, want := err, ErrInvalidMagic; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestIOWal(t *testing.T) {
-	_, err := OpenFile("./test/wal.sqlite")
+	_, err := OpenFile("./testdata/wal.sqlite")
 	if have, want := err, ErrWAL; have != want {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
@@ -279,7 +279,7 @@ func TestIOWal(t *testing.T) {
 
 func TestMasterNoSQL(t *testing.T) {
 	// primary key creates an index without SQL statement
-	db, err := OpenFile("./test/primarykey.sqlite")
+	db, err := OpenFile("./testdata/primarykey.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,7 @@ func TestMasterNoSQL(t *testing.T) {
 }
 
 func TestDatabaseTable(t *testing.T) {
-	db, err := OpenFile("./test/index.sqlite")
+	db, err := OpenFile("./testdata/index.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +327,7 @@ func TestDatabaseTable(t *testing.T) {
 }
 
 func TestIOTableRowidSingle(t *testing.T) {
-	db, err := OpenFile("./test/single.sqlite")
+	db, err := OpenFile("./testdata/single.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,7 +362,7 @@ func TestIOTableRowidSingle(t *testing.T) {
 
 // wordList gives the contents of words.txt
 func wordList(t *testing.T) []string {
-	f, err := os.Open("./test/words.txt")
+	f, err := os.Open("./testdata/words.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -397,7 +397,7 @@ func shuffle(n int, swap func(i, j int)) {
 }
 
 func TestIOTableRowidLong(t *testing.T) {
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -446,7 +446,7 @@ func TestIOTableRowidLong(t *testing.T) {
 
 func TestDatabaseLock(t *testing.T) {
 	// can we lock at all?
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -474,7 +474,7 @@ func TestDatabaseLock(t *testing.T) {
 }
 
 func TestDatabaseSchema(t *testing.T) {
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}

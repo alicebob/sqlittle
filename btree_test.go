@@ -7,7 +7,7 @@ import (
 )
 
 func TestTablesSingle(t *testing.T) {
-	f, err := OpenFile("./test/single.sqlite")
+	f, err := OpenFile("./testdata/single.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestTablesSingle(t *testing.T) {
 }
 
 func TestTablesFour(t *testing.T) {
-	db, err := OpenFile("./test/four.sqlite")
+	db, err := OpenFile("./testdata/four.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestTablesFour(t *testing.T) {
 
 func TestTableLong(t *testing.T) {
 	// start page is an interior table page
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +147,7 @@ func TestTableOverflow(t *testing.T) {
 		testline += "longline"
 	}
 
-	db, err := OpenFile("./test/overflow.sqlite")
+	db, err := OpenFile("./testdata/overflow.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +197,7 @@ func TestTableOverflow(t *testing.T) {
 
 func TestTableValues(t *testing.T) {
 	// different value types
-	db, err := OpenFile("./test/values.sqlite")
+	db, err := OpenFile("./testdata/values.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +263,7 @@ func TestTableValues(t *testing.T) {
 
 func TestIndexSingle(t *testing.T) {
 	// scan a whole index (single page)
-	db, err := OpenFile("./test/index.sqlite")
+	db, err := OpenFile("./testdata/index.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +316,7 @@ func TestIndexSingle(t *testing.T) {
 
 func TestIndexWords(t *testing.T) {
 	// scan a whole index, with internal page
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -372,7 +372,7 @@ func TestIndexWords(t *testing.T) {
 
 func TestIndexScanMin(t *testing.T) {
 	// scan a index
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +411,7 @@ func TestIndexScanMin(t *testing.T) {
 
 func TestIndexScanMin2(t *testing.T) {
 	// scan a non-unique index
-	db, err := OpenFile("./test/words.sqlite")
+	db, err := OpenFile("./testdata/words.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -450,7 +450,7 @@ func TestIndexScanMin2(t *testing.T) {
 }
 
 func TestScanNoRowid(t *testing.T) {
-	db, err := OpenFile("./test/withoutrowid.sqlite")
+	db, err := OpenFile("./testdata/withoutrowid.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,7 +6,7 @@ import (
 )
 
 func Benchmark_RandomRowid(b *testing.B) {
-	db, err := OpenFile("test/words.sqlite")
+	db, err := OpenFile("testdata/words.sqlite")
 	if err != nil {
 		b.Fatal(err)
 	}

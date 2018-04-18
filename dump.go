@@ -1,5 +1,5 @@
 // dump table and index structure
-// usage: go run dump.go ./test/single.sqlite
+// usage: go run dump.go ./testdata/single.sqlite
 // +build never
 
 package main
