@@ -29,6 +29,40 @@ func ExampleTable_Scan() {
 	// row 3: town
 }
 
+func ExampleTable_WithoutRowidScan() {
+	db, err := OpenFile("test/withoutrowid.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	table, err := db.Table("words")
+	if err != nil {
+		panic(err)
+	}
+	i := 10
+	if err := table.WithoutRowidScan(
+		func(rec Record) bool {
+			fmt.Printf("row %s\n", rec[0].(string))
+			i--
+			return i <= 0
+		},
+	); err != nil {
+		panic(err)
+	}
+	// output:
+	// row Adams
+	// row Ahmadinejad
+	// row Alabaman
+	// row Algonquin
+	// row Amy
+	// row Andersen
+	// row Annette's
+	// row Antipas's
+	// row Arizonan
+	// row Artaxerxes's
+}
+
 func ExampleTable_Rowid() {
 	db, err := OpenFile("test/single.sqlite")
 	if err != nil {
@@ -47,6 +81,26 @@ func ExampleTable_Rowid() {
 	fmt.Printf("row: %s\n", row[0].(string))
 	// output:
 	// row: universe
+}
+
+func ExampleTable_WithoutRowidPK() {
+	db, err := OpenFile("test/withoutrowid.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	table, err := db.Table("words")
+	if err != nil {
+		panic(err)
+	}
+	row, err := table.WithoutRowidPK(Record{"awesomely"})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("row: %v\n", row)
+	// output:
+	// row: [awesomely 9]
 }
 
 func ExampleIndex_Scan() {
