@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/alicebob/sqlittle"
 )
@@ -68,7 +69,8 @@ func toColumnIndex(s *sqlittle.SchemaTable, columns []string, allowRowid bool) (
 	for _, c := range columns {
 		n := s.Column(c)
 		if n < 0 {
-			if allowRowid && (c == "rowid" || c == "oid" || c == "_rowid_") {
+			cup := strings.ToUpper(c)
+			if allowRowid && (cup == "ROWID" || cup == "OID" || cup == "_ROWID_") {
 				res = append(res, columIndex{nil, n, true})
 				continue
 			} else {

@@ -36,7 +36,7 @@ func TestSelectSimple(t *testing.T) {
 		}
 		words = append(words, w)
 	}
-	if err := db.Select("words", cb, "length", "word"); err != nil {
+	if err := db.Select("words", cb, "length", "wORd"); err != nil {
 		t.Fatal(err)
 	}
 	if have, want := len(words), 1000; have != want {
@@ -120,16 +120,16 @@ func TestSelectColumnRowid(t *testing.T) {
 
 	var count int64 = 1
 	cb := func(r Row) {
-		var n [3]int64
-		if err := r.Scan(nil, &n[0], &n[1], &n[2]); err != nil {
+		var n [4]int64
+		if err := r.Scan(nil, &n[0], &n[1], &n[2], &n[3]); err != nil {
 			t.Fatal(err)
 		}
-		if have, want := n, [3]int64{count, count, count}; have != want {
+		if have, want := n, [...]int64{count, count, count, count}; have != want {
 			t.Errorf("have %v, want %v", have, want)
 		}
 		count++
 	}
-	if err := db.Select("words", cb, "word", "rowid", "oid", "_rowid_"); err != nil {
+	if err := db.Select("words", cb, "word", "rowid", "oid", "_rowid_", "rOwId"); err != nil {
 		t.Fatal(err)
 	}
 }

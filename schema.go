@@ -224,8 +224,9 @@ func (st *SchemaTable) addIndexed(name string, cols []sql.IndexedColumn) bool {
 
 // Returns the index of the named column, or -1.
 func (st *SchemaTable) Column(name string) int {
+	u := strings.ToUpper(name)
 	for i, col := range st.Columns {
-		if col.Name == name {
+		if strings.ToUpper(col.Name) == u {
 			return i
 		}
 	}
