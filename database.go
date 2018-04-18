@@ -408,7 +408,6 @@ func (db *Database) objectNames(typ string) ([]string, error) {
 // Table opens the named table.
 // Will return ErrNoSuchTable when the table isn't there (or isn't a table).
 // Table pointer is always valid if err == nil.
-// See also TableWithoutRowid()
 func (db *Database) Table(name string) (*Table, error) {
 	objects, err := db.master()
 	if err != nil {
@@ -417,20 +416,6 @@ func (db *Database) Table(name string) (*Table, error) {
 	for _, o := range objects {
 		if o.typ == "table" && o.name == name {
 			return &Table{db: db, root: o.rootPage, sql: o.sql}, nil
-		}
-	}
-	return nil, ErrNoSuchTable
-}
-
-// Same as Table(), but for 'CREAT TABLE ... WITHOUT ROWID'.
-func (db *Database) TableWithoutRowid(name string) (*TableWithoutRowid, error) {
-	objects, err := db.master()
-	if err != nil {
-		return nil, err
-	}
-	for _, o := range objects {
-		if o.typ == "table" && o.name == name {
-			return &TableWithoutRowid{db: db, root: o.rootPage, sql: o.sql}, nil
 		}
 	}
 	return nil, ErrNoSuchTable
@@ -476,16 +461,33 @@ func (db *Database) Info() (string, error) {
 		switch o.typ {
 		case "table":
 			fmt.Fprintf(b, "  first rows:\n")
-			if tab, err := db.Table(o.name); err != nil {
+			t, err := db.Table(o.name)
+			if err != nil {
 				fmt.Fprintf(b, "    error: %s\n", err)
-			} else {
+				continue
+			}
+			switch t.withoutRowid() {
+			case true:
+				fmt.Fprintf(b, "    (WITHOUT ROWID table)\n")
 				i := 0
-				tab.Scan(func(rowid int64, rec Record) bool {
+				if err := t.WithoutRowidScan(func(rec Record) bool {
+					fmt.Fprintf(b, "    %v\n", rec)
+					i++
+					return i > 5
+				}); err != nil {
+					fmt.Fprintf(b, "    error: %s\n", err)
+				} else if i == 0 {
+					fmt.Fprintf(b, "    (no rows)\n")
+				}
+			case false:
+				i := 0
+				if err := t.Scan(func(rowid int64, rec Record) bool {
 					fmt.Fprintf(b, "    %d: %v\n", rowid, rec)
 					i++
 					return i > 5
-				})
-				if i == 0 {
+				}); err != nil {
+					fmt.Fprintf(b, "    error: %s\n", err)
+				} else if i == 0 {
 					fmt.Fprintf(b, "    (no rows)\n")
 				}
 			}

@@ -15,12 +15,6 @@ type Table struct {
 	sql  string
 }
 
-type TableWithoutRowid struct {
-	db   *Database
-	root int
-	sql  string
-}
-
 type Index struct {
 	db   *Database
 	root int
@@ -32,17 +26,15 @@ type Index struct {
 // scan should be terminated.
 type TableScanCB func(int64, Record) bool
 
-// TableWithoutRowidScanCB is the Scan() callback for 'WITHOUT ROWID' tables.
-// It works the same as TableScanCB, but there is no rowid.
-type TableWithoutRowidScanCB func(Record) bool
-
-// IndexScanCB is passed to Index.Scan() and Index.ScanMin().
+// RecordCB is passed to Index.Scan(), Index.ScanMin(), and
+// Table.ScanWithoutRowid.
 // It should return true when the scan should be stopped.
 //
+// For index scans:
 // The callback gets the raw values as stored in the index. For a normal index
 // the last value is the rowid value (see ChompRowid()). For a WITHOUT ROWID it
 // depends on the table which rows there are.
-type IndexScanCB func(Record) bool
+type RecordCB func(Record) bool
 
 // Def returns the table definition. Not everything SQLite supports is
 // supported (yet).
@@ -57,6 +49,12 @@ func (t *Table) Def() (*sql.CreateTableStmt, error) {
 		return nil, errors.New("no CREATE TABLE attached")
 	}
 	return &stmt, nil
+}
+
+// withoutRowid is true if this is a 'WITHOUT ROWID' table
+func (t *Table) withoutRowid() bool {
+	_, err := t.db.openIndex(t.root)
+	return err == nil
 }
 
 // Scan calls cb() for every row in the table. Will be called in 'database
@@ -86,6 +84,31 @@ func (t *Table) Scan(cb TableScanCB) error {
 				return false, err
 			}
 			return cb(rowid, rec), nil
+		},
+	)
+	return err
+}
+
+// WithoutRowidScan is like Table.Scan(), but for 'WITHOUT ROWID' tables.
+func (t *Table) WithoutRowidScan(cb RecordCB) error {
+	root, err := t.db.openIndex(t.root)
+	if err != nil {
+		return err
+	}
+
+	_, err = root.Iter(
+		maxRecursion,
+		t.db,
+		func(pl cellPayload) (bool, error) {
+			full, err := addOverflow(t.db, pl)
+			if err != nil {
+				return false, err
+			}
+			rec, err := parseRecord(full)
+			if err != nil {
+				return false, err
+			}
+			return cb(rec), nil
 		},
 	)
 	return err
@@ -126,34 +149,9 @@ func (t *Table) Rowid(rowid int64) (Record, error) {
 	return parseRecord(c)
 }
 
-// Scan calls cb() for every row in the table. These will be called in the
-// order of the primary key.
-func (t *TableWithoutRowid) Scan(cb TableWithoutRowidScanCB) error {
-	root, err := t.db.openIndex(t.root)
-	if err != nil {
-		return err
-	}
-
-	_, err = root.Iter(
-		maxRecursion,
-		t.db,
-		func(pl cellPayload) (bool, error) {
-			full, err := addOverflow(t.db, pl)
-			if err != nil {
-				return false, err
-			}
-			rec, err := parseRecord(full)
-			if err != nil {
-				return false, err
-			}
-			return cb(rec), nil
-		},
-	)
-	return err
-}
-
-// Rowid finds a single row by primary key. Will return nil if it isn't found.
-func (t *TableWithoutRowid) Rowid(r Record) (Record, error) {
+// WithoutRowidPK finds a single row by primary key in a 'WITHOUT ROWID' table. Will
+// return nil if it isn't found.
+func (t *Table) WithoutRowidPK(r Record) (Record, error) {
 	root, err := t.db.openIndex(t.root)
 	if err != nil {
 		return nil, err
@@ -193,10 +191,11 @@ func (t *Index) Def() (*sql.CreateIndexStmt, error) {
 
 // Scan calls cb() for every row in the index. These will be called in the
 // index order.
-// The callback gets the rowid the row is about (use Table.Rowid() to load the
-// row, if you need it), and all the columns present in the index.
+// The callback gets the record as stored in the index. For indexes on a
+// non-WITHOUT ROWID table the last value will be the rowid (see ChompRowid()).
+// For a WITHOUT ROWID table the columns depend on your table structure.
 // If the callback returns true (done) the scan will be stopped.
-func (in *Index) Scan(cb IndexScanCB) error {
+func (in *Index) Scan(cb RecordCB) error {
 	root, err := in.db.openIndex(in.root)
 	if err != nil {
 		return err
@@ -225,7 +224,7 @@ func (in *Index) Scan(cb IndexScanCB) error {
 // record don't match those in the index an error will be returned.
 // If the callback returns true (done) the scan will be stopped.
 // All comments from Index.Scan are valid here as well.
-func (in *Index) ScanMin(from Record, cb IndexScanCB) error {
+func (in *Index) ScanMin(from Record, cb RecordCB) error {
 	root, err := in.db.openIndex(in.root)
 	if err != nil {
 		return err

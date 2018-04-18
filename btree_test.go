@@ -450,21 +450,19 @@ func TestIndexScanMin2(t *testing.T) {
 }
 
 func TestScanNoRowid(t *testing.T) {
-	db, err := OpenFile("./test/worowid.sqlite")
+	db, err := OpenFile("./test/withoutrowid.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	/*
-		schema, err := db.Schema("words")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if have, want := schema.WithoutRowid, true; have != want {
-			t.Errorf("have %#v, want %#v", have, want)
-		}
-	*/
+	schema, err := db.Schema("words")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := schema.WithoutRowid, true; have != want {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
 
 	testWords := func(rootPage int) {
 		root, err := db.openIndex(rootPage)
