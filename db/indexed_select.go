@@ -11,7 +11,7 @@ func indexedSelectRowid(
 	cb RowCB,
 	columns []string,
 ) error {
-	ci, err := toColumnIndex(schema, columns, true)
+	ci, err := toColumnIndexRowid(schema, columns)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func indexedSelectWithoutRowid(
 	cb RowCB,
 	columns []string,
 ) error {
-	ci, err := toColumnIndex(schema, columns, false)
+	ci, err := toColumnIndexNonRowid(schema, columns)
 	if err != nil {
 		return err
 	}

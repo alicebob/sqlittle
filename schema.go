@@ -271,16 +271,8 @@ func (st *SchemaTable) addRefColumns() {
 
 			// add all missing PK columns to the indexes
 			for i, ind := range st.Indexes {
-				findCol := func(n string) int {
-					for i, c := range ind.Columns {
-						if strings.ToUpper(c.Column) == strings.ToUpper(n) {
-							return i
-						}
-					}
-					return -1
-				}
 				for _, c := range pk.Columns {
-					if in := findCol(c.Column); in < 0 {
+					if in := ind.Column(c.Column); in < 0 {
 						ind.Columns = append(ind.Columns, c)
 						ind.PKColumns = append(ind.PKColumns, len(ind.Columns)-1)
 					} else {
@@ -313,6 +305,17 @@ func (st *SchemaTable) addRefColumns() {
 			st.Indexes[i] = s
 		}
 	}
+}
+
+// Returns the index of the named column, or -1.
+func (si *SchemaIndex) Column(name string) int {
+	u := strings.ToUpper(name)
+	for i, col := range si.Columns {
+		if strings.ToUpper(col.Column) == u {
+			return i
+		}
+	}
+	return -1
 }
 
 // A primary key can be an alias for the rowid iff:

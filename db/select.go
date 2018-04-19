@@ -8,7 +8,7 @@ import (
 )
 
 func selectWithRowid(db *sqlittle.Database, s *sqlittle.SchemaTable, cb RowCB, columns []string) error {
-	ci, err := toColumnIndex(s, columns, true)
+	ci, err := toColumnIndexRowid(s, columns)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func selectWithRowid(db *sqlittle.Database, s *sqlittle.SchemaTable, cb RowCB, c
 }
 
 func selectWithoutRowid(db *sqlittle.Database, s *sqlittle.SchemaTable, cb RowCB, columns []string) error {
-	ci, err := toColumnIndex(s, columns, false)
+	ci, err := toColumnIndexNonRowid(s, columns)
 	if err != nil {
 		return err
 	}
@@ -63,14 +63,14 @@ type columIndex struct {
 }
 
 // given column names returns the index in a Row this column is expected, and
-// the column definition
-func toColumnIndex(s *sqlittle.SchemaTable, columns []string, allowRowid bool) ([]columIndex, error) {
+// the column definition. Allows 'rowid' alias.
+func toColumnIndexRowid(s *sqlittle.SchemaTable, columns []string) ([]columIndex, error) {
 	res := make([]columIndex, 0, len(columns))
 	for _, c := range columns {
 		n := s.Column(c)
 		if n < 0 {
 			cup := strings.ToUpper(c)
-			if allowRowid && (cup == "ROWID" || cup == "OID" || cup == "_ROWID_") {
+			if cup == "ROWID" || cup == "OID" || cup == "_ROWID_" {
 				res = append(res, columIndex{nil, n, true})
 				continue
 			} else {
@@ -78,6 +78,29 @@ func toColumnIndex(s *sqlittle.SchemaTable, columns []string, allowRowid bool) (
 			}
 		}
 		res = append(res, columIndex{&s.Columns[n], n, false})
+	}
+	return res, nil
+}
+
+// given column names returns the index in a Row this column is expected, and
+// the column definition. For non-rowid tables the storage order depends on the
+// primary key.
+func toColumnIndexNonRowid(s *sqlittle.SchemaTable, columns []string) ([]columIndex, error) {
+	pk := s.NamedIndex("")
+	if pk == nil {
+		return nil, fmt.Errorf("internal error: no primary key")
+	}
+	res := make([]columIndex, 0, len(columns))
+	for _, c := range columns {
+		n := pk.Column(c)
+		if n < 0 {
+			return nil, fmt.Errorf("no such column: %q", c)
+		}
+		cn := s.Column(c)
+		if cn < 0 {
+			return nil, fmt.Errorf("no such column: %q", c)
+		}
+		res = append(res, columIndex{&s.Columns[cn], n, false})
 	}
 	return res, nil
 }

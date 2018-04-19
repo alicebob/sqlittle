@@ -4,6 +4,9 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/andreyvit/diff"
+	"github.com/davecgh/go-spew/spew"
 )
 
 // where := WhereEq{"length", 4}
@@ -131,5 +134,35 @@ func TestSelectColumnRowid(t *testing.T) {
 	}
 	if err := db.Select("words", cb, "word", "rowid", "oid", "_rowid_", "rOwId"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSelectFunky(t *testing.T) {
+	// funkykey has columns in a different order than the definition
+	db, err := Open("../testdata/funkykey.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var rows [][]string
+	cb := func(r Row) {
+		var w [4]string
+		if err := r.Scan(&w[0], &w[1], &w[2], &w[3]); err != nil {
+			t.Fatal(err)
+		}
+		rows = append(rows, w[:])
+	}
+	if err := db.Select("fuz", cb, "a", "b", "c", "d"); err != nil {
+		t.Fatal(err)
+	}
+	// ordered by (c, a)
+	want := [][]string{
+		[]string{"algebraic", "begotten", "colder", "destinies"},
+		[]string{"allegory", "beagle", "consequent", "duffers"},
+		[]string{"angle", "billiards", "crotchety", "delta"},
+	}
+	if have, want := rows, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 	}
 }

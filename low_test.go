@@ -127,7 +127,7 @@ func TestLowWithoutRowid2(t *testing.T) {
 		t.Fatal(err)
 	}
 	// note that this is not the column order
-	if have, want := row, (Record{"consequent", "allegory", "beagle", "delta"}); !reflect.DeepEqual(have, want) {
+	if have, want := row, (Record{"consequent", "allegory", "beagle", "duffers"}); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
