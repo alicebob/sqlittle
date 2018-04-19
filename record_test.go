@@ -6,299 +6,317 @@ import (
 )
 
 func TestRecord(t *testing.T) {
-	for i, cas := range []struct {
-		e    string
-		want []interface{}
-		err  error
-	}{
-		{
-			e: "\x06\x17\x17\x17\x01Wtablehellohello\x02CREATE TABLE hello (who varchar(255))",
-			want: []interface{}{
-				"table",
-				"hello",
-				"hello",
-				int64(2),
-				"CREATE TABLE hello (who varchar(255))",
-			},
-		},
-		{
-			// type 1: 8 bit
-			e:    "\x02\x01P",
-			want: []interface{}{int64(80)},
-		},
-		{
-			// type 1: 8 bit
-			e:    "\x02\x01\xb0",
-			want: []interface{}{-int64(80)},
-		},
-		{
-			// type 2: 16 bit
-			e:    "\x02\x02@\x00",
-			want: []interface{}{int64(1 << 14)},
-		},
-		{
-			// type 2: 16 bit
-			e:    "\x02\x02\xc0\x00",
-			want: []interface{}{-int64(1 << 14)},
-		},
-		{
-			// type 3: 24 bit
-			e:    "\x02\x03\x7f\x00\x00",
-			want: []interface{}{int64(0x7f0000)},
-		},
-		{
-			// type 3: 24 bit
-			e:    "\x02\x03\xff\xff\xff",
-			want: []interface{}{-int64(1)},
-		},
-		{
-			// type 4: 32 bit
-			e:    "\x02\x04\x7f\x00\x00\x00",
-			want: []interface{}{int64(0x7f000000)},
-		},
-		{
-			// type 4: 32 bit
-			e:    "\x02\x04\xff\xff\xff\xff",
-			want: []interface{}{-int64(1)},
-		},
-		{
-			// type 5: 48 bit
-			e:    "\x02\x05\x7f\x00\x00\x00\x00\x00",
-			want: []interface{}{int64(0x7f0000000000)},
-		},
-		{
-			// type 5: 48 bit
-			e:    "\x02\x05\xff\xff\xff\xff\xff\xff",
-			want: []interface{}{-int64(1)},
-		},
-		{
-			// type 6: 64 bit
-			e:    "\x02\x06\x7f\x00\x00\x00\x00\x00\x00\x00",
-			want: []interface{}{int64(0x7f00000000000000)},
-		},
-		{
-			// type 6: 64 bit
-			e:    "\x02\x06\xff\xff\xff\xff\xff\xff\xff\xff",
-			want: []interface{}{-int64(1)},
-		},
-		{
-			// type 7: float
-			e:    "\x02\x07\x00\x00\x00\x00\x00\x00\x00\x00",
-			want: []interface{}{0.0},
-		},
-		{
-			// type 7: float
-			e:    "\x02\x07\x40\x09\x21\xfb\x54\x44\x2d\x18",
-			want: []interface{}{3.141592653589793},
-		},
-		{
-			// type 8: int 0
-			e:    "\x02\b",
-			want: []interface{}{int64(0)},
-		},
-		{
-			// type 9: int 1
-			e:    "\x02\t",
-			want: []interface{}{int64(1)},
-		},
-		{
-			// type 10: internal
-			e:   "\x02\x0a",
-			err: errInternal,
-		},
-		{
-			// type 11: internal
-			e:   "\x02\x0b",
-			err: errInternal,
-		},
-		{
-			// type > 11, even: bytes
-			e: "\x02VCREATE TABLE hello (who varchar(255))",
-			want: []interface{}{
-				[]byte("CREATE TABLE hello (who varchar(255))"),
-			},
-		},
-		{
-			// type > 11, odd: string
-			e: "\x02WCREATE TABLE hello (who varchar(255))",
-			want: []interface{}{
-				"CREATE TABLE hello (who varchar(255))",
-			},
-		},
-		// Error cases
-		{
-			// truncated record
-			e:   "\x02",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated 8 bit
-			e:   "\x02\x01",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated 16 bit
-			e:   "\x02\x02@",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated 32 bit
-			e:   "\x02\x04\x7f\x00\x00",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated 48 bit
-			e:   "\x02\x05\x7f\x00\x00",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated 64 bit
-			e:   "\x02\x06\x7f\x00\x00\x00\x00\x00\x00",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated float
-			e:   "\x02\x07\x40\x09\x21\xfb\x54\x44\x2d",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated bytes
-			e:   "\x02VCREATE TABLE hello (who varchar(255)",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated string
-			e:   "\x02WCREATE TABLE hello (who varchar(255)",
-			err: ErrCorrupted,
-		},
-		{
-			// truncated multi field record
-			e:   "\x06\x17\x17\x17\x01Wtablehellohello\x02",
-			err: ErrCorrupted,
-			want: []interface{}{
-				"table",
-				"hello",
-				"hello",
-				int64(2),
-			},
-		},
-	} {
-		e, err := parseRecord([]byte(cas.e))
-		if have, want := err, cas.err; !reflect.DeepEqual(have, want) {
-			t.Fatalf("case %d: have %v, want %v", i, have, want)
+	test := func(e string, want []interface{}, wantErr error) {
+		t.Helper()
+		parsed, err := parseRecord([]byte(e))
+		if have, want := err, wantErr; !reflect.DeepEqual(have, want) {
+			t.Fatalf("have %v, want %v", have, want)
 		}
-		if have, want := e, cas.want; !reflect.DeepEqual(have, want) {
-			t.Errorf("case %d: have\n-[[%#v]], want\n-[[%#v]]", i, have, want)
+		if have, want := parsed, want; !reflect.DeepEqual(have, want) {
+			t.Errorf("have\n-[[%#v]], want\n-[[%#v]]", have, want)
 		}
 	}
+	test(
+		"\x06\x17\x17\x17\x01Wtablehellohello\x02CREATE TABLE hello (who varchar(255))",
+		[]interface{}{
+			"table",
+			"hello",
+			"hello",
+			int64(2),
+			"CREATE TABLE hello (who varchar(255))",
+		},
+		nil,
+	)
+	test(
+		// type 1: 8 bit
+		"\x02\x01P",
+		[]interface{}{int64(80)},
+		nil,
+	)
+	test(
+		// type 1: 8 bit
+		"\x02\x01\xb0",
+		[]interface{}{-int64(80)},
+		nil,
+	)
+	test(
+		// type 2: 16 bit
+		"\x02\x02@\x00",
+		[]interface{}{int64(1 << 14)},
+		nil,
+	)
+	test(
+		// type 2: 16 bit
+		"\x02\x02\xc0\x00",
+		[]interface{}{-int64(1 << 14)},
+		nil,
+	)
+	test(
+		// type 3: 24 bit
+		"\x02\x03\x7f\x00\x00",
+		[]interface{}{int64(0x7f0000)},
+		nil,
+	)
+	test(
+		// type 3: 24 bit
+		"\x02\x03\xff\xff\xff",
+		[]interface{}{-int64(1)},
+		nil,
+	)
+	test(
+		// type 4: 32 bit
+		"\x02\x04\x7f\x00\x00\x00",
+		[]interface{}{int64(0x7f000000)},
+		nil,
+	)
+	test(
+		// type 4: 32 bit
+		"\x02\x04\xff\xff\xff\xff",
+		[]interface{}{-int64(1)},
+		nil,
+	)
+	test(
+		// type 5: 48 bit
+		"\x02\x05\x7f\x00\x00\x00\x00\x00",
+		[]interface{}{int64(0x7f0000000000)},
+		nil,
+	)
+	test(
+		// type 5: 48 bit
+		"\x02\x05\xff\xff\xff\xff\xff\xff",
+		[]interface{}{-int64(1)},
+		nil,
+	)
+	test(
+		// type 6: 64 bit
+		"\x02\x06\x7f\x00\x00\x00\x00\x00\x00\x00",
+		[]interface{}{int64(0x7f00000000000000)},
+		nil,
+	)
+	test(
+		// type 6: 64 bit
+		"\x02\x06\xff\xff\xff\xff\xff\xff\xff\xff",
+		[]interface{}{-int64(1)},
+		nil,
+	)
+	test(
+		// type 7: float
+		"\x02\x07\x00\x00\x00\x00\x00\x00\x00\x00",
+		[]interface{}{0.0},
+		nil,
+	)
+	test(
+		// type 7: float
+		"\x02\x07\x40\x09\x21\xfb\x54\x44\x2d\x18",
+		[]interface{}{3.141592653589793},
+		nil,
+	)
+	test(
+		// type 8: int 0
+		"\x02\b",
+		[]interface{}{int64(0)},
+		nil,
+	)
+	test(
+		// type 9: int 1
+		"\x02\t",
+		[]interface{}{int64(1)},
+		nil,
+	)
+	test(
+		// type 10: internal
+		"\x02\x0a",
+		nil,
+		errInternal,
+	)
+	test(
+		// type 11: internal
+		"\x02\x0b",
+		nil,
+		errInternal,
+	)
+	test(
+		// type > 11, even: bytes
+		"\x02VCREATE TABLE hello (who varchar(255))",
+		[]interface{}{
+			[]byte("CREATE TABLE hello (who varchar(255))"),
+		},
+		nil,
+	)
+	test(
+		// type > 11, odd: string
+		"\x02WCREATE TABLE hello (who varchar(255))",
+		[]interface{}{
+			"CREATE TABLE hello (who varchar(255))",
+		},
+		nil,
+	)
+
+	// Error cases
+	test(
+		// truncated record
+		"\x02",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated 8 bit
+		"\x02\x01",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated 16 bit
+		"\x02\x02@",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated 32 bit
+		"\x02\x04\x7f\x00\x00",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated 48 bit
+		"\x02\x05\x7f\x00\x00",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated 64 bit
+		"\x02\x06\x7f\x00\x00\x00\x00\x00\x00",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated float
+		"\x02\x07\x40\x09\x21\xfb\x54\x44\x2d",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated bytes
+		"\x02VCREATE TABLE hello (who varchar(255)",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated string
+		"\x02WCREATE TABLE hello (who varchar(255)",
+		nil,
+		ErrCorrupted,
+	)
+	test(
+		// truncated multi field record
+		"\x06\x17\x17\x17\x01Wtablehellohello\x02",
+		[]interface{}{
+			"table",
+			"hello",
+			"hello",
+			int64(2),
+		},
+		ErrCorrupted,
+	)
 }
 
 func TestColumnCompare(t *testing.T) {
-	type cas struct {
-		a, b interface{}
-		want int
-		err  error
-	}
-	for i, c := range []cas{
-		// nil
-		{nil, nil, 0, nil},
-
-		// int64
-		{nil, int64(1), -1, nil},
-		{int64(1), nil, 1, nil},
-		{int64(42), int64(42), 0, nil},
-		{int64(-42), int64(42), -1, nil},
-		{int64(42), int64(-42), 1, nil},
-
-		// float64
-		{nil, 3.14, -1, nil},
-		{3.14, nil, 1, nil},
-		{1.12, 3.14, -1, nil},
-		{3.14, 3.14, 0, nil},
-		{3.14, -3.14, 1, nil},
-
-		// float64 'n int
-		{-int64(12), -3.14, -1, nil},
-		{int64(3), 3.0, 0, nil},
-		{int64(3), -3.14, 1, nil},
-
-		// strings
-		{nil, "bar", -1, nil},
-		{"bar", nil, 1, nil},
-		{"foo", "bar", 1, nil},
-		{"foo", "foo", 0, nil},
-		{"bar", "foo", -1, nil},
-		{"foofoo", "foo", 1, nil},
-		{"foo", "foofoo", -1, nil},
-		{"foo", "Foo", 1, nil},
-
-		// bytes
-		{nil, []byte("bar"), -1, nil},
-		{[]byte("bar"), nil, 1, nil},
-		{[]byte("foo"), []byte("bar"), 1, nil},
-		{[]byte("bar"), []byte("bar"), 0, nil},
-		{[]byte("bar"), []byte("foo"), -1, nil},
-
-		// combos
-		{int64(42), "string", 0, errCmp},
-		{"string", int64(42), 0, errCmp},
-		{int64(42), []byte("byte"), 0, errCmp},
-		{[]byte("byte"), int64(42), 0, errCmp},
-		{3.14, "string", 0, errCmp},
-		{"string", 3.14, 0, errCmp},
-		{3.14, []byte("byte"), 0, errCmp},
-		{[]byte("byte"), 3.14, 0, errCmp},
-		{[]byte("byte"), "string", 0, errCmp},
-		{"string", []byte("byte"), 0, errCmp},
-	} {
-		o, err := columnCmp(c.a, c.b)
-		if have, want := err, c.err; !reflect.DeepEqual(have, want) {
-			t.Fatalf("case %d: have %q, want %q", i, have, want)
+	test := func(a, b interface{}, want int, wantErr error) {
+		t.Helper()
+		o, err := columnCmp(a, b)
+		if have, want := err, wantErr; !reflect.DeepEqual(have, want) {
+			t.Fatalf("have %q, want %q", have, want)
 		}
-		if have, want := o, c.want; have != want {
-			t.Errorf("case %d-(%v,%v): have %d, want %d", i, c.a, c.b, have, want)
+		if have, want := o, want; have != want {
+			t.Errorf("have %d, want %d", have, want)
 		}
 	}
+	// nil
+	test(nil, nil, 0, nil)
+
+	// int64
+	test(nil, int64(1), -1, nil)
+	test(int64(1), nil, 1, nil)
+	test(int64(42), int64(42), 0, nil)
+	test(int64(-42), int64(42), -1, nil)
+	test(int64(42), int64(-42), 1, nil)
+
+	// float64
+	test(nil, 3.14, -1, nil)
+	test(3.14, nil, 1, nil)
+	test(1.12, 3.14, -1, nil)
+	test(3.14, 3.14, 0, nil)
+	test(3.14, -3.14, 1, nil)
+
+	// float64 'n int
+	test(-int64(12), -3.14, -1, nil)
+	test(int64(3), 3.0, 0, nil)
+	test(int64(3), -3.14, 1, nil)
+
+	// strings
+	test(nil, "bar", -1, nil)
+	test("bar", nil, 1, nil)
+	test("foo", "bar", 1, nil)
+	test("foo", "foo", 0, nil)
+	test("bar", "foo", -1, nil)
+	test("foofoo", "foo", 1, nil)
+	test("foo", "foofoo", -1, nil)
+	test("foo", "Foo", 1, nil)
+
+	// bytes
+	test(nil, []byte("bar"), -1, nil)
+	test([]byte("bar"), nil, 1, nil)
+	test([]byte("foo"), []byte("bar"), 1, nil)
+	test([]byte("bar"), []byte("bar"), 0, nil)
+	test([]byte("bar"), []byte("foo"), -1, nil)
+
+	// combos
+	test(int64(42), "string", 0, errCmp)
+	test("string", int64(42), 0, errCmp)
+	test(int64(42), []byte("byte"), 0, errCmp)
+	test([]byte("byte"), int64(42), 0, errCmp)
+	test(3.14, "string", 0, errCmp)
+	test("string", 3.14, 0, errCmp)
+	test(3.14, []byte("byte"), 0, errCmp)
+	test([]byte("byte"), 3.14, 0, errCmp)
+	test([]byte("byte"), "string", 0, errCmp)
+	test("string", []byte("byte"), 0, errCmp)
 }
 
 func TestRecordCompare(t *testing.T) {
-	type cas struct {
-		a, b Record
-		want int
-	}
-	for i, c := range []cas{
-		{
-			a:    Record{int64(1)},
-			b:    Record{int64(42)},
-			want: -1,
-		},
-		{
-			a:    Record{int64(42)},
-			b:    Record{int64(42)},
-			want: 0,
-		},
-		{
-			a:    Record{int64(42)},
-			b:    Record{int64(1)},
-			want: 1,
-		},
-		{
-			a:    Record{int64(42), int64(43)},
-			b:    Record{int64(42)},
-			want: 0,
-		},
-		{
-			a:    Record{int64(42)},
-			b:    Record{int64(42), int64(43)},
-			want: 0,
-		},
-	} {
-		o, err := cmp(c.a, c.b)
+	test := func(a, b Record, want int) {
+		t.Helper()
+		o, err := cmp(a, b)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if have, want := o, c.want; have != want {
-			t.Errorf("case %d: have %d, want %d", i, have, want)
+		if have, want := o, want; have != want {
+			t.Errorf("have %d, want %d", have, want)
 		}
 	}
+	test(
+		Record{int64(1)},
+		Record{int64(42)},
+		-1,
+	)
+	test(
+		Record{int64(42)},
+		Record{int64(42)},
+		0,
+	)
+	test(
+		Record{int64(42)},
+		Record{int64(1)},
+		1,
+	)
+	test(
+		Record{int64(42), int64(43)},
+		Record{int64(42)},
+		0,
+	)
+	test(
+		Record{int64(42)},
+		Record{int64(42), int64(43)},
+		0,
+	)
 }
