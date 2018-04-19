@@ -9,6 +9,7 @@ ALL:= \
     journal_persist.sqlite \
     journal_truncate.sqlite \
     magic.sqlite \
+    music.sqlite \
     notadatabase.sqlite \
     overflow.sqlite \
     primarykey.sqlite \

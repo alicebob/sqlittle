@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/alicebob/sqlittle"
@@ -69,8 +68,7 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 	}
 
 	if s.WithoutRowid {
-		return errors.New("WITHOUT ROWID not supported yet")
-		// return selectWithoutRowid(db.db, s, cb, columns)
+		return indexedSelectWithoutRowid(db.db, s, ind, cb, columns)
 	} else {
 		return indexedSelectRowid(db.db, s, ind, cb, columns)
 	}

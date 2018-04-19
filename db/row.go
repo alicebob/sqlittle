@@ -164,3 +164,12 @@ func stringToInt64(s string) (int64, error) {
 	f, err := strconv.ParseFloat(s, 64)
 	return int64(f), err
 }
+
+// make a new record from columns from the old record
+func reRecord(r sqlittle.Record, indexes []int) sqlittle.Record {
+	n := make(sqlittle.Record, len(indexes))
+	for i := range n {
+		n[i] = r[indexes[i]]
+	}
+	return n
+}
