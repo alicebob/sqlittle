@@ -63,10 +63,8 @@ func indexedSelectWithoutRowid(
 		return err
 	}
 
-	pkIndexes := []int{1} // FIXME :)
-
 	return ind.Scan(func(r sqlittle.Record) bool {
-		pk := reRecord(r, pkIndexes)
+		pk := reRecord(r, index.PKColumns)
 
 		row, err := tab.WithoutRowidPK(pk)
 		if err != nil || row == nil {
