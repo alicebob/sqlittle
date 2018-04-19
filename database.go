@@ -305,12 +305,12 @@ func (db *Database) master() ([]sqliteMaster, error) {
 		if s, ok := e[1].(string); !ok {
 			return false, ErrInvalidDef
 		} else {
-			m.name = s
+			m.name = strings.ToLower(s)
 		}
 		if s, ok := e[2].(string); !ok {
 			return false, ErrInvalidDef
 		} else {
-			m.tblName = s
+			m.tblName = strings.ToLower(s)
 		}
 		if n, ok := e[3].(int64); !ok {
 			return false, ErrInvalidDef
@@ -413,8 +413,9 @@ func (db *Database) Table(name string) (*Table, error) {
 	if err != nil {
 		return nil, err
 	}
+	n := strings.ToLower(name)
 	for _, o := range objects {
-		if o.typ == "table" && o.name == name {
+		if o.typ == "table" && o.name == n {
 			return &Table{db: db, root: o.rootPage, sql: o.sql}, nil
 		}
 	}
@@ -432,8 +433,9 @@ func (db *Database) Index(name string) (*Index, error) {
 	if err != nil {
 		return nil, err
 	}
+	n := strings.ToLower(name)
 	for _, o := range objects {
-		if o.typ == "index" && o.name == name {
+		if o.typ == "index" && o.name == n {
 			return &Index{db: db, root: o.rootPage, sql: o.sql}, nil
 		}
 	}

@@ -55,8 +55,9 @@ type IndexColumn struct {
 
 func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
 	var createSQL string
+	n := strings.ToLower(table)
 	for _, m := range master {
-		if m.typ == "table" && m.name == table {
+		if m.typ == "table" && m.name == n {
 			createSQL = m.sql
 			break
 		}
@@ -77,7 +78,7 @@ func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
 	st := newCreateTable(ct)
 
 	for _, m := range master {
-		if m.typ == "index" && m.tblName == table && m.sql != "" {
+		if m.typ == "index" && m.tblName == n && m.sql != "" {
 			// silently ignore indexes we don't understand
 			if t, err := sql.Parse(m.sql); err == nil {
 				if ci, ok := t.(sql.CreateIndexStmt); ok {
