@@ -4,6 +4,7 @@ ALL:= \
     alter.sqlite \
     empty.sqlite \
     four.sqlite \
+    funkykey.sqlite \
     index.sqlite \
     journal_hot.sqlite \
     journal_persist.sqlite \

@@ -109,3 +109,25 @@ func TestLowWithoutRowid(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
+
+func TestLowWithoutRowid2(t *testing.T) {
+	db, err := OpenFile("./testdata/funkykey.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	table, err := db.Table("fuz")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	row, err := table.WithoutRowidPK(Record{"consequent", "allegory"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// note that this is not the column order
+	if have, want := row, (Record{"consequent", "allegory", "beagle", "delta"}); !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}

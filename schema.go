@@ -35,20 +35,22 @@ type TableColumn struct {
 	Null    bool
 	Default interface{}
 	Collate string
-	RowID   bool
+	Rowid   bool
 	// todo: Affinity string // based on Type
 }
 
 type SchemaIndex struct {
 	// Index is empty for the primary key in a WITHOUT ROWID table
-	Index   string
-	Columns []IndexColumn
+	Index     string
+	Columns   []IndexColumn
+	PKColumns []int // indexes in Columns. Only filled for non-rowid tables
 }
 
 type IndexColumn struct {
 	Column    string
 	Collate   string
 	SortOrder sql.SortOrder
+	Rowid     bool
 }
 
 func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
@@ -84,6 +86,9 @@ func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
 			}
 		}
 	}
+
+	st.addRefColumns()
+
 	return st, nil
 }
 
@@ -102,17 +107,17 @@ func newCreateTable(ct sql.CreateTableStmt) *SchemaTable {
 			Null:    c.Null,
 			Default: c.Default,
 			Collate: c.Collate,
-			RowID:   false,
+			Rowid:   false,
 		}
 		if c.PrimaryKey {
-			col.RowID = (!ct.WithoutRowid) && isRowid(false, c.Type, c.PrimaryKeyDir)
+			col.Rowid = (!ct.WithoutRowid) && isRowid(false, c.Type, c.PrimaryKeyDir)
 			col.Null = !ct.WithoutRowid && c.Null // w/o rowid forces not null
 
 			name := fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex)
 			if ct.WithoutRowid {
 				name = ""
 			}
-			if (ct.WithoutRowid || !col.RowID) && st.addIndex(
+			if (ct.WithoutRowid || !col.Rowid) && st.addIndex(
 				name,
 				[]IndexColumn{
 					{
@@ -147,7 +152,7 @@ constraint:
 				// is this column an alias for the rowid?
 				col := st.column(c.IndexedColumns[0].Column)
 				if isRowid(true, col.Type, c.IndexedColumns[0].SortOrder) {
-					col.RowID = true
+					col.Rowid = true
 					continue constraint
 				}
 			}
@@ -170,6 +175,7 @@ constraint:
 			}
 		}
 	}
+
 	return st
 }
 
@@ -250,6 +256,63 @@ func (st *SchemaTable) NamedIndex(name string) *SchemaIndex {
 		}
 	}
 	return nil
+}
+
+// addRefColumns adds all columns sqlite adds to indexes.
+//  - for rowid tables that's a rowid column in every index
+//  - for non-rowid tables that's all primary key columns which are not already
+//  present in the index.
+//
+// This can only be done once the primary key is known.
+func (st *SchemaTable) addRefColumns() {
+	if st.WithoutRowid {
+		if pk := st.NamedIndex(""); pk != nil {
+			// pk can't be nil, really
+
+			// add all missing PK columns to the indexes
+			for i, ind := range st.Indexes {
+				findCol := func(n string) int {
+					for i, c := range ind.Columns {
+						if strings.ToUpper(c.Column) == strings.ToUpper(n) {
+							return i
+						}
+					}
+					return -1
+				}
+				for _, c := range pk.Columns {
+					if in := findCol(c.Column); in < 0 {
+						ind.Columns = append(ind.Columns, c)
+						ind.PKColumns = append(ind.PKColumns, len(ind.Columns)-1)
+					} else {
+						ind.PKColumns = append(ind.PKColumns, in)
+					}
+				}
+				st.Indexes[i] = ind
+			}
+
+			// PK gets all the column from the table
+			// Effectively it gets the column-store-order of the whole table
+			// (which can be different from the column order, if you primary
+			// key doesn't use the columns in the same order)
+			for _, c := range st.Columns {
+				found := false
+				for _, pkc := range pk.Columns {
+					if strings.ToUpper(c.Column) == strings.ToUpper(pkc.Column) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					pk.Columns = append(pk.Columns, IndexColumn{Column: c.Column})
+				}
+			}
+		}
+	} else {
+		for i, s := range st.Indexes {
+			s.Columns = append(s.Columns, IndexColumn{Rowid: true})
+			st.Indexes[i] = s
+		}
+	}
 }
 
 // A primary key can be an alias for the rowid iff:
