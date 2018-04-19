@@ -189,11 +189,11 @@ func ExampleDatabase_Schema() {
 	}
 	fmt.Printf("columns:\n")
 	for _, c := range schema.Columns {
-		fmt.Printf(" - %q is a %s\n", c.Name, c.Type)
+		fmt.Printf(" - %q is a %s\n", c.Column, c.Type)
 	}
 	fmt.Printf("available indexes:\n")
 	for _, ind := range schema.Indexes {
-		fmt.Printf(" - %q (", ind.Name)
+		fmt.Printf(" - %q (", ind.Index)
 		for i, c := range ind.Columns {
 			if i > 0 {
 				fmt.Printf(", ")

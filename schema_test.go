@@ -70,8 +70,8 @@ func TestSchemaSimple(t *testing.T) {
 		&SchemaTable{
 			Table: "foo",
 			Columns: []TableColumn{
-				{Name: "a", Null: true},
-				{Name: "b"},
+				{Column: "a", Null: true},
+				{Column: "b"},
 			},
 		},
 		nil,
@@ -89,11 +89,11 @@ func TestSchemaConstrPK(t *testing.T) {
 		&SchemaTable{
 			Table: "foo",
 			Columns: []TableColumn{
-				{Name: "a", Null: true},
+				{Column: "a", Null: true},
 			},
 			Indexes: []SchemaIndex{
 				{
-					Name: "sqlite_autoindex_foo_1",
+					Index: "sqlite_autoindex_foo_1",
 					Columns: []IndexColumn{
 						{
 							Column: "a",
@@ -117,21 +117,21 @@ func TestSchemaUnique(t *testing.T) {
 		&SchemaTable{
 			Table: "foo3",
 			Columns: []TableColumn{
-				{Name: "a", Null: true},
-				{Name: "b", Null: true},
-				{Name: "c", Null: true},
+				{Column: "a", Null: true},
+				{Column: "b", Null: true},
+				{Column: "c", Null: true},
 			},
 			Indexes: []SchemaIndex{
 				{
-					Name:    "sqlite_autoindex_foo3_1",
+					Index:   "sqlite_autoindex_foo3_1",
 					Columns: []IndexColumn{{Column: "a"}},
 				},
 				{
-					Name:    "sqlite_autoindex_foo3_2",
+					Index:   "sqlite_autoindex_foo3_2",
 					Columns: []IndexColumn{{Column: "b"}},
 				},
 				{
-					Name:    "sqlite_autoindex_foo3_3",
+					Index:   "sqlite_autoindex_foo3_3",
 					Columns: []IndexColumn{{Column: "c"}},
 				},
 			},
@@ -152,16 +152,16 @@ func TestSchemaRowid(t *testing.T) {
 		&SchemaTable{
 			Table: "foo",
 			Columns: []TableColumn{
-				{Name: "a", Type: "integer", Null: true, RowID: true},
-				{Name: "b", Null: true},
+				{Column: "a", Type: "integer", Null: true, RowID: true},
+				{Column: "b", Null: true},
 			},
 			Indexes: []SchemaIndex{
 				{
-					Name:    "sqlite_autoindex_foo_1",
+					Index:   "sqlite_autoindex_foo_1",
 					Columns: []IndexColumn{{Column: "b"}},
 				},
 				{
-					Name:    "sqlite_autoindex_foo_2",
+					Index:   "sqlite_autoindex_foo_2",
 					Columns: []IndexColumn{{Column: "b", Collate: "rtrim", SortOrder: sql.Desc}},
 				},
 			},
@@ -180,7 +180,7 @@ func TestSchemaRowid2(t *testing.T) {
 		&SchemaTable{
 			Table: "foo",
 			Columns: []TableColumn{
-				{Name: "a", Type: "integer", Null: true, RowID: true},
+				{Column: "a", Type: "integer", Null: true, RowID: true},
 			},
 		},
 		nil,
@@ -198,17 +198,17 @@ func TestSchemaWithoutRowid(t *testing.T) {
 			Table:        "foo4",
 			WithoutRowid: true,
 			Columns: []TableColumn{
-				{Name: "a", Type: "varchar"},
-				{Name: "b", Type: "", Null: true},
+				{Column: "a", Type: "varchar"},
+				{Column: "b", Type: "", Null: true},
 			},
 			Indexes: []SchemaIndex{
 				{
 					// "without rowid" primary key
-					Name:    "",
+					Index:   "",
 					Columns: []IndexColumn{{Column: "a"}},
 				},
 				{
-					Name:    "sqlite_autoindex_foo4_2", // _1 is reserved
+					Index:   "sqlite_autoindex_foo4_2", // _1 is reserved
 					Columns: []IndexColumn{{Column: "b"}},
 				},
 			},
@@ -229,11 +229,11 @@ func TestSchemaWithoutRowid2(t *testing.T) {
 			Table:        "foo7",
 			WithoutRowid: true,
 			Columns: []TableColumn{
-				{Name: "a", Null: false},
+				{Column: "a", Null: false},
 			},
 			Indexes: []SchemaIndex{
 				{
-					Name:    "",
+					Index:   "",
 					Columns: []IndexColumn{{Column: "a"}},
 				},
 			},
@@ -253,11 +253,11 @@ func TestSchemaWithoutRowid3(t *testing.T) {
 			Table:        "foo6",
 			WithoutRowid: true,
 			Columns: []TableColumn{
-				{Name: "a", Type: "integer", Null: false}, // forced by w/o rowid PK
+				{Column: "a", Type: "integer", Null: false}, // forced by w/o rowid PK
 			},
 			Indexes: []SchemaIndex{
 				{
-					Name:    "",
+					Index:   "",
 					Columns: []IndexColumn{{Column: "a"}},
 				},
 			},
@@ -278,21 +278,21 @@ func TestSchemaIndex(t *testing.T) {
 		&SchemaTable{
 			Table: "foo9",
 			Columns: []TableColumn{
-				{Name: "a", Null: true},
-				{Name: "b", Null: true},
-				{Name: "c", Null: true},
+				{Column: "a", Null: true},
+				{Column: "b", Null: true},
+				{Column: "c", Null: true},
 			},
 			Indexes: []SchemaIndex{
 				{
-					Name:    "sqlite_autoindex_foo9_1",
+					Index:   "sqlite_autoindex_foo9_1",
 					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
 				},
 				{
-					Name:    "fooi",
+					Index:   "fooi",
 					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
 				},
 				{
-					Name:    "fooi2",
+					Index:   "fooi2",
 					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
 				},
 			},

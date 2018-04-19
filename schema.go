@@ -30,7 +30,7 @@ type SchemaTable struct {
 }
 
 type TableColumn struct {
-	Name    string
+	Column  string
 	Type    string // as given in the CREATE TABLE
 	Null    bool
 	Default interface{}
@@ -40,8 +40,8 @@ type TableColumn struct {
 }
 
 type SchemaIndex struct {
-	// Name is empty for the primary key in a WITHOUT ROWID table
-	Name    string
+	// Index is empty for the primary key in a WITHOUT ROWID table
+	Index   string
 	Columns []IndexColumn
 }
 
@@ -97,7 +97,7 @@ func newCreateTable(ct sql.CreateTableStmt) *SchemaTable {
 	autoindex := 1
 	for _, c := range ct.Columns {
 		col := TableColumn{
-			Name:    c.Name,
+			Column:  c.Name,
 			Type:    c.Type,
 			Null:    c.Null,
 			Default: c.Default,
@@ -185,7 +185,7 @@ func (st *SchemaTable) addCreateIndex(ci sql.CreateIndexStmt) {
 		})
 	}
 	st.Indexes = append(st.Indexes, SchemaIndex{
-		Name:    ci.Index,
+		Index:   ci.Index,
 		Columns: cs,
 	})
 }
@@ -197,13 +197,13 @@ func (st *SchemaTable) addIndex(name string, cols []IndexColumn) bool {
 		if reflect.DeepEqual(ind.Columns, cols) {
 			if name == "" {
 				// special case if we found the 'WITHOUT ROWID' PK later on
-				st.Indexes[i].Name = ""
+				st.Indexes[i].Index = ""
 			}
 			return false
 		}
 	}
 	st.Indexes = append(st.Indexes, SchemaIndex{
-		Name:    name,
+		Index:   name,
 		Columns: cols,
 	})
 	return true
@@ -226,7 +226,7 @@ func (st *SchemaTable) addIndexed(name string, cols []sql.IndexedColumn) bool {
 func (st *SchemaTable) Column(name string) int {
 	u := strings.ToUpper(name)
 	for i, col := range st.Columns {
-		if strings.ToUpper(col.Name) == u {
+		if strings.ToUpper(col.Column) == u {
 			return i
 		}
 	}
@@ -239,6 +239,17 @@ func (st *SchemaTable) column(name string) *TableColumn {
 		return nil // you're asking for non-exising columns and for trouble
 	}
 	return &st.Columns[n]
+}
+
+// NamedIndex returns the index with the name (case insensitive)
+func (st *SchemaTable) NamedIndex(name string) *SchemaIndex {
+	u := strings.ToUpper(name)
+	for i, ind := range st.Indexes {
+		if strings.ToUpper(ind.Index) == u {
+			return &st.Indexes[i]
+		}
+	}
+	return nil
 }
 
 // A primary key can be an alias for the rowid iff:
