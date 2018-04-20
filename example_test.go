@@ -198,11 +198,7 @@ func ExampleDatabase_Schema() {
 			if i > 0 {
 				fmt.Printf(", ")
 			}
-			if c.Rowid {
-				fmt.Print("<rowid>")
-			} else {
-				fmt.Print(c.Column)
-			}
+			fmt.Print(c.Column)
 		}
 		fmt.Print(")\n")
 	}
@@ -211,8 +207,8 @@ func ExampleDatabase_Schema() {
 	//  - "word" is a varchar
 	//  - "length" is a int
 	// available indexes:
-	//  - "words_index_1" (word, <rowid>)
-	//  - "words_index_2" (length, word, <rowid>)
+	//  - "words_index_1" (word)
+	//  - "words_index_2" (length, word)
 }
 
 func ExampleTable_Def() {

@@ -93,15 +93,8 @@ func TestSchemaConstrPK(t *testing.T) {
 			},
 			Indexes: []SchemaIndex{
 				{
-					Index: "sqlite_autoindex_foo_1",
-					Columns: []IndexColumn{
-						{
-							Column: "a",
-						},
-						{
-							Rowid: true,
-						},
-					},
+					Index:   "sqlite_autoindex_foo_1",
+					Columns: []IndexColumn{{Column: "a"}},
 				},
 			},
 		},
@@ -127,15 +120,15 @@ func TestSchemaUnique(t *testing.T) {
 			Indexes: []SchemaIndex{
 				{
 					Index:   "sqlite_autoindex_foo3_1",
-					Columns: []IndexColumn{{Column: "a"}, {Rowid: true}},
+					Columns: []IndexColumn{{Column: "a"}},
 				},
 				{
 					Index:   "sqlite_autoindex_foo3_2",
-					Columns: []IndexColumn{{Column: "b"}, {Rowid: true}},
+					Columns: []IndexColumn{{Column: "b"}},
 				},
 				{
 					Index:   "sqlite_autoindex_foo3_3",
-					Columns: []IndexColumn{{Column: "c"}, {Rowid: true}},
+					Columns: []IndexColumn{{Column: "c"}},
 				},
 			},
 		},
@@ -161,13 +154,12 @@ func TestSchemaRowid(t *testing.T) {
 			Indexes: []SchemaIndex{
 				{
 					Index:   "sqlite_autoindex_foo_1",
-					Columns: []IndexColumn{{Column: "b"}, {Rowid: true}},
+					Columns: []IndexColumn{{Column: "b"}},
 				},
 				{
 					Index: "sqlite_autoindex_foo_2",
 					Columns: []IndexColumn{
 						{Column: "b", Collate: "rtrim", SortOrder: sql.Desc},
-						{Rowid: true},
 					},
 				},
 			},
@@ -209,13 +201,8 @@ func TestSchemaWithoutRowid(t *testing.T) {
 			},
 			Indexes: []SchemaIndex{
 				{
-					// "without rowid" primary key
-					Index:   "",
-					Columns: []IndexColumn{{Column: "a"}, {Column: "b"}},
-				},
-				{
 					Index:   "sqlite_autoindex_foo4_2", // _1 is reserved
-					Columns: []IndexColumn{{Column: "b"}, {Column: "a"}},
+					Columns: []IndexColumn{{Column: "b"}},
 				},
 			},
 			PK: []IndexColumn{{Column: "a"}},
@@ -238,12 +225,6 @@ func TestSchemaWithoutRowid2(t *testing.T) {
 			Columns: []TableColumn{
 				{Column: "a", Null: false},
 			},
-			Indexes: []SchemaIndex{
-				{
-					Index:   "",
-					Columns: []IndexColumn{{Column: "a"}},
-				},
-			},
 			PK: []IndexColumn{{Column: "a"}},
 		},
 		nil,
@@ -261,13 +242,7 @@ func TestSchemaWithoutRowid3(t *testing.T) {
 			Table:        "foo6",
 			WithoutRowid: true,
 			Columns: []TableColumn{
-				{Column: "a", Type: "integer", Null: false}, // forced by w/o rowid PK
-			},
-			Indexes: []SchemaIndex{
-				{
-					Index:   "",
-					Columns: []IndexColumn{{Column: "a"}},
-				},
+				{Column: "a", Type: "integer", Null: false}, // forced not null by w/o rowid PK
 			},
 			PK: []IndexColumn{{Column: "a"}},
 		},
@@ -294,15 +269,15 @@ func TestSchemaIndex(t *testing.T) {
 			Indexes: []SchemaIndex{
 				{
 					Index:   "sqlite_autoindex_foo9_1",
-					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}, {Rowid: true}},
+					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
 				},
 				{
 					Index:   "fooi",
-					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}, {Rowid: true}},
+					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
 				},
 				{
 					Index:   "fooi2",
-					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}, {Rowid: true}},
+					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}},
 				},
 			},
 		},
@@ -329,18 +304,12 @@ func TestSchemaIndexNonRowid(t *testing.T) {
 			},
 			Indexes: []SchemaIndex{
 				{
-					Index: "",
-					// 'a' is not in the primary key, but this describes the
-					// column order in the database file
-					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}, {Column: "a"}},
-				},
-				{
 					Index:   "fooi",
 					Columns: []IndexColumn{{Column: "b"}, {Column: "c"}},
 				},
 				{
 					Index:   "fooj",
-					Columns: []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
+					Columns: []IndexColumn{{Column: "a"}, {Column: "c"}},
 				},
 			},
 			PK: []IndexColumn{{Column: "c"}, {Column: "b"}},
@@ -367,14 +336,8 @@ func TestSchemaUnique2(t *testing.T) {
 			},
 			Indexes: []SchemaIndex{
 				{
-					Index: "",
-					// 'a' is not in the primary key, but this describes the
-					// column order in the database file
-					Columns: []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
-				},
-				{
 					Index:   "sqlite_autoindex_foo_2",
-					Columns: []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
+					Columns: []IndexColumn{{Column: "a"}, {Column: "c"}},
 				},
 			},
 			PK: []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},

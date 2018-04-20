@@ -15,13 +15,6 @@ import (
 	"github.com/alicebob/sqlittle/sql"
 )
 
-/*
-type Schema struct {
-	Tables map[string]SchemaTable
-	// Indexes map[string]Index
-}
-*/
-
 type SchemaTable struct {
 	Table        string
 	WithoutRowid bool
@@ -50,7 +43,6 @@ type IndexColumn struct {
 	Column    string
 	Collate   string
 	SortOrder sql.SortOrder
-	Rowid     bool
 }
 
 func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
@@ -88,8 +80,6 @@ func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
 		}
 	}
 
-	st.addRefColumns()
-
 	return st, nil
 }
 
@@ -119,23 +109,26 @@ func newCreateTable(ct sql.CreateTableStmt) *SchemaTable {
 				name = ""
 			}
 			if ct.WithoutRowid {
-				st.PK = []IndexColumn{
+				// non-rowid primary keys have a special place
+				st.setPK([]IndexColumn{
 					{
 						Column:    c.Name,
 						SortOrder: c.PrimaryKeyDir,
 					},
-				}
-			}
-			if (ct.WithoutRowid || !col.Rowid) && st.addIndex(
-				name,
-				[]IndexColumn{
-					{
-						Column:    c.Name,
-						SortOrder: c.PrimaryKeyDir,
-					},
-				},
-			) {
+				})
 				autoindex++
+			} else {
+				if !col.Rowid && st.addIndex(
+					name,
+					[]IndexColumn{
+						{
+							Column:    c.Name,
+							SortOrder: c.PrimaryKeyDir,
+						},
+					},
+				) {
+					autoindex++
+				}
 			}
 		}
 		if c.Unique {
@@ -165,23 +158,22 @@ constraint:
 					continue constraint
 				}
 			}
-			name := fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex)
 			if ct.WithoutRowid {
 				for _, co := range c.IndexedColumns {
 					st.column(co.Column).Null = false
 				}
-				name = ""
+				st.setPK(toIndexColumns(c.IndexedColumns))
+				autoindex++
+				continue
 			}
-			if ct.WithoutRowid {
-				st.PK = toIndexColumns(c.IndexedColumns)
-			}
-			if st.addIndexed(name, c.IndexedColumns) {
+			name := fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex)
+			if st.addIndex(name, toIndexColumns(c.IndexedColumns)) {
 				autoindex++
 			}
 		case sql.TableUnique:
-			if st.addIndexed(
+			if st.addIndex(
 				fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex),
-				c.IndexedColumns,
+				toIndexColumns(c.IndexedColumns),
 			) {
 				autoindex++
 			}
@@ -215,12 +207,11 @@ func toIndexColumns(ci []sql.IndexedColumn) []IndexColumn {
 // add an index. This is a noop if an equivalent index already exists. Returns
 // whether the indexed got added.
 func (st *SchemaTable) addIndex(name string, cols []IndexColumn) bool {
-	for i, ind := range st.Indexes {
+	if reflect.DeepEqual(st.PK, cols) {
+		return false
+	}
+	for _, ind := range st.Indexes {
 		if reflect.DeepEqual(ind.Columns, cols) {
-			if name == "" {
-				// special case if we found the 'WITHOUT ROWID' PK later on
-				st.Indexes[i].Index = ""
-			}
 			return false
 		}
 	}
@@ -231,17 +222,17 @@ func (st *SchemaTable) addIndex(name string, cols []IndexColumn) bool {
 	return true
 }
 
-// helper for addIndex when you already have an []IndexedColumn.
-func (st *SchemaTable) addIndexed(name string, cols []sql.IndexedColumn) bool {
-	var cs []IndexColumn
-	for _, col := range cols {
-		cs = append(cs, IndexColumn{
-			Column:    col.Column,
-			Collate:   col.Collate,
-			SortOrder: col.SortOrder,
-		})
+// sets the PK key (for non-rowid tables). Deletes any duplicate indexes.
+func (st *SchemaTable) setPK(cols []IndexColumn) {
+	st.PK = cols
+	for i, ind := range st.Indexes {
+		if reflect.DeepEqual(ind.Columns, cols) {
+			st.Indexes = append(st.Indexes[:i], st.Indexes[i+1:]...)
+			if len(st.Indexes) == 0 {
+				st.Indexes = nil // to make test diffs easier
+			}
+		}
 	}
-	return st.addIndex(name, cs)
 }
 
 // Returns the index of the named column, or -1.
@@ -272,52 +263,6 @@ func (st *SchemaTable) NamedIndex(name string) *SchemaIndex {
 		}
 	}
 	return nil
-}
-
-// addRefColumns adds all columns sqlite adds to indexes.
-//  - for rowid tables that's a rowid column in every index
-//  - for non-rowid tables that's all primary key columns which are not already
-//  present in the index.
-//
-// This can only be done once the primary key is known.
-func (st *SchemaTable) addRefColumns() {
-	if st.WithoutRowid {
-		if pk := st.NamedIndex(""); pk != nil {
-			// pk can't be nil, really
-
-			// add all missing PK columns to the indexes
-			for i, ind := range st.Indexes {
-				for _, c := range pk.Columns {
-					if in := ind.Column(c.Column); in < 0 {
-						ind.Columns = append(ind.Columns, c)
-					}
-				}
-				st.Indexes[i] = ind
-			}
-
-			// PK gets all the column from the table
-			// Effectively it gets the column-store-order of the whole table
-			// (which can be different from the column order, if you primary
-			// key doesn't use the columns in the same order)
-			for _, c := range st.Columns {
-				found := false
-				for _, pkc := range pk.Columns {
-					if strings.ToUpper(c.Column) == strings.ToUpper(pkc.Column) {
-						found = true
-						break
-					}
-				}
-				if !found {
-					pk.Columns = append(pk.Columns, IndexColumn{Column: c.Column})
-				}
-			}
-		}
-	} else {
-		for i, s := range st.Indexes {
-			s.Columns = append(s.Columns, IndexColumn{Rowid: true})
-			st.Indexes[i] = s
-		}
-	}
 }
 
 // Returns the index of the named column, or -1.

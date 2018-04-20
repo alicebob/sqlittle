@@ -82,25 +82,18 @@ func toColumnIndexRowid(s *sqlittle.SchemaTable, columns []string) ([]columIndex
 	return res, nil
 }
 
-// given column names returns the index in a Row this column is expected, and
-// the column definition. For non-rowid tables the storage order depends on the
+// given column names returns the index of this column in a row in the index (and
+// the column definition). For database order of the columns depends on the
 // primary key.
 func toColumnIndexNonRowid(s *sqlittle.SchemaTable, columns []string) ([]columIndex, error) {
-	pk := s.NamedIndex("")
-	if pk == nil {
-		return nil, fmt.Errorf("internal error: no primary key")
-	}
+	stored := columnStoreOrder(s) // column indexes in disk order
 	res := make([]columIndex, 0, len(columns))
 	for _, c := range columns {
-		n := pk.Column(c)
+		n := s.Column(c)
 		if n < 0 {
 			return nil, fmt.Errorf("no such column: %q", c)
 		}
-		cn := s.Column(c)
-		if cn < 0 {
-			return nil, fmt.Errorf("no such column: %q", c)
-		}
-		res = append(res, columIndex{&s.Columns[cn], n, false})
+		res = append(res, columIndex{&s.Columns[n], stored[n], false})
 	}
 	return res, nil
 }
