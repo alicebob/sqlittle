@@ -2,26 +2,27 @@
 
 This document explains the layers of sqlittle.
 
+The code is split in three packages:
+db/ the low level routines which deal with files
+sql/ SQL parser for `CREATE TABLE` and `CREATE INDEX` statements
+/ the higher level routines to hide SQLite quirks.
+
+This is mostly about the low level package.
+
 This is how the files work together, with the lowest level on the
 bottom:
 
-    +---------------------------------+
-    | (SQL interface)                 |
-    +---------------------------------+
-    | (plan builder)                  |
-    +---------------------------------+
-    | (plan executer)                 |
-    +----------------+----------------+
-    | low.go         | schema.go      |
-    +----------------+----------------+
-    | database.go                     |
-    +---------------------------------+
-    | btree.go                        |
-    +---------------------------------+
-    | pager (pager.go, pager_unix.go) |
-    +---------------------------------+
-
-Things in parenthesis are imaginary future.
+    +---------------------------------------+
+    | db.go, select.go, row.go              |
+    +===================+===================+
+    | db/low.go         | db/schema.go      |
+    +-------------------+-------------------+
+    | db/database.go                        |
+    +---------------------------------------+
+    | db/btree.go                           |
+    +---------------------------------------+
+    | pager (db/pager.go, db/pager_unix.go) |
+    +---------------------------------------+
 
     
 ### pager
@@ -63,6 +64,11 @@ With the result you could test whether a table matches what you think it does
 when you use the low level scan routines. It could also be used to build more
 flexible query code.
 
-### future
+### high level
 
-indeed
+/db.go gives methods which hide most SQLite details. It mostly calls code from
+/select.go and /indexed_select.go .
+
+/row.go has Scan() to deal with data conversions.
+
+/sqlite.go knows how columns are stored in indexes.

@@ -1,8 +1,6 @@
-// Package SQLittle provides pure Go, read-only, access to SQLite (version 3) database
+// Package sqlittle/db provides low level access to SQLite (version 3) database
 // files.
 //
-// Both tables and index files are supported. The current interface is very low
-// level, and you'll have to know the table and index structure.
-//
-// See README.md for usage help.
+// See ../README.md for general information about SQLittle, and
+// see ../LOWLEVEL.md for information about this package.
 package db

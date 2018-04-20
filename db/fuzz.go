@@ -1,5 +1,6 @@
 package db
 
+// Fuzz routine for the go-fuzz test system
 func Fuzz(data []byte) int {
 	if err := fuzz(data); err != nil {
 		return 0

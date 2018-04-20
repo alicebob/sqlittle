@@ -1,9 +1,14 @@
-Pure Go low-level SQLite3 file reader
+Pure Go SQLite3 file reader
 
 # what
 
-This is (for now) a set of low level routines to read SQLite files. Both 
-tables and indices can be read, but there is no support for SQL.
+SQLittle can read SQLite3 tables and indexes. It can iterate over tables, and
+can efficiently search using indexes.  SQLittle will deal with all SQLite
+storage quirks, but otherwise it doesn't try to be smart; if you want to use
+an index you have to give the name of the index.
+
+There is no support for SQL, and if you want to do the most efficient joins
+possible you'll have to use the low level code.
 
 Based on https://sqlite.org/fileformat2.html and some SQLite source code reading.
 
@@ -15,21 +20,55 @@ there is no real need for this. However, since this library is pure Go
 cross-compilation is much easier. Given the constraints a valid use-case would
 for example be storing app configuration in read-only sqlite files.
 
+# example
+
+simple SELECT over the whole table:
+
+    db, _ := Open("./testdata/music.sqlite")
+    defer db.Close()
+
+    cb := func(r Row) {
+        var (
+            name   string
+            length int
+        )
+        _ = r.Scan(&name, &length)
+        fmt.Printf("%s: %d seconds\n", name, length)
+    }
+    // iterate in rowid order:
+    db.Select("tracks", cb, "name", "length")
+
+    // iterate by length, using an index
+    db.IndexedSelect("tracks", "tracks_length", cb, "name, "length")
+
+
+Select a primary key:
+
+    db, _ := Open("./testdata/music.sqlite")
+    defer db.Close()
+
+    cb := func(r Row) {
+        name, _ := r.ScanString()
+        fmt.Printf("%s\n", name)
+    }
+    db.PKSelect("tracks", Row{int64(4)}, cb, "name")
+
 
 # docs
 
 https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 
+See [LOWLEVEL.md](LOWLEVEL.md) about the low level reader.
 See [CODE.md](CODE.md) for an overview how the code is structured.
 
 
 # features
 
-- low level interface to access tables and indices. Full table/index
-  scan and basic search are supported
+- table scan in row order, or table scan in index order, simple searches with
+  use of (partial) indexes
+- works on both rowid and non-rowid tables
 - behaves nicely on corrupted database files (no panics)
 - files can be used concurrently with sqlite (compatible locks)
-- table and index definitions are exposed
 - detects corrupt journal files
 
 
@@ -39,71 +78,25 @@ See [CODE.md](CODE.md) for an overview how the code is structured.
 - only supports UTF8 strings
 - only supports binary string comparisons
 - no joins/sorting/ranges
-- does not work with WAL journal mode files (WAL is not the default journal mode)
+- WAL files are not supported
 
 
-# low level interface
+# locks
 
-See [godoc](https://godoc.org/github.com/alicebob/sqlittle) for all available
-methods and examples, but the gist of a table scan is:
-
-    db, _ := OpenFile("testdata/single.sqlite")
-    defer db.Close()
-    table, _ := db.Table("hello")
-    table.Scan(func(rowid int64, rec Record) bool {
-        fmt.Printf("row %d: %s\n", rowid, rec[0].(string))
-        return false // we want all the rows
-    })
+SQLittle has a read-lock on the file during the whole execution of a Select function. It's safe to change the database using SQLite while the file is opened in SQLittle.
 
 
-Printing the columns:
+# status
 
-    db, _ := OpenFile("testdata/single.sqlite")
-    defer db.Close()
-    schema, _ := db.Schema("words")
-    fmt.Printf("columns:\n")
-    for _, c := range schema.Columns {
-        fmt.Printf(" - %q is a %s\n", c.Name, c.Type)
-    }
+The current level of abstraction is likely the final one (that is: deal
+with reading single tables; don't even try joins or SQL or query planning), but
+the API might still change.
 
-
-## low level locks
-
-If you somehow know that no-one will change the .sqlite file you don't have to
-use locks. Otherwise sandwich your logic between database.RLock() and
-database.RUnlock() calls. Any *Table or *Index pointer you have is invalid
-after database.RUnlock().
-
-
-# low level SQLite gotchas
-
-The low level routines don't change any fields, they simply pass on how data is
-stored in the database by SQLite. Notably that includes:
-- float64 columns might be stored as int64
-- after an alter table which adds columns a row might miss those new columns
-- "integer primary key" columns will be always be stored as `nil` in a table,
-  and the rowid should be used as the value
-- string indexes are compared with a simple binary comparison, no collating
-  functions are used. If a column uses any other collating function for strings
-  you can't use the index.
-
-
-# low level todos
-
-- ~~remove all panics on wrong input~~
-- ~~fail on non-utf8 encoding~~
-- ~~check all constant header fields~~
-- ~~proper page loading abstraction/page cache/index cache~~
-- ~~locks~~
-- ~~deal with the reserved region~~
-- ~~refuse to open files with a non-committed/failed non-wal journal~~
-- ~~refuse to open wal journal files~~
-- ~~parse embedded table and index definitions and make them available~~
-- ~~go back to mmap for pager_unix~~
-- parse more exotic table and index definitions
-- goroutine safe
-- support WAL
-- ~~scan functions for `without rowid` tables and indexes~~
+TODOs:
+- deal with DESC indexes
+- deal with collate functions somehow
+- the table and index definitions SQL parser is not finished enough
+- add some more databases found in the wild in the sqlittle-ci tests
 
 # &c.
 
