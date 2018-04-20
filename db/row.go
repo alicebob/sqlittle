@@ -157,6 +157,18 @@ func (r Row) Scan(args ...interface{}) error {
 	return nil
 }
 
+// ScanString is a shortcut for row.Scan(&string)
+func (r Row) ScanString(args ...interface{}) (string, error) {
+	var s1 string
+	return s1, r.Scan(&s1)
+}
+
+// ScanStringString is a shortcut for row.Scan(&string, &string)
+func (r Row) ScanStringString(args ...interface{}) (string, string, error) {
+	var s1, s2 string
+	return s1, s2, r.Scan(&s1, &s2)
+}
+
 func stringToInt64(s string) (int64, error) {
 	if v, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return v, nil
