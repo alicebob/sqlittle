@@ -77,8 +77,9 @@ See [CODE.md](CODE.md) for an overview how the code is structured.
 - read-only
 - only supports UTF8 strings
 - only supports binary string comparisons
-- no joins/sorting/ranges
+- no joins
 - WAL files are not supported
+- indexes are used for sorting; no on-the-fly sorting
 
 
 # locks
@@ -96,7 +97,11 @@ TODOs:
 - deal with DESC indexes
 - deal with collate functions somehow
 - the table and index definitions SQL parser is not finished enough
-- add some more databases found in the wild in the sqlittle-ci tests
+- add some more databases found in the wild to sqlittle-ci
+- add a helper to find indexes. That would be especially useful for the
+  `sqlite_autoindex_...` indexes
+- optimize loading when all requested columns are available in the index
+- IndexedSelectCmd()
 
 # &c.
 

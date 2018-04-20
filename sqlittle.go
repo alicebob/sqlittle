@@ -95,6 +95,9 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 
 // Select all rows matching key from the given table via the index. The order
 // will be the index order.
+//
+// `key` is compared against the index columns. It can have fewer columns than
+// the index.
 func (db *DB) IndexedSelectEq(table, index string, key Row, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
@@ -118,10 +121,13 @@ func (db *DB) IndexedSelectEq(table, index string, key Row, cb RowCB, columns ..
 	}
 }
 
-// Select rows via a Primary Key lookup. `key` can have fewer columns than the
-// primary key, in which case all rows with that prefix are found.
+// Select rows via a Primary Key lookup.
 //
-// This is especially efficient for non-rowid tables, and for rowid tables
+// `key` is compared against the columns
+// of the primary keu. It can have fewer columns than the
+// primary key.
+//
+// PKSelect is especially efficient for non-rowid tables, and for rowid tables
 // which have a single 'integer primary key' column.
 func (db *DB) PKSelect(table string, key Row, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
