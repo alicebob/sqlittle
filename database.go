@@ -418,7 +418,7 @@ func (db *Database) withoutRowid(name string) bool {
 // Table opens the named table.
 // Will return ErrNoSuchTable when the table isn't there (or isn't a table).
 // Table pointer is always valid if err == nil.
-// See also WithoutRowidTable() for `WITHOUT ROWID` tables.
+// See also NonRowidTable() for `WITHOUT ROWID` tables.
 func (db *Database) Table(name string) (*Table, error) {
 	objects, err := db.master()
 	if err != nil {
@@ -433,9 +433,9 @@ func (db *Database) Table(name string) (*Table, error) {
 	return nil, ErrNoSuchTable
 }
 
-// WithoutRowidTable open a `WITHOUT ROWID` table. It's implemented with an
+// NonRowidTable open a `WITHOUT ROWID` table. It's implemented with an
 // Index.
-func (db *Database) WithoutRowidTable(name string) (*Index, error) {
+func (db *Database) NonRowidTable(name string) (*Index, error) {
 	objects, err := db.master()
 	if err != nil {
 		return nil, err
@@ -510,7 +510,7 @@ func (db *Database) Info() (string, error) {
 			case true:
 				fmt.Fprintf(b, "  (WITHOUT ROWID table)\n")
 				fmt.Fprintf(b, "  first rows:\n")
-				t, err := db.WithoutRowidTable(o.name)
+				t, err := db.NonRowidTable(o.name)
 				if err != nil {
 					fmt.Fprintf(b, "    error: %s\n", err)
 					continue

@@ -44,9 +44,9 @@ func (db *DB) Select(table string, cb RowCB, columns ...string) error {
 	}
 
 	if s.WithoutRowid {
-		return selectWithoutRowid(db.db, s, cb, columns)
+		return selectNonRowid(db.db, s, cb, columns)
 	} else {
-		return selectWithRowid(db.db, s, cb, columns)
+		return select_(db.db, s, cb, columns)
 	}
 }
 
@@ -122,8 +122,7 @@ func (db *DB) IndexedSelectEq(table, index string, key Row, cb RowCB, columns ..
 // primary key, in which case all rows with that prefix are found.
 //
 // This is especially efficient for non-rowid tables, and for rowid tables
-// which have a single 'integer primary key' column (otherwise this is an alias
-// for IndexedSelectEq()).
+// which have a single 'integer primary key' column.
 func (db *DB) PKSelect(table string, key Row, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err

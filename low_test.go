@@ -88,7 +88,7 @@ func TestLowScanEq(t *testing.T) {
 	}
 	defer db.Close()
 
-	table, err := db.WithoutRowidTable("words")
+	table, err := db.NonRowidTable("words")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestLowWithoutRowid2(t *testing.T) {
 	}
 	defer db.Close()
 
-	table, err := db.WithoutRowidTable("fuz")
+	table, err := db.NonRowidTable("fuz")
 	if err != nil {
 		t.Fatal(err)
 	}

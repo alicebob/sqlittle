@@ -36,7 +36,7 @@ func ExampleTable_WithoutRowidScan() {
 	}
 	defer db.Close()
 
-	table, err := db.WithoutRowidTable("words")
+	table, err := db.NonRowidTable("words")
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +90,7 @@ func ExampleIndex_ScanEq() {
 	}
 	defer db.Close()
 
-	table, err := db.WithoutRowidTable("words")
+	table, err := db.NonRowidTable("words")
 	if err != nil {
 		panic(err)
 	}

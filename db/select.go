@@ -6,7 +6,7 @@ import (
 	"github.com/alicebob/sqlittle"
 )
 
-func selectWithRowid(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, columns []string) error {
+func select_(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, columns []string) error {
 	ci, err := toColumnIndexRowid(s, columns)
 	if err != nil {
 		return err
@@ -22,13 +22,13 @@ func selectWithRowid(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, column
 	})
 }
 
-func selectWithoutRowid(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, columns []string) error {
+func selectNonRowid(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, columns []string) error {
 	ci, err := toColumnIndexNonRowid(s, columns)
 	if err != nil {
 		return err
 	}
 
-	t, err := db.WithoutRowidTable(s.Table)
+	t, err := db.NonRowidTable(s.Table)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func pkSelectNonRowid(db *sqlittle.Database, s *sqlittle.Schema, key Row, cb Row
 	if err != nil {
 		return err
 	}
-	t, err := db.WithoutRowidTable(s.Table)
+	t, err := db.NonRowidTable(s.Table)
 	if err != nil {
 		return err
 	}

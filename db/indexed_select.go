@@ -93,7 +93,7 @@ func indexedSelectNonRowid(
 		return err
 	}
 
-	tab, err := db.WithoutRowidTable(schema.Table)
+	tab, err := db.NonRowidTable(schema.Table)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func indexedSelectEqNonRowid(
 		return err
 	}
 
-	tab, err := db.WithoutRowidTable(schema.Table)
+	tab, err := db.NonRowidTable(schema.Table)
 	if err != nil {
 		return err
 	}
