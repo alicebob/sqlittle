@@ -141,7 +141,7 @@ func ChompRowid(rec Record) (int64, Record, error) {
 // Note: strings are always compared with binary comparison; no collating
 // functions are used.
 // Will return an error on impossible column pair comparison.
-func cmp(a, b Record) (int, error) {
+func Cmp(a, b Record) (int, error) {
 	for i, ac := range a {
 		if len(b)-1 < i {
 			return 0, nil

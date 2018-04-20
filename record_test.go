@@ -286,7 +286,7 @@ func TestColumnCompare(t *testing.T) {
 func TestRecordCompare(t *testing.T) {
 	test := func(a, b Record, want int) {
 		t.Helper()
-		o, err := cmp(a, b)
+		o, err := Cmp(a, b)
 		if err != nil {
 			t.Fatal(err)
 		}

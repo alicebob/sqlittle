@@ -149,6 +149,24 @@ func (t *Table) Rowid(rowid int64) (Record, error) {
 	return parseRecord(c)
 }
 
+// WithoutRowidScanMin is like ScanMin, but for `WITHOUT ROWID` tables.
+func (t *Table) WithoutRowidScanMin(key Record, cb RecordCB) error {
+	root, err := t.db.openIndex(t.root)
+	if err != nil {
+		return err
+	}
+
+	_, err = root.IterMin(
+		maxRecursion,
+		t.db,
+		key,
+		func(found Record) (bool, error) {
+			return cb(found), nil
+		},
+	)
+	return err
+}
+
 // WithoutRowidPK finds a single row by primary key in a 'WITHOUT ROWID' table. Will
 // return nil if it isn't found.
 func (t *Table) WithoutRowidPK(r Record) (Record, error) {
@@ -163,7 +181,7 @@ func (t *Table) WithoutRowidPK(r Record) (Record, error) {
 		t.db,
 		r,
 		func(found Record) (bool, error) {
-			res, err := cmp(r, found)
+			res, err := Cmp(r, found)
 			if err != nil {
 				return false, err
 			}
@@ -235,6 +253,31 @@ func (in *Index) ScanMin(from Record, cb RecordCB) error {
 		in.db,
 		from,
 		func(rec Record) (bool, error) {
+			return cb(rec), nil
+		},
+	)
+	return err
+}
+
+// ScanMin wrapper which stops when we're over the
+func (in *Index) ScanEq(key Record, cb RecordCB) error {
+	root, err := in.db.openIndex(in.root)
+	if err != nil {
+		return err
+	}
+
+	_, err = root.IterMin(
+		maxRecursion,
+		in.db,
+		key,
+		func(rec Record) (bool, error) {
+			res, err := Cmp(rec, key)
+			if err != nil {
+				return false, err
+			}
+			if res > 0 {
+				return true, nil
+			}
 			return cb(rec), nil
 		},
 	)

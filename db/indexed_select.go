@@ -41,6 +41,46 @@ func indexedSelectRowid(
 	})
 }
 
+func indexedSelectEq(
+	db *sqlittle.Database,
+	schema *sqlittle.Schema,
+	index *sqlittle.SchemaIndex,
+	key Row,
+	cb RowCB,
+	columns []string,
+) error {
+	ci, err := toColumnIndexRowid(schema, columns)
+	if err != nil {
+		return err
+	}
+
+	tab, err := db.Table(schema.Table)
+	if err != nil {
+		return err
+	}
+
+	ind, err := db.Index(index.Index)
+	if err != nil {
+		return err
+	}
+
+	return ind.ScanEq(
+		sqlittle.Record(key),
+		func(r sqlittle.Record) bool {
+			rowid, _, err := sqlittle.ChompRowid(r)
+			if err != nil {
+				return false
+			}
+			row, err := tab.Rowid(rowid)
+			if err != nil || row == nil {
+				// should never be nil
+				return false
+			}
+			cb(toRow(rowid, ci, row))
+			return false
+		})
+}
+
 func indexedSelectWithoutRowid(
 	db *sqlittle.Database,
 	schema *sqlittle.Schema,

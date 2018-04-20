@@ -10,6 +10,12 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+func init() {
+	spew.Config.DisablePointerAddresses = true
+	spew.Config.DisableCapacities = true
+	spew.Config.SortKeys = true
+}
+
 func TestIsRowid(t *testing.T) {
 	for i, c := range [][2]bool{
 		[...]bool{isRowid(true, "Integer", sql.Asc), true},
@@ -41,9 +47,6 @@ func testSchema(
 		return
 	}
 	if !reflect.DeepEqual(have, want) {
-		spew.Config.DisablePointerAddresses = true
-		spew.Config.DisableCapacities = true
-		spew.Config.SortKeys = true
 		t.Errorf("%s: diff:\n%s", table, diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 	}
 }
@@ -87,7 +90,8 @@ func TestSchemaConstrPK(t *testing.T) {
 			{"index", "sqlite_autoindex_foo_1", "foo", 42, ""},
 		},
 		&Schema{
-			Table: "foo",
+			Table:      "foo",
+			PrimaryKey: "sqlite_autoindex_foo_1",
 			Columns: []TableColumn{
 				{Column: "a", Null: true},
 			},
@@ -111,7 +115,8 @@ func TestSchemaUnique(t *testing.T) {
 			{"index", "sqlite_autoindex_foo_1", "foo3", 42, ""},
 		},
 		&Schema{
-			Table: "foo3",
+			Table:      "foo3",
+			PrimaryKey: "sqlite_autoindex_foo3_2",
 			Columns: []TableColumn{
 				{Column: "a", Null: true},
 				{Column: "b", Null: true},
@@ -151,6 +156,7 @@ func TestSchemaRowid(t *testing.T) {
 				{Column: "a", Type: "integer", Null: true, Rowid: true},
 				{Column: "b", Null: true},
 			},
+			RowidPK: true,
 			Indexes: []SchemaIndex{
 				{
 					Index:   "sqlite_autoindex_foo_1",
@@ -176,7 +182,8 @@ func TestSchemaRowid2(t *testing.T) {
 			{"table", "foo", "foo", 42, `create table foo(a integer, primary key(a desc))`},
 		},
 		&Schema{
-			Table: "foo",
+			Table:   "foo",
+			RowidPK: true,
 			Columns: []TableColumn{
 				{Column: "a", Type: "integer", Null: true, Rowid: true},
 			},

@@ -92,3 +92,53 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 		return indexedSelectRowid(db.db, s, ind, cb, columns)
 	}
 }
+
+// Select all rows matching key from the given table via the index. The order
+// will be the index order.
+func (db *DB) IndexedSelectEq(table, index string, key Row, cb RowCB, columns ...string) error {
+	if err := db.db.RLock(); err != nil {
+		return err
+	}
+	defer db.db.RUnlock()
+
+	s, err := db.db.Schema(table)
+	if err != nil {
+		return err
+	}
+
+	ind := s.NamedIndex(index)
+	if ind == nil {
+		return fmt.Errorf("no such index: %q", index)
+	}
+
+	if s.WithoutRowid {
+		// return indexedSelectWithoutRowid(db.db, s, ind, cb, columns)
+		return errors.New("fixme")
+	} else {
+		return indexedSelectEq(db.db, s, ind, key, cb, columns)
+	}
+}
+
+// Select rows via a Primary Key lookup. `key` can have fewer columns than the
+// primary key, in which case all rows with that prefix are found.
+//
+// This is especially efficient for non-rowid tables, and for rowid tables
+// which have a single 'integer primary key' column (otherwise this is an alias
+// for IndexedSelectEq()).
+func (db *DB) PKSelect(table string, key Row, cb RowCB, columns ...string) error {
+	if err := db.db.RLock(); err != nil {
+		return err
+	}
+	defer db.db.RUnlock()
+
+	s, err := db.db.Schema(table)
+	if err != nil {
+		return err
+	}
+
+	if s.WithoutRowid {
+		return pkSelectNonRowid(db.db, s, key, cb, columns)
+	} else {
+		return pkSelect(db.db, s, key, cb, columns)
+	}
+}

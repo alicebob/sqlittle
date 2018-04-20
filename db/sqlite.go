@@ -71,7 +71,7 @@ func toColumnIndexNonRowid(s *sqlittle.Schema, columns []string) ([]columIndex, 
 // given an index gives back the indexes in a row which form the primary key.
 func pkColumns(schema *sqlittle.Schema, ind *sqlittle.SchemaIndex) []int {
 	if !schema.WithoutRowid {
-		panic("can't call pkColumns on an rowid table")
+		panic("can't call pkColumns on a rowid table")
 	}
 
 	var res []int
@@ -89,7 +89,7 @@ func pkColumns(schema *sqlittle.Schema, ind *sqlittle.SchemaIndex) []int {
 // given a non-rowid table, gives the order columns are stored on disk
 func columnStoreOrder(schema *sqlittle.Schema) []int {
 	if !schema.WithoutRowid {
-		panic("can't call columnStoreOrder on an rowid table")
+		panic("can't call columnStoreOrder on a rowid table")
 	}
 
 	// all PK columns come first, then all other columns, in order

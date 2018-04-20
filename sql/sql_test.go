@@ -9,6 +9,12 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+func init() {
+	spew.Config.DisablePointerAddresses = true
+	spew.Config.DisableCapacities = true
+	spew.Config.SortKeys = true
+}
+
 type sqlCase struct {
 	sql  string
 	want interface{}
@@ -27,9 +33,6 @@ func testSQL(t *testing.T, cases []sqlCase) {
 			continue
 		}
 		if have, want := stmt, c.want; !reflect.DeepEqual(have, want) {
-			spew.Config.DisablePointerAddresses = true
-			spew.Config.DisableCapacities = true
-			spew.Config.SortKeys = true
 			t.Errorf("case %d: diff:\n%s", n, diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 		}
 	}

@@ -20,7 +20,9 @@ type Schema struct {
 	WithoutRowid bool
 	Columns      []TableColumn
 	Indexes      []SchemaIndex
-	PK           []IndexColumn // only filled in non-rowid tables
+	PK           []IndexColumn // only set for non-rowid tables
+	PrimaryKey   string        // only set for rowid tables: name of the index
+	RowidPK      bool          // only set for rowid tables: whether we have a 'integer primary key' column, which means there is no separate index for the primary key
 }
 
 type TableColumn struct {
@@ -34,7 +36,6 @@ type TableColumn struct {
 }
 
 type SchemaIndex struct {
-	// Index is empty for the primary key in a WITHOUT ROWID table
 	Index   string
 	Columns []IndexColumn
 }
@@ -118,7 +119,10 @@ func newCreateTable(ct sql.CreateTableStmt) *Schema {
 				})
 				autoindex++
 			} else {
-				if !col.Rowid && st.addIndex(
+				if col.Rowid {
+					st.RowidPK = true
+				} else if st.addIndex(
+					true,
 					name,
 					[]IndexColumn{
 						{
@@ -133,6 +137,7 @@ func newCreateTable(ct sql.CreateTableStmt) *Schema {
 		}
 		if c.Unique {
 			if st.addIndex(
+				false,
 				fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex),
 				[]IndexColumn{
 					{
@@ -155,6 +160,7 @@ constraint:
 				col := st.column(c.IndexedColumns[0].Column)
 				if isRowid(true, col.Type, c.IndexedColumns[0].SortOrder) {
 					col.Rowid = true
+					st.RowidPK = true
 					continue constraint
 				}
 			}
@@ -167,11 +173,12 @@ constraint:
 				continue
 			}
 			name := fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex)
-			if st.addIndex(name, toIndexColumns(c.IndexedColumns)) {
+			if st.addIndex(true, name, toIndexColumns(c.IndexedColumns)) {
 				autoindex++
 			}
 		case sql.TableUnique:
 			if st.addIndex(
+				false,
 				fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex),
 				toIndexColumns(c.IndexedColumns),
 			) {
@@ -206,12 +213,15 @@ func toIndexColumns(ci []sql.IndexedColumn) []IndexColumn {
 
 // add an index. This is a noop if an equivalent index already exists. Returns
 // whether the indexed got added.
-func (st *Schema) addIndex(name string, cols []IndexColumn) bool {
+func (st *Schema) addIndex(pk bool, name string, cols []IndexColumn) bool {
 	if reflect.DeepEqual(st.PK, cols) {
 		return false
 	}
 	for _, ind := range st.Indexes {
 		if reflect.DeepEqual(ind.Columns, cols) {
+			if pk {
+				st.PrimaryKey = ind.Index
+			}
 			return false
 		}
 	}
@@ -219,6 +229,9 @@ func (st *Schema) addIndex(name string, cols []IndexColumn) bool {
 		Index:   name,
 		Columns: cols,
 	})
+	if pk {
+		st.PrimaryKey = name
+	}
 	return true
 }
 
