@@ -87,9 +87,9 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 	}
 
 	if s.WithoutRowid {
-		return indexedSelectWithoutRowid(db.db, s, ind, cb, columns)
+		return indexedSelectNonRowid(db.db, s, ind, cb, columns)
 	} else {
-		return indexedSelectRowid(db.db, s, ind, cb, columns)
+		return indexedSelect(db.db, s, ind, cb, columns)
 	}
 }
 
@@ -112,8 +112,7 @@ func (db *DB) IndexedSelectEq(table, index string, key Row, cb RowCB, columns ..
 	}
 
 	if s.WithoutRowid {
-		// return indexedSelectWithoutRowid(db.db, s, ind, cb, columns)
-		return errors.New("fixme")
+		return indexedSelectEqNonRowid(db.db, s, ind, key, cb, columns)
 	} else {
 		return indexedSelectEq(db.db, s, ind, key, cb, columns)
 	}

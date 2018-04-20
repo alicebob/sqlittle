@@ -72,11 +72,18 @@ func pkSelect(db *sqlittle.Database, s *sqlittle.Schema, key Row, cb RowCB, colu
 		}
 		return nil
 	}
-	if s.PrimaryKey == "" {
+	ind := s.NamedIndex(s.PrimaryKey)
+	if ind == nil {
 		return errors.New("table has no primary key")
 	}
-	// TODO: call IndexedSelectEq()
-	return errors.New("FIXME")
+	return indexedSelectEq(
+		db,
+		s,
+		ind,
+		key,
+		cb,
+		columns,
+	)
 }
 
 func pkSelectNonRowid(db *sqlittle.Database, s *sqlittle.Schema, key Row, cb RowCB, columns []string) error {
