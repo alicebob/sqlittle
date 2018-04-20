@@ -27,6 +27,7 @@ type SchemaTable struct {
 	WithoutRowid bool
 	Columns      []TableColumn
 	Indexes      []SchemaIndex
+	PK           []IndexColumn // only filled in non-rowid tables
 }
 
 type TableColumn struct {
@@ -41,9 +42,8 @@ type TableColumn struct {
 
 type SchemaIndex struct {
 	// Index is empty for the primary key in a WITHOUT ROWID table
-	Index     string
-	Columns   []IndexColumn
-	PKColumns []int // indexes in Columns. Only filled for non-rowid tables
+	Index   string
+	Columns []IndexColumn
 }
 
 type IndexColumn struct {
@@ -118,6 +118,14 @@ func newCreateTable(ct sql.CreateTableStmt) *SchemaTable {
 			if ct.WithoutRowid {
 				name = ""
 			}
+			if ct.WithoutRowid {
+				st.PK = []IndexColumn{
+					{
+						Column:    c.Name,
+						SortOrder: c.PrimaryKeyDir,
+					},
+				}
+			}
 			if (ct.WithoutRowid || !col.Rowid) && st.addIndex(
 				name,
 				[]IndexColumn{
@@ -164,6 +172,9 @@ constraint:
 				}
 				name = ""
 			}
+			if ct.WithoutRowid {
+				st.PK = toIndexColumns(c.IndexedColumns)
+			}
 			if st.addIndexed(name, c.IndexedColumns) {
 				autoindex++
 			}
@@ -183,18 +194,22 @@ constraint:
 // add `CREATE INDEX` statement to a table
 // Does not check for duplicate indexes.
 func (st *SchemaTable) addCreateIndex(ci sql.CreateIndexStmt) {
+	st.Indexes = append(st.Indexes, SchemaIndex{
+		Index:   ci.Index,
+		Columns: toIndexColumns(ci.IndexedColumns),
+	})
+}
+
+func toIndexColumns(ci []sql.IndexedColumn) []IndexColumn {
 	var cs []IndexColumn
-	for _, col := range ci.IndexedColumns {
+	for _, col := range ci {
 		cs = append(cs, IndexColumn{
 			Column:    col.Column,
 			Collate:   col.Collate,
 			SortOrder: col.SortOrder,
 		})
 	}
-	st.Indexes = append(st.Indexes, SchemaIndex{
-		Index:   ci.Index,
-		Columns: cs,
-	})
+	return cs
 }
 
 // add an index. This is a noop if an equivalent index already exists. Returns
@@ -275,9 +290,6 @@ func (st *SchemaTable) addRefColumns() {
 				for _, c := range pk.Columns {
 					if in := ind.Column(c.Column); in < 0 {
 						ind.Columns = append(ind.Columns, c)
-						ind.PKColumns = append(ind.PKColumns, len(ind.Columns)-1)
-					} else {
-						ind.PKColumns = append(ind.PKColumns, in)
 					}
 				}
 				st.Indexes[i] = ind

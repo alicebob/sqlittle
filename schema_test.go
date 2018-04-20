@@ -210,16 +210,15 @@ func TestSchemaWithoutRowid(t *testing.T) {
 			Indexes: []SchemaIndex{
 				{
 					// "without rowid" primary key
-					Index:     "",
-					Columns:   []IndexColumn{{Column: "a"}, {Column: "b"}},
-					PKColumns: []int{0},
+					Index:   "",
+					Columns: []IndexColumn{{Column: "a"}, {Column: "b"}},
 				},
 				{
-					Index:     "sqlite_autoindex_foo4_2", // _1 is reserved
-					Columns:   []IndexColumn{{Column: "b"}, {Column: "a"}},
-					PKColumns: []int{1},
+					Index:   "sqlite_autoindex_foo4_2", // _1 is reserved
+					Columns: []IndexColumn{{Column: "b"}, {Column: "a"}},
 				},
 			},
+			PK: []IndexColumn{{Column: "a"}},
 		},
 		nil,
 	)
@@ -241,11 +240,11 @@ func TestSchemaWithoutRowid2(t *testing.T) {
 			},
 			Indexes: []SchemaIndex{
 				{
-					Index:     "",
-					Columns:   []IndexColumn{{Column: "a"}},
-					PKColumns: []int{0},
+					Index:   "",
+					Columns: []IndexColumn{{Column: "a"}},
 				},
 			},
+			PK: []IndexColumn{{Column: "a"}},
 		},
 		nil,
 	)
@@ -266,11 +265,11 @@ func TestSchemaWithoutRowid3(t *testing.T) {
 			},
 			Indexes: []SchemaIndex{
 				{
-					Index:     "",
-					Columns:   []IndexColumn{{Column: "a"}},
-					PKColumns: []int{0},
+					Index:   "",
+					Columns: []IndexColumn{{Column: "a"}},
 				},
 			},
+			PK: []IndexColumn{{Column: "a"}},
 		},
 		nil,
 	)
@@ -333,20 +332,18 @@ func TestSchemaIndexNonRowid(t *testing.T) {
 					Index: "",
 					// 'a' is not in the primary key, but this describes the
 					// column order in the database file
-					Columns:   []IndexColumn{{Column: "c"}, {Column: "b"}, {Column: "a"}},
-					PKColumns: []int{0, 1},
+					Columns: []IndexColumn{{Column: "c"}, {Column: "b"}, {Column: "a"}},
 				},
 				{
-					Index:     "fooi",
-					Columns:   []IndexColumn{{Column: "b"}, {Column: "c"}},
-					PKColumns: []int{1, 0},
+					Index:   "fooi",
+					Columns: []IndexColumn{{Column: "b"}, {Column: "c"}},
 				},
 				{
-					Index:     "fooj",
-					Columns:   []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
-					PKColumns: []int{1, 2},
+					Index:   "fooj",
+					Columns: []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
 				},
 			},
+			PK: []IndexColumn{{Column: "c"}, {Column: "b"}},
 		},
 		nil,
 	)
@@ -373,15 +370,14 @@ func TestSchemaUnique2(t *testing.T) {
 					Index: "",
 					// 'a' is not in the primary key, but this describes the
 					// column order in the database file
-					Columns:   []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
-					PKColumns: []int{0, 1, 2},
+					Columns: []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
 				},
 				{
-					Index:     "sqlite_autoindex_foo_2",
-					Columns:   []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
-					PKColumns: []int{0, 1, 2},
+					Index:   "sqlite_autoindex_foo_2",
+					Columns: []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
 				},
 			},
+			PK: []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
 		},
 		nil,
 	)
