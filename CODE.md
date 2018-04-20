@@ -13,7 +13,7 @@ This is how the files work together, with the lowest level on the
 bottom:
 
     +---------------------------------------+
-    | db.go, select.go, row.go              |
+    | sqlittle.go, select.go, row.go        |
     +===================+===================+
     | db/low.go         | db/schema.go      |
     +-------------------+-------------------+
@@ -66,8 +66,8 @@ flexible query code.
 
 ### high level
 
-/db.go gives methods which hide most SQLite details. It mostly calls code from
-/select.go and /indexed_select.go .
+/sqlittle.go gives methods which hide most SQLite details. It mostly calls code
+from /select.go and /indexed_select.go .
 
 /row.go has Scan() to deal with data conversions.
 

@@ -8,6 +8,12 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+func init() {
+	spew.Config.DisablePointerAddresses = true
+	spew.Config.DisableCapacities = true
+	spew.Config.SortKeys = true
+}
+
 func TestIndexedSelectRowid(t *testing.T) {
 	db, err := Open("testdata/words.sqlite")
 	if err != nil {
@@ -66,6 +72,48 @@ func TestIndexedSelectWithoutRowid(t *testing.T) {
 		"Come Together",
 	}
 	if have, want := names, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
+}
+
+func TestIndexedSelectEq(t *testing.T) {
+	db, err := Open("testdata/music.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var words []string
+	cb := func(r Row) {
+		w, _ := r.ScanString()
+		words = append(words, w)
+	}
+	if err := db.IndexedSelectEq("albums", "albums_name", Row{"Abbey Road"}, cb, "name"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"Abbey Road"}
+	if have, want := words, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
+}
+
+func TestIndexedSelectEqNonRowid(t *testing.T) {
+	db, err := Open("testdata/music.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var words []string
+	cb := func(r Row) {
+		w, _ := r.ScanString()
+		words = append(words, w)
+	}
+	if err := db.IndexedSelectEq("tracks", "tracks_length", Row{int64(121)}, cb, "name"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"Norwegian Wood"}
+	if have, want := words, want; !reflect.DeepEqual(have, want) {
 		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 	}
 }
