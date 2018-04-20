@@ -29,7 +29,7 @@ func ExampleTable_Scan() {
 	// row 3: town
 }
 
-func ExampleTable_WithoutRowidScan() {
+func ExampleTable_Scan_nonrowid() {
 	db, err := OpenFile("testdata/withoutrowid.sqlite")
 	if err != nil {
 		panic(err)
@@ -83,7 +83,7 @@ func ExampleTable_Rowid() {
 	// row: universe
 }
 
-func ExampleIndex_ScanEq() {
+func ExampleTable_Rowid_nonrowid() {
 	db, err := OpenFile("testdata/withoutrowid.sqlite")
 	if err != nil {
 		panic(err)
@@ -177,6 +177,31 @@ func ExampleIndex_ScanMin() {
 	// wristwatch's
 	// writhing
 	// wusses
+}
+
+func ExampleIndex_ScanEq() {
+	// Find records mathing a key.
+	db, err := OpenFile("testdata/words.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_1")
+	if err != nil {
+		panic(err)
+	}
+	if err := index.ScanEq(
+		Record{"wombat"},
+		func(rec Record) bool {
+			fmt.Printf("%v\n", rec) // word, rowid
+			return false
+		},
+	); err != nil {
+		panic(err)
+	}
+	// output:
+	// [wombat 159]
 }
 
 func ExampleDatabase_Schema() {
