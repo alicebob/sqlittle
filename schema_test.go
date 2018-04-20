@@ -351,3 +351,38 @@ func TestSchemaIndexNonRowid(t *testing.T) {
 		nil,
 	)
 }
+
+func TestSchemaUnique2(t *testing.T) {
+	// ignore duplicate uniques
+	testSchema(
+		t,
+		"foo",
+		[]sqliteMaster{
+			{"table", "foo", "foo", 42, `CREATE TABLE foo (a,b,c, unique(a,c,b), unique(a,c), unique(a,c,b), primary key(a,c,b)) without rowid`},
+		},
+		&SchemaTable{
+			Table:        "foo",
+			WithoutRowid: true,
+			Columns: []TableColumn{
+				{Column: "a", Null: false},
+				{Column: "b", Null: false},
+				{Column: "c", Null: false},
+			},
+			Indexes: []SchemaIndex{
+				{
+					Index: "",
+					// 'a' is not in the primary key, but this describes the
+					// column order in the database file
+					Columns:   []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
+					PKColumns: []int{0, 1, 2},
+				},
+				{
+					Index:     "sqlite_autoindex_foo_2",
+					Columns:   []IndexColumn{{Column: "a"}, {Column: "c"}, {Column: "b"}},
+					PKColumns: []int{0, 1, 2},
+				},
+			},
+		},
+		nil,
+	)
+}
