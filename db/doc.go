@@ -1,5 +1,8 @@
-// SELECT like functions for SQLite tables
+// Package SQLittle provides pure Go, read-only, access to SQLite (version 3) database
+// files.
 //
-// These are higher level than the core sqlittle functions, and hide all
-// sqlite storage specific details.
+// Both tables and index files are supported. The current interface is very low
+// level, and you'll have to know the table and index structure.
+//
+// See README.md for usage help.
 package db

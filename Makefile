@@ -15,7 +15,7 @@ fuzz:
 	go get -v github.com/dvyukov/go-fuzz/...
 
 	rm -f sqlittle-fuzz.zip
-	go-fuzz-build github.com/alicebob/sqlittle
+	go-fuzz-build github.com/alicebob/sqlittle/db
 	mkdir -p workdir
 	cp -r corpus workdir
 	go-fuzz -bin=sqlittle-fuzz.zip -workdir=workdir
