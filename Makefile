@@ -6,7 +6,7 @@ test:
 	go test ./...
 
 bench:
-	go test -bench .
+	go test -bench . github.com/alicebob/sqlittle/db
 
 format:
 	go fmt
