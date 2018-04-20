@@ -1,4 +1,4 @@
-// SchemaTable describes a table and all indexes on that table.
+// Schema describes a table and all indexes on that table.
 // Both indexes from the `CREATE TABLE` and from any relevant `CREATE INDEX`-es
 // are processed.
 // It knows the SQLite conventions how tables and indexes are used, such as the
@@ -15,7 +15,7 @@ import (
 	"github.com/alicebob/sqlittle/sql"
 )
 
-type SchemaTable struct {
+type Schema struct {
 	Table        string
 	WithoutRowid bool
 	Columns      []TableColumn
@@ -45,7 +45,7 @@ type IndexColumn struct {
 	SortOrder sql.SortOrder
 }
 
-func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
+func newSchema(table string, master []sqliteMaster) (*Schema, error) {
 	var createSQL string
 	n := strings.ToLower(table)
 	for _, m := range master {
@@ -83,10 +83,10 @@ func newSchema(table string, master []sqliteMaster) (*SchemaTable, error) {
 	return st, nil
 }
 
-// transform a `create table` statement into a SchemaTable, which knows which
+// transform a `create table` statement into a Schema, which knows which
 // indexes are used
-func newCreateTable(ct sql.CreateTableStmt) *SchemaTable {
-	st := &SchemaTable{
+func newCreateTable(ct sql.CreateTableStmt) *Schema {
+	st := &Schema{
 		Table:        ct.Table,
 		WithoutRowid: ct.WithoutRowid,
 	}
@@ -185,7 +185,7 @@ constraint:
 
 // add `CREATE INDEX` statement to a table
 // Does not check for duplicate indexes.
-func (st *SchemaTable) addCreateIndex(ci sql.CreateIndexStmt) {
+func (st *Schema) addCreateIndex(ci sql.CreateIndexStmt) {
 	st.Indexes = append(st.Indexes, SchemaIndex{
 		Index:   ci.Index,
 		Columns: toIndexColumns(ci.IndexedColumns),
@@ -206,7 +206,7 @@ func toIndexColumns(ci []sql.IndexedColumn) []IndexColumn {
 
 // add an index. This is a noop if an equivalent index already exists. Returns
 // whether the indexed got added.
-func (st *SchemaTable) addIndex(name string, cols []IndexColumn) bool {
+func (st *Schema) addIndex(name string, cols []IndexColumn) bool {
 	if reflect.DeepEqual(st.PK, cols) {
 		return false
 	}
@@ -223,7 +223,7 @@ func (st *SchemaTable) addIndex(name string, cols []IndexColumn) bool {
 }
 
 // sets the PK key (for non-rowid tables). Deletes any duplicate indexes.
-func (st *SchemaTable) setPK(cols []IndexColumn) {
+func (st *Schema) setPK(cols []IndexColumn) {
 	st.PK = cols
 	for i, ind := range st.Indexes {
 		if reflect.DeepEqual(ind.Columns, cols) {
@@ -236,7 +236,7 @@ func (st *SchemaTable) setPK(cols []IndexColumn) {
 }
 
 // Returns the index of the named column, or -1.
-func (st *SchemaTable) Column(name string) int {
+func (st *Schema) Column(name string) int {
 	u := strings.ToUpper(name)
 	for i, col := range st.Columns {
 		if strings.ToUpper(col.Column) == u {
@@ -246,7 +246,7 @@ func (st *SchemaTable) Column(name string) int {
 	return -1
 }
 
-func (st *SchemaTable) column(name string) *TableColumn {
+func (st *Schema) column(name string) *TableColumn {
 	n := st.Column(name)
 	if n < 0 {
 		return nil // you're asking for non-exising columns and for trouble
@@ -255,7 +255,7 @@ func (st *SchemaTable) column(name string) *TableColumn {
 }
 
 // NamedIndex returns the index with the name (case insensitive)
-func (st *SchemaTable) NamedIndex(name string) *SchemaIndex {
+func (st *Schema) NamedIndex(name string) *SchemaIndex {
 	u := strings.ToUpper(name)
 	for i, ind := range st.Indexes {
 		if strings.ToUpper(ind.Index) == u {

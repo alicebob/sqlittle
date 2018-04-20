@@ -8,7 +8,7 @@ import (
 
 // for non-rowid tables only:
 // given an index gives back the indexes in a row which form the primary key.
-func pkColumns(schema *sqlittle.SchemaTable, ind *sqlittle.SchemaIndex) []int {
+func pkColumns(schema *sqlittle.Schema, ind *sqlittle.SchemaIndex) []int {
 	if !schema.WithoutRowid {
 		panic("can't call pkColumns on an rowid table")
 	}
@@ -26,7 +26,7 @@ func pkColumns(schema *sqlittle.SchemaTable, ind *sqlittle.SchemaIndex) []int {
 }
 
 // given a non-rowid table, gives the order columns are stored on disk
-func columnStoreOrder(schema *sqlittle.SchemaTable) []int {
+func columnStoreOrder(schema *sqlittle.Schema) []int {
 	if !schema.WithoutRowid {
 		panic("can't call columnStoreOrder on an rowid table")
 	}

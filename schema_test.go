@@ -28,7 +28,7 @@ func testSchema(
 	t *testing.T,
 	table string,
 	master []sqliteMaster,
-	want *SchemaTable,
+	want *Schema,
 	wantErr error,
 ) {
 	t.Helper()
@@ -67,7 +67,7 @@ func TestSchemaSimple(t *testing.T) {
 		[]sqliteMaster{
 			{"table", "foo", "foo", 42, "CREATE TABLE foo (a, b not null)"},
 		},
-		&SchemaTable{
+		&Schema{
 			Table: "foo",
 			Columns: []TableColumn{
 				{Column: "a", Null: true},
@@ -86,7 +86,7 @@ func TestSchemaConstrPK(t *testing.T) {
 			{"table", "foo", "foo", 42, "CREATE TABLE foo (a, PRIMARY KEY(a))"},
 			{"index", "sqlite_autoindex_foo_1", "foo", 42, ""},
 		},
-		&SchemaTable{
+		&Schema{
 			Table: "foo",
 			Columns: []TableColumn{
 				{Column: "a", Null: true},
@@ -110,7 +110,7 @@ func TestSchemaUnique(t *testing.T) {
 			{"table", "foo3", "foo3", 42, "create table foo3 (a unique, b PRIMARY KEY, c, unique(a), unique(c))"},
 			{"index", "sqlite_autoindex_foo_1", "foo3", 42, ""},
 		},
-		&SchemaTable{
+		&Schema{
 			Table: "foo3",
 			Columns: []TableColumn{
 				{Column: "a", Null: true},
@@ -145,7 +145,7 @@ func TestSchemaRowid(t *testing.T) {
 			{"index", "sqlite_autoindex_foo_1", "foo", 42, ""},
 			{"index", "sqlite_autoindex_foo_2", "foo", 42, ""},
 		},
-		&SchemaTable{
+		&Schema{
 			Table: "foo",
 			Columns: []TableColumn{
 				{Column: "a", Type: "integer", Null: true, Rowid: true},
@@ -175,7 +175,7 @@ func TestSchemaRowid2(t *testing.T) {
 		[]sqliteMaster{
 			{"table", "foo", "foo", 42, `create table foo(a integer, primary key(a desc))`},
 		},
-		&SchemaTable{
+		&Schema{
 			Table: "foo",
 			Columns: []TableColumn{
 				{Column: "a", Type: "integer", Null: true, Rowid: true},
@@ -192,7 +192,7 @@ func TestSchemaWithoutRowid(t *testing.T) {
 		[]sqliteMaster{
 			{"table", "foo4", "foo4", 42, `create table foo4(a varchar, b, primary key(a), unique(b)) without rowid`},
 		},
-		&SchemaTable{
+		&Schema{
 			Table:        "foo4",
 			WithoutRowid: true,
 			Columns: []TableColumn{
@@ -219,7 +219,7 @@ func TestSchemaWithoutRowid2(t *testing.T) {
 		[]sqliteMaster{
 			{"table", "foo7", "foo7", 42, `CREATE TABLE foo7(a, unique(a), primary key(a)) without rowid`},
 		},
-		&SchemaTable{
+		&Schema{
 			Table:        "foo7",
 			WithoutRowid: true,
 			Columns: []TableColumn{
@@ -238,7 +238,7 @@ func TestSchemaWithoutRowid3(t *testing.T) {
 		[]sqliteMaster{
 			{"table", "foo6", "foo6", 42, `create table foo6(a integer unique primary key) without rowid`},
 		},
-		&SchemaTable{
+		&Schema{
 			Table:        "foo6",
 			WithoutRowid: true,
 			Columns: []TableColumn{
@@ -259,7 +259,7 @@ func TestSchemaIndex(t *testing.T) {
 			{"index", "fooi", "foo9", 42, `CREATE INDEX fooi ON foo9 (c, b)`},
 			{"index", "fooi2", "foo9", 42, `CREATE INDEX fooi2 ON foo9 (c, b)`},
 		},
-		&SchemaTable{
+		&Schema{
 			Table: "foo9",
 			Columns: []TableColumn{
 				{Column: "a", Null: true},
@@ -294,7 +294,7 @@ func TestSchemaIndexNonRowid(t *testing.T) {
 			{"index", "fooi", "foo9", 42, `CREATE INDEX fooi ON foo9 (b, c)`},
 			{"index", "fooj", "foo9", 42, `CREATE INDEX fooj ON foo9 (a, c)`},
 		},
-		&SchemaTable{
+		&Schema{
 			Table:        "foo9",
 			WithoutRowid: true,
 			Columns: []TableColumn{
@@ -326,7 +326,7 @@ func TestSchemaUnique2(t *testing.T) {
 		[]sqliteMaster{
 			{"table", "foo", "foo", 42, `CREATE TABLE foo (a,b,c, unique(a,c,b), unique(a,c), unique(a,c,b), primary key(a,c,b)) without rowid`},
 		},
-		&SchemaTable{
+		&Schema{
 			Table:        "foo",
 			WithoutRowid: true,
 			Columns: []TableColumn{

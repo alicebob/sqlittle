@@ -6,7 +6,7 @@ import (
 
 func indexedSelectRowid(
 	db *sqlittle.Database,
-	schema *sqlittle.SchemaTable,
+	schema *sqlittle.Schema,
 	index *sqlittle.SchemaIndex,
 	cb RowCB,
 	columns []string,
@@ -43,7 +43,7 @@ func indexedSelectRowid(
 
 func indexedSelectWithoutRowid(
 	db *sqlittle.Database,
-	schema *sqlittle.SchemaTable,
+	schema *sqlittle.Schema,
 	index *sqlittle.SchemaIndex,
 	cb RowCB,
 	columns []string,

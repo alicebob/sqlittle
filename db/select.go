@@ -7,7 +7,7 @@ import (
 	"github.com/alicebob/sqlittle"
 )
 
-func selectWithRowid(db *sqlittle.Database, s *sqlittle.SchemaTable, cb RowCB, columns []string) error {
+func selectWithRowid(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, columns []string) error {
 	ci, err := toColumnIndexRowid(s, columns)
 	if err != nil {
 		return err
@@ -23,7 +23,7 @@ func selectWithRowid(db *sqlittle.Database, s *sqlittle.SchemaTable, cb RowCB, c
 	})
 }
 
-func selectWithoutRowid(db *sqlittle.Database, s *sqlittle.SchemaTable, cb RowCB, columns []string) error {
+func selectWithoutRowid(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, columns []string) error {
 	ci, err := toColumnIndexNonRowid(s, columns)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ type columIndex struct {
 
 // given column names returns the index in a Row this column is expected, and
 // the column definition. Allows 'rowid' alias.
-func toColumnIndexRowid(s *sqlittle.SchemaTable, columns []string) ([]columIndex, error) {
+func toColumnIndexRowid(s *sqlittle.Schema, columns []string) ([]columIndex, error) {
 	res := make([]columIndex, 0, len(columns))
 	for _, c := range columns {
 		n := s.Column(c)
@@ -85,7 +85,7 @@ func toColumnIndexRowid(s *sqlittle.SchemaTable, columns []string) ([]columIndex
 // given column names returns the index of this column in a row in the index (and
 // the column definition). For database order of the columns depends on the
 // primary key.
-func toColumnIndexNonRowid(s *sqlittle.SchemaTable, columns []string) ([]columIndex, error) {
+func toColumnIndexNonRowid(s *sqlittle.Schema, columns []string) ([]columIndex, error) {
 	stored := columnStoreOrder(s) // column indexes in disk order
 	res := make([]columIndex, 0, len(columns))
 	for _, c := range columns {

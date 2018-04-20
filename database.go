@@ -443,7 +443,7 @@ func (db *Database) Index(name string) (*Index, error) {
 }
 
 // Schema gives the definition of a table and all associated indexes.
-func (db *Database) Schema(table string) (*SchemaTable, error) {
+func (db *Database) Schema(table string) (*Schema, error) {
 	m, err := db.master()
 	if err != nil {
 		return nil, err
