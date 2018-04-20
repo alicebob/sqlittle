@@ -405,9 +405,20 @@ func (db *Database) objectNames(typ string) ([]string, error) {
 	return names, nil
 }
 
+// withoutRowid is true if name is a 'WITHOUT ROWID' table
+func (db *Database) withoutRowid(name string) bool {
+	t, err := db.Table(name)
+	if err != nil {
+		return false
+	}
+	_, err = t.db.openIndex(t.root)
+	return err == nil
+}
+
 // Table opens the named table.
 // Will return ErrNoSuchTable when the table isn't there (or isn't a table).
 // Table pointer is always valid if err == nil.
+// See also WithoutRowidTable() for `WITHOUT ROWID` tables.
 func (db *Database) Table(name string) (*Table, error) {
 	objects, err := db.master()
 	if err != nil {
@@ -417,6 +428,22 @@ func (db *Database) Table(name string) (*Table, error) {
 	for _, o := range objects {
 		if o.typ == "table" && o.name == n {
 			return &Table{db: db, root: o.rootPage, sql: o.sql}, nil
+		}
+	}
+	return nil, ErrNoSuchTable
+}
+
+// WithoutRowidTable open a `WITHOUT ROWID` table. It's implemented with an
+// Index.
+func (db *Database) WithoutRowidTable(name string) (*Index, error) {
+	objects, err := db.master()
+	if err != nil {
+		return nil, err
+	}
+	n := strings.ToLower(name)
+	for _, o := range objects {
+		if o.typ == "table" && o.name == n {
+			return &Index{db: db, root: o.rootPage, sql: o.sql}, nil
 		}
 	}
 	return nil, ErrNoSuchTable
@@ -462,18 +489,17 @@ func (db *Database) Info() (string, error) {
 		fmt.Fprintf(b, "- %s (%s)\n  owner: %s\n  sql: %s\n", o.name, o.typ, o.tblName, o.sql)
 		switch o.typ {
 		case "table":
-			fmt.Fprintf(b, "  first rows:\n")
-			t, err := db.Table(o.name)
-			if err != nil {
-				fmt.Fprintf(b, "    error: %s\n", err)
-				continue
-			}
-			switch t.withoutRowid() {
-			case true:
-				fmt.Fprintf(b, "    (WITHOUT ROWID table)\n")
+			switch db.withoutRowid(o.name) {
+			case false:
+				fmt.Fprintf(b, "  first rows:\n")
+				t, err := db.Table(o.name)
+				if err != nil {
+					fmt.Fprintf(b, "    error: %s\n", err)
+					continue
+				}
 				i := 0
-				if err := t.WithoutRowidScan(func(rec Record) bool {
-					fmt.Fprintf(b, "    %v\n", rec)
+				if err := t.Scan(func(rowid int64, rec Record) bool {
+					fmt.Fprintf(b, "    %d: %v\n", rowid, rec)
 					i++
 					return i > 5
 				}); err != nil {
@@ -481,10 +507,17 @@ func (db *Database) Info() (string, error) {
 				} else if i == 0 {
 					fmt.Fprintf(b, "    (no rows)\n")
 				}
-			case false:
+			case true:
+				fmt.Fprintf(b, "  (WITHOUT ROWID table)\n")
+				fmt.Fprintf(b, "  first rows:\n")
+				t, err := db.WithoutRowidTable(o.name)
+				if err != nil {
+					fmt.Fprintf(b, "    error: %s\n", err)
+					continue
+				}
 				i := 0
-				if err := t.Scan(func(rowid int64, rec Record) bool {
-					fmt.Fprintf(b, "    %d: %v\n", rowid, rec)
+				if err := t.Scan(func(rec Record) bool {
+					fmt.Fprintf(b, "    %v\n", rec)
 					i++
 					return i > 5
 				}); err != nil {

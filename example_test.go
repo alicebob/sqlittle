@@ -36,12 +36,12 @@ func ExampleTable_WithoutRowidScan() {
 	}
 	defer db.Close()
 
-	table, err := db.Table("words")
+	table, err := db.WithoutRowidTable("words")
 	if err != nil {
 		panic(err)
 	}
 	i := 10
-	if err := table.WithoutRowidScan(
+	if err := table.Scan(
 		func(rec Record) bool {
 			fmt.Printf("row %s\n", rec[0].(string))
 			i--
@@ -83,22 +83,25 @@ func ExampleTable_Rowid() {
 	// row: universe
 }
 
-func ExampleTable_WithoutRowidPK() {
+func ExampleIndex_ScanEq() {
 	db, err := OpenFile("testdata/withoutrowid.sqlite")
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
 
-	table, err := db.Table("words")
+	table, err := db.WithoutRowidTable("words")
 	if err != nil {
 		panic(err)
 	}
-	row, err := table.WithoutRowidPK(Record{"awesomely"})
-	if err != nil {
+	if err := table.ScanEq(Record{"awesomely"},
+		func(r Record) bool {
+			fmt.Printf("row: %v\n", r)
+			return false
+		},
+	); err != nil {
 		panic(err)
 	}
-	fmt.Printf("row: %v\n", row)
 	// output:
 	// row: [awesomely 9]
 }

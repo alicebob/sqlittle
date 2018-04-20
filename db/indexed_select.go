@@ -93,7 +93,7 @@ func indexedSelectWithoutRowid(
 		return err
 	}
 
-	tab, err := db.Table(schema.Table)
+	tab, err := db.WithoutRowidTable(schema.Table)
 	if err != nil {
 		return err
 	}
@@ -107,12 +107,13 @@ func indexedSelectWithoutRowid(
 	return ind.Scan(func(r sqlittle.Record) bool {
 		pk := reRecord(r, cols)
 
-		row, err := tab.WithoutRowidPK(pk)
-		if err != nil || row == nil {
+		var found sqlittle.Record
+		err := tab.ScanEq(pk, func(row sqlittle.Record) bool { found = row; return true })
+		if err != nil || found == nil {
 			// should never be nil
 			return false
 		}
-		cb(toRow(0, ci, row))
+		cb(toRow(0, ci, found))
 		return false
 	})
 }

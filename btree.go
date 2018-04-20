@@ -516,7 +516,7 @@ func parseCellpointers(
 	return cs, nil
 }
 
-// Given a (non-expanded) payload, runs Cmp() against it.
+// Given a (non-expanded) payload, runs cmp() against it.
 // The returned Record may be nil if the non-expanded payload was enough to
 // determine the result.
 // (that's TODO).
@@ -532,6 +532,6 @@ func lazyCmp(db *Database, pl cellPayload, against Record) (int, Record, error) 
 		return 0, nil, err
 	}
 
-	r, err := Cmp(irec, against)
+	r, err := cmp(irec, against)
 	return r, irec, err
 }

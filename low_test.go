@@ -81,31 +81,28 @@ func TestLowDefs(t *testing.T) {
 	}
 }
 
-func TestLowWithoutRowid(t *testing.T) {
+func TestLowScanEq(t *testing.T) {
 	db, err := OpenFile("./testdata/withoutrowid.sqlite")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	table, err := db.Table("words")
+	table, err := db.WithoutRowidTable("words")
 	if err != nil {
 		t.Fatal(err)
-	}
-	rows := 0
-	table.WithoutRowidScan(func(r Record) bool {
-		rows++
-		return false
-	})
-	if have, want := rows, 1000; have != want {
-		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	row, err := table.WithoutRowidPK(Record{"crankiest"})
-	if err != nil {
+	var found Record
+	if err := table.ScanEq(
+		Record{"crankiest"},
+		func(r Record) bool {
+			found = r
+			return false
+		}); err != nil {
 		t.Fatal(err)
 	}
-	if have, want := row, (Record{"crankiest", int64(9)}); !reflect.DeepEqual(have, want) {
+	if have, want := found, (Record{"crankiest", int64(9)}); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
@@ -117,17 +114,23 @@ func TestLowWithoutRowid2(t *testing.T) {
 	}
 	defer db.Close()
 
-	table, err := db.Table("fuz")
+	table, err := db.WithoutRowidTable("fuz")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	row, err := table.WithoutRowidPK(Record{"consequent", "allegory"})
-	if err != nil {
+	var found Record
+	if err := table.ScanEq(
+		Record{"consequent", "allegory"},
+		func(r Record) bool {
+			found = r
+			return false
+		},
+	); err != nil {
 		t.Fatal(err)
 	}
 	// note that this is not the column order
-	if have, want := row, (Record{"consequent", "allegory", "beagle", "duffers"}); !reflect.DeepEqual(have, want) {
+	if have, want := found, (Record{"consequent", "allegory", "beagle", "duffers"}); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }

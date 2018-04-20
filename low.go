@@ -15,6 +15,7 @@ type Table struct {
 	sql  string
 }
 
+// Index is either an index, or the table for a non-rowid table
 type Index struct {
 	db   *Database
 	root int
@@ -51,12 +52,6 @@ func (t *Table) Def() (*sql.CreateTableStmt, error) {
 	return &stmt, nil
 }
 
-// withoutRowid is true if this is a 'WITHOUT ROWID' table
-func (t *Table) withoutRowid() bool {
-	_, err := t.db.openIndex(t.root)
-	return err == nil
-}
-
 // Scan calls cb() for every row in the table. Will be called in 'database
 // order'.
 // The record is given as sqlite stores it; this means:
@@ -84,31 +79,6 @@ func (t *Table) Scan(cb TableScanCB) error {
 				return false, err
 			}
 			return cb(rowid, rec), nil
-		},
-	)
-	return err
-}
-
-// WithoutRowidScan is like Table.Scan(), but for 'WITHOUT ROWID' tables.
-func (t *Table) WithoutRowidScan(cb RecordCB) error {
-	root, err := t.db.openIndex(t.root)
-	if err != nil {
-		return err
-	}
-
-	_, err = root.Iter(
-		maxRecursion,
-		t.db,
-		func(pl cellPayload) (bool, error) {
-			full, err := addOverflow(t.db, pl)
-			if err != nil {
-				return false, err
-			}
-			rec, err := parseRecord(full)
-			if err != nil {
-				return false, err
-			}
-			return cb(rec), nil
 		},
 	)
 	return err
@@ -147,51 +117,6 @@ func (t *Table) Rowid(rowid int64) (Record, error) {
 		return nil, err
 	}
 	return parseRecord(c)
-}
-
-// WithoutRowidScanMin is like ScanMin, but for `WITHOUT ROWID` tables.
-func (t *Table) WithoutRowidScanMin(key Record, cb RecordCB) error {
-	root, err := t.db.openIndex(t.root)
-	if err != nil {
-		return err
-	}
-
-	_, err = root.IterMin(
-		maxRecursion,
-		t.db,
-		key,
-		func(found Record) (bool, error) {
-			return cb(found), nil
-		},
-	)
-	return err
-}
-
-// WithoutRowidPK finds a single row by primary key in a 'WITHOUT ROWID' table. Will
-// return nil if it isn't found.
-func (t *Table) WithoutRowidPK(r Record) (Record, error) {
-	root, err := t.db.openIndex(t.root)
-	if err != nil {
-		return nil, err
-	}
-
-	var recPl Record
-	_, err = root.IterMin(
-		maxRecursion,
-		t.db,
-		r,
-		func(found Record) (bool, error) {
-			res, err := Cmp(r, found)
-			if err != nil {
-				return false, err
-			}
-			if res == 0 {
-				recPl = found
-			}
-			return true, nil
-		},
-	)
-	return recPl, err
 }
 
 // Def returns the index definition.
@@ -259,7 +184,8 @@ func (in *Index) ScanMin(from Record, cb RecordCB) error {
 	return err
 }
 
-// ScanMin wrapper which stops when we're over the
+// Find all records with the given key prefix. For a non-rowid table this is a
+// primary key lookup
 func (in *Index) ScanEq(key Record, cb RecordCB) error {
 	root, err := in.db.openIndex(in.root)
 	if err != nil {
@@ -271,7 +197,7 @@ func (in *Index) ScanEq(key Record, cb RecordCB) error {
 		in.db,
 		key,
 		func(rec Record) (bool, error) {
-			res, err := Cmp(rec, key)
+			res, err := cmp(rec, key)
 			if err != nil {
 				return false, err
 			}

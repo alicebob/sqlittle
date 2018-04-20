@@ -28,11 +28,11 @@ func selectWithoutRowid(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, col
 		return err
 	}
 
-	t, err := db.Table(s.Table)
+	t, err := db.WithoutRowidTable(s.Table)
 	if err != nil {
 		return err
 	}
-	return t.WithoutRowidScan(func(r sqlittle.Record) bool {
+	return t.Scan(func(r sqlittle.Record) bool {
 		cb(toRow(0, ci, r))
 		return false
 	})
@@ -84,19 +84,16 @@ func pkSelectNonRowid(db *sqlittle.Database, s *sqlittle.Schema, key Row, cb Row
 	if err != nil {
 		return err
 	}
-	t, err := db.Table(s.Table)
+	t, err := db.WithoutRowidTable(s.Table)
 	if err != nil {
 		return err
 	}
 
-	return t.WithoutRowidScanMin(
+	return t.ScanEq(
 		sqlittle.Record(key),
 		func(r sqlittle.Record) bool {
-			res, err := sqlittle.Cmp(r, sqlittle.Record(key))
-			if err != nil || res == 1 {
-				return true
-			}
 			cb(toRow(0, ci, r))
 			return false
-		})
+		},
+	)
 }
