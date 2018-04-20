@@ -35,3 +35,21 @@ func selectWithoutRowid(db *sqlittle.Database, s *sqlittle.Schema, cb RowCB, col
 		return false
 	})
 }
+
+func selectRowid(db *sqlittle.Database, s *sqlittle.Schema, rowid int64, columns []string) (Row, error) {
+	ci, err := toColumnIndexRowid(s, columns)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := db.Table(s.Table)
+	if err != nil {
+		return nil, err
+	}
+	r, err := t.Rowid(rowid)
+	if err != nil || r == nil {
+		return nil, err
+	}
+	// TODO: decide what to do with shared []byte pointers
+	return toRow(rowid, ci, r), nil
+}

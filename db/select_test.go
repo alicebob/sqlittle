@@ -9,9 +9,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-// where := WhereEq{"length", 4}
-// err := db.SelectWhere("words", where, cb, "word")
-
 func TestSelectCols(t *testing.T) {
 	db, err := Open("../testdata/words.sqlite")
 	if err != nil {

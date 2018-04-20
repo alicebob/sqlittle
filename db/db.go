@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/alicebob/sqlittle"
@@ -27,7 +28,7 @@ func (db *DB) Close() error {
 type RowCB func(Row)
 
 // Select the columns from every row from the given table. Order is the rowid
-// order for rowid tables, and the orderd primary key for non-rowid tables.
+// order for rowid tables, and the ordered primary key for non-rowid tables.
 //
 // For rowid tables the special values "rowid", "oid", and "_rowid_" will load
 // the rowid (unless there is a column with that name).
@@ -47,6 +48,24 @@ func (db *DB) Select(table string, cb RowCB, columns ...string) error {
 	} else {
 		return selectWithRowid(db.db, s, cb, columns)
 	}
+}
+
+// Select by rowid. Returns a nil row if the rowid isn't found.
+// Returns an error on a 'WITHOUT ROWID' table.
+func (db *DB) SelectRowid(table string, rowid int64, columns ...string) (Row, error) {
+	if err := db.db.RLock(); err != nil {
+		return nil, err
+	}
+	defer db.db.RUnlock()
+
+	s, err := db.db.Schema(table)
+	if err != nil {
+		return nil, err
+	}
+	if s.WithoutRowid {
+		return nil, errors.New("can't use SelectRowid on a WITHOUT ROWID table")
+	}
+	return selectRowid(db.db, s, rowid, columns)
 }
 
 // Select all rows from the given table via the index. The order will be the
@@ -73,7 +92,3 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 		return indexedSelectRowid(db.db, s, ind, cb, columns)
 	}
 }
-
-// func (db *DB) SelectWhere(table string, cb RowCB, columns ...string) error
-
-// func (db *DB) IndexedSelectWhere(table string, cb RowCB, columns ...string) error
