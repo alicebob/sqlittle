@@ -16,8 +16,8 @@ var (
 // It can only have fields of these types: nil, int64, float64, string, []byte
 type Record []interface{}
 
-func parseRecord(r []byte) ([]interface{}, error) {
-	var res []interface{}
+func parseRecord(r []byte) (Record, error) {
+	var res Record
 	hSize, n := readVarint(r)
 	if n < 0 || hSize < int64(n) || hSize > int64(len(r)) {
 		return res, ErrCorrupted
@@ -117,6 +117,22 @@ func parseRecord(r []byte) ([]interface{}, error) {
 	return res, nil
 }
 
+func (rec Record) cmp(cs []Cmp) int {
+	// TODO: check rec length
+	for i, c := range cs {
+		r := c(rec[i])
+		switch r {
+		case -1, 1:
+			return r
+		case 0:
+			// continue
+		default:
+			panic("invalid cmp value")
+		}
+	}
+	return 0
+}
+
 // Removes the rowid column from an index value (that's the last value from a
 // Record).
 // Returns: rowid, record, error
@@ -153,11 +169,11 @@ func cmp(a, b Record) (int, error) {
 	return 0, nil
 }
 
-// returns -1 when a is smaller, 0 when a and b are equal, and else 1
-// Column can be: nil, int64, float64, string, []byte
-// Becuase float columns might be stored as int that's conversion is supported.
 var errCmp = errors.New("impossible comparison")
 
+// returns -1 when a is smaller, 0 when a and b are equal, and else 1
+// Column can be: nil, int64, float64, string, []byte
+// Because float columns might be stored as int that conversion is supported.
 func columnCmp(a, b interface{}) (int, error) {
 	switch at := a.(type) {
 	case nil:

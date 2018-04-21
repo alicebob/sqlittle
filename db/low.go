@@ -209,3 +209,29 @@ func (in *Index) ScanEq(key Record, cb RecordCB) error {
 	)
 	return err
 }
+
+// Find all records where cmp(row) == 0
+//
+// For a non-rowid table this is a primary key lookup
+//
+// This uses binary searches, so be you'll have to compensate for DESC index
+// columns.
+func (in *Index) ScanCmp(cmp []Cmp, cb RecordCB) error {
+	root, err := in.db.openIndex(in.root)
+	if err != nil {
+		return err
+	}
+
+	_, err = root.IterMinCmp(
+		maxRecursion,
+		in.db,
+		cmp,
+		func(rec Record) (bool, error) {
+			if rec.cmp(cmp) > 0 {
+				return true, nil
+			}
+			return cb(rec), nil
+		},
+	)
+	return err
+}

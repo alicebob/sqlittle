@@ -13,6 +13,7 @@ ALL:= \
     music.sqlite \
     notadatabase.sqlite \
     overflow.sqlite \
+    prefix.sqlite \
     primarykey.sqlite \
     single.sqlite \
     truncated.sqlite \

@@ -6,7 +6,7 @@ import (
 )
 
 func TestRecord(t *testing.T) {
-	test := func(e string, want []interface{}, wantErr error) {
+	test := func(e string, want Record, wantErr error) {
 		t.Helper()
 		parsed, err := parseRecord([]byte(e))
 		if have, want := err, wantErr; !reflect.DeepEqual(have, want) {
@@ -18,7 +18,7 @@ func TestRecord(t *testing.T) {
 	}
 	test(
 		"\x06\x17\x17\x17\x01Wtablehellohello\x02CREATE TABLE hello (who varchar(255))",
-		[]interface{}{
+		Record{
 			"table",
 			"hello",
 			"hello",
@@ -30,97 +30,97 @@ func TestRecord(t *testing.T) {
 	test(
 		// type 1: 8 bit
 		"\x02\x01P",
-		[]interface{}{int64(80)},
+		Record{int64(80)},
 		nil,
 	)
 	test(
 		// type 1: 8 bit
 		"\x02\x01\xb0",
-		[]interface{}{-int64(80)},
+		Record{-int64(80)},
 		nil,
 	)
 	test(
 		// type 2: 16 bit
 		"\x02\x02@\x00",
-		[]interface{}{int64(1 << 14)},
+		Record{int64(1 << 14)},
 		nil,
 	)
 	test(
 		// type 2: 16 bit
 		"\x02\x02\xc0\x00",
-		[]interface{}{-int64(1 << 14)},
+		Record{-int64(1 << 14)},
 		nil,
 	)
 	test(
 		// type 3: 24 bit
 		"\x02\x03\x7f\x00\x00",
-		[]interface{}{int64(0x7f0000)},
+		Record{int64(0x7f0000)},
 		nil,
 	)
 	test(
 		// type 3: 24 bit
 		"\x02\x03\xff\xff\xff",
-		[]interface{}{-int64(1)},
+		Record{-int64(1)},
 		nil,
 	)
 	test(
 		// type 4: 32 bit
 		"\x02\x04\x7f\x00\x00\x00",
-		[]interface{}{int64(0x7f000000)},
+		Record{int64(0x7f000000)},
 		nil,
 	)
 	test(
 		// type 4: 32 bit
 		"\x02\x04\xff\xff\xff\xff",
-		[]interface{}{-int64(1)},
+		Record{-int64(1)},
 		nil,
 	)
 	test(
 		// type 5: 48 bit
 		"\x02\x05\x7f\x00\x00\x00\x00\x00",
-		[]interface{}{int64(0x7f0000000000)},
+		Record{int64(0x7f0000000000)},
 		nil,
 	)
 	test(
 		// type 5: 48 bit
 		"\x02\x05\xff\xff\xff\xff\xff\xff",
-		[]interface{}{-int64(1)},
+		Record{-int64(1)},
 		nil,
 	)
 	test(
 		// type 6: 64 bit
 		"\x02\x06\x7f\x00\x00\x00\x00\x00\x00\x00",
-		[]interface{}{int64(0x7f00000000000000)},
+		Record{int64(0x7f00000000000000)},
 		nil,
 	)
 	test(
 		// type 6: 64 bit
 		"\x02\x06\xff\xff\xff\xff\xff\xff\xff\xff",
-		[]interface{}{-int64(1)},
+		Record{-int64(1)},
 		nil,
 	)
 	test(
 		// type 7: float
 		"\x02\x07\x00\x00\x00\x00\x00\x00\x00\x00",
-		[]interface{}{0.0},
+		Record{0.0},
 		nil,
 	)
 	test(
 		// type 7: float
 		"\x02\x07\x40\x09\x21\xfb\x54\x44\x2d\x18",
-		[]interface{}{3.141592653589793},
+		Record{3.141592653589793},
 		nil,
 	)
 	test(
 		// type 8: int 0
 		"\x02\b",
-		[]interface{}{int64(0)},
+		Record{int64(0)},
 		nil,
 	)
 	test(
 		// type 9: int 1
 		"\x02\t",
-		[]interface{}{int64(1)},
+		Record{int64(1)},
 		nil,
 	)
 	test(
@@ -138,7 +138,7 @@ func TestRecord(t *testing.T) {
 	test(
 		// type > 11, even: bytes
 		"\x02VCREATE TABLE hello (who varchar(255))",
-		[]interface{}{
+		Record{
 			[]byte("CREATE TABLE hello (who varchar(255))"),
 		},
 		nil,
@@ -146,7 +146,7 @@ func TestRecord(t *testing.T) {
 	test(
 		// type > 11, odd: string
 		"\x02WCREATE TABLE hello (who varchar(255))",
-		[]interface{}{
+		Record{
 			"CREATE TABLE hello (who varchar(255))",
 		},
 		nil,
@@ -210,7 +210,7 @@ func TestRecord(t *testing.T) {
 	test(
 		// truncated multi field record
 		"\x06\x17\x17\x17\x01Wtablehellohello\x02",
-		[]interface{}{
+		Record{
 			"table",
 			"hello",
 			"hello",

@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alicebob/sqlittle"
+	sdb "github.com/alicebob/sqlittle/db"
 )
 
 func main() {
 	flag.Parse()
 	for _, f := range flag.Args() {
-		db, err := sqlittle.OpenFile(f)
+		db, err := sdb.OpenFile(f)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s: %s", f, err)
 			continue

@@ -56,7 +56,7 @@ func TestTablesFour(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var rows []interface{}
+	var rows []Record
 	if _, err := root.Iter(
 		maxRecursion,
 		db,
@@ -74,10 +74,10 @@ func TestTablesFour(t *testing.T) {
 		}); err != nil {
 		t.Fatal(err)
 	}
-	if have, want := rows, []interface{}{
-		[]interface{}{"world"},
-		[]interface{}{"universe"},
-		[]interface{}{"town"},
+	if have, want := rows, []Record{
+		Record{"world"},
+		Record{"universe"},
+		Record{"town"},
 	}; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
@@ -108,7 +108,7 @@ func TestTableLong(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	var rows []interface{}
+	var rows []Record
 	if _, err := root.Iter(
 		maxRecursion,
 		db,
@@ -129,8 +129,8 @@ func TestTableLong(t *testing.T) {
 		}); err != nil {
 		t.Fatal(err)
 	}
-	if have, want := rows, []interface{}{
-		[]interface{}{"aniseed", int64(7)},
+	if have, want := rows, []Record{
+		Record{"aniseed", int64(7)},
 	}; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
@@ -170,7 +170,7 @@ func TestTableOverflow(t *testing.T) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 
-	var rows []interface{}
+	var rows []Record
 	if _, err := root.Iter(
 		maxRecursion,
 		db,
@@ -188,8 +188,8 @@ func TestTableOverflow(t *testing.T) {
 		}); err != nil {
 		t.Fatal(err)
 	}
-	if have, want := rows, []interface{}{
-		[]interface{}{testline},
+	if have, want := rows, []Record{
+		Record{testline},
 	}; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
@@ -432,6 +432,85 @@ func TestIndexScanMin2(t *testing.T) {
 		maxRecursion,
 		db,
 		Record{int64(15)},
+		func(r Record) (bool, error) {
+			rows = append(rows, r)
+			return false, err
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := len(rows), 20; have != want {
+		t.Fatalf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[0][1].(string), "commercializing"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[20-1][1].(string), "internationalism's"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+}
+
+func TestIndexIterMinCmp(t *testing.T) {
+	// scan a index
+	db, err := OpenFile("./../testdata/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := db.openIndex(index.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var rows []Record
+	if _, err := root.IterMinCmp(
+		maxRecursion,
+		db,
+		[]Cmp{CmpString("improvise")},
+		func(r Record) (bool, error) {
+			rows = append(rows, r)
+			return false, err
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := len(rows), 460; have != want {
+		t.Fatalf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[0][0].(string), "improvise"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+	if have, want := rows[460-1][0].(string), "yeshivahs"; have != want {
+		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
+	}
+}
+
+func TestIndexIterMinCmp2(t *testing.T) {
+	// scan a non-unique index
+	db, err := OpenFile("./../testdata/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_2") // index: length(word), word
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := db.openIndex(index.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Load all rows >= 15 chars
+	var rows []Record
+	if _, err := root.IterMinCmp(
+		maxRecursion,
+		db,
+		[]Cmp{CmpInt64(15)},
 		func(r Record) (bool, error) {
 			rows = append(rows, r)
 			return false, err

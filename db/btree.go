@@ -46,6 +46,8 @@ type indexBtree interface {
 	Iter(int, *Database, indexIterCB) (bool, error)
 	// Scan starting from an index value
 	IterMin(int, *Database, Record, indexIterMinCB) (bool, error)
+	// Scan starting from an index value
+	IterMinCmp(int, *Database, []Cmp, indexIterMinCB) (bool, error)
 	// Count counts the number of records. For debugging.
 	Count(*Database) (int, error)
 }
@@ -79,6 +81,13 @@ type indexInterior struct {
 	cells     []indexInteriorCell
 	rightmost int
 }
+
+var (
+	_ tableBtree = &tableLeaf{}
+	_ tableBtree = &tableInterior{}
+	_ indexBtree = &indexLeaf{}
+	_ indexBtree = &indexInterior{}
+)
 
 func newBtree(b []byte, isFileHeader bool) (interface{}, error) {
 	hb := b
@@ -295,6 +304,30 @@ func (l *indexLeaf) IterMin(_ int, db *Database, min Record, cb indexIterMinCB) 
 	return false, nil
 }
 
+func (l *indexLeaf) IterMinCmp(_ int, db *Database, cmp []Cmp, cb indexIterMinCB) (bool, error) {
+	// TODO?: binary search
+	for _, pl := range l.cells {
+		full, err := addOverflow(db, pl)
+		if err != nil {
+			return false, err
+		}
+		rec, err := parseRecord(full)
+		if err != nil {
+			return false, err
+		}
+
+		cmpRes := rec.cmp(cmp)
+		if cmpRes < 0 {
+			continue
+		}
+
+		if done, err := cb(rec); done || err != nil {
+			return done, err
+		}
+	}
+	return false, nil
+}
+
 func (l *indexLeaf) Count(*Database) (int, error) {
 	return len(l.cells), nil
 }
@@ -388,6 +421,46 @@ func (l *indexInterior) IterMin(r int, db *Database, min Record, cb indexIterMin
 		return false, err
 	}
 	return page.IterMin(r-1, db, min, cb)
+}
+
+func (l *indexInterior) IterMinCmp(r int, db *Database, cmp []Cmp, cb indexIterMinCB) (bool, error) {
+	if r == 0 {
+		return false, ErrRecursion
+	}
+	// TODO?: this could be done with a binary search
+	for _, c := range l.cells {
+		full, err := addOverflow(db, c.payload)
+		if err != nil {
+			return false, err
+		}
+		rec, err := parseRecord(full)
+		if err != nil {
+			return false, err
+		}
+
+		cmpRes := rec.cmp(cmp)
+		// on equal we still need to check left on non-unique indexes.
+		if cmpRes < 0 {
+			continue
+		}
+
+		page, err := db.openIndex(c.left)
+		if err != nil {
+			return false, err
+		}
+		if done, err := page.IterMinCmp(r-1, db, cmp, cb); done || err != nil {
+			return done, err
+		}
+
+		if done, err := cb(rec); done || err != nil {
+			return done, err
+		}
+	}
+	page, err := db.openIndex(l.rightmost)
+	if err != nil {
+		return false, err
+	}
+	return page.IterMinCmp(r-1, db, cmp, cb)
 }
 
 func (l *indexInterior) Count(db *Database) (int, error) {

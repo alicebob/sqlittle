@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/alicebob/sqlittle/sql"
+	"github.com/andreyvit/diff"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestLowEmpty(t *testing.T) {
@@ -132,5 +134,68 @@ func TestLowWithoutRowid2(t *testing.T) {
 	// note that this is not the column order
 	if have, want := found, (Record{"consequent", "allegory", "beagle", "duffers"}); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
+
+func TestLowScanCmp(t *testing.T) {
+	db, err := OpenFile("./../testdata/prefix.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_prefix")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var found []Record
+	if err := index.ScanCmp(
+		[]Cmp{CmpString("who")},
+		func(r Record) bool {
+			found = append(found, r)
+			return false
+		}); err != nil {
+		t.Fatal(err)
+	}
+	want := []Record{
+		Record{"who", int64(285)}, // whoop
+		Record{"who", int64(381)}, // whoa
+		Record{"who", int64(920)}, // whorls
+	}
+	if have, want := found, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
+}
+
+func TestLowScanCmpDesc(t *testing.T) {
+	db, err := OpenFile("./../testdata/prefix.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_prefix_desc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var found []Record
+	if err := index.ScanCmp(
+		[]Cmp{CmpDesc(CmpString("who"))},
+		func(r Record) bool {
+			found = append(found, r)
+			return false
+		}); err != nil {
+		t.Fatal(err)
+	}
+	// only the prefix is DESC; rowids are still ascending
+	want := []Record{
+		Record{"who", int64(285)}, // whoop
+		Record{"who", int64(381)}, // whoa
+		Record{"who", int64(920)}, // whorls
+	}
+	if have, want := found, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 	}
 }
