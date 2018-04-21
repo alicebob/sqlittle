@@ -1,4 +1,4 @@
-.PHONY: all test build
+.PHONY: all test build bench
 
 all: test build
 
@@ -7,3 +7,6 @@ test:
 
 build:
 	go build
+
+bench:
+	go test -bench .

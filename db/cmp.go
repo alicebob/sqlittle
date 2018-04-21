@@ -1,3 +1,6 @@
+// docs:
+// https://sqlite.org/datatype3.html chapter "4. Comparison Expressions"
+
 package db
 
 import (

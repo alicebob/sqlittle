@@ -1,13 +1,10 @@
 package db
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"math/rand"
-	"os"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -371,27 +368,6 @@ func TestIOTableRowidSingle(t *testing.T) {
 		if have, want := row, c.want; !reflect.DeepEqual(have, want) {
 			t.Errorf("have %#v, want %#v", have, want)
 		}
-	}
-}
-
-// wordList gives the contents of words.txt
-func wordList(t *testing.T) []string {
-	f, err := os.Open("./../testdata/words.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	var words []string
-	b := bufio.NewReader(f)
-	for {
-		w, err := b.ReadString('\n')
-		if err == io.EOF {
-			return words
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		words = append(words, strings.TrimRight(w, "\n"))
 	}
 }
 
