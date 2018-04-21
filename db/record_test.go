@@ -220,69 +220,6 @@ func TestRecord(t *testing.T) {
 	)
 }
 
-func TestColumnCompare(t *testing.T) {
-	test := func(a, b interface{}, want int, wantErr error) {
-		t.Helper()
-		o, err := columnCmp(a, b)
-		if have, want := err, wantErr; !reflect.DeepEqual(have, want) {
-			t.Fatalf("have %q, want %q", have, want)
-		}
-		if have, want := o, want; have != want {
-			t.Errorf("have %d, want %d", have, want)
-		}
-	}
-	// nil
-	test(nil, nil, 0, nil)
-
-	// int64
-	test(nil, int64(1), -1, nil)
-	test(int64(1), nil, 1, nil)
-	test(int64(42), int64(42), 0, nil)
-	test(int64(-42), int64(42), -1, nil)
-	test(int64(42), int64(-42), 1, nil)
-
-	// float64
-	test(nil, 3.14, -1, nil)
-	test(3.14, nil, 1, nil)
-	test(1.12, 3.14, -1, nil)
-	test(3.14, 3.14, 0, nil)
-	test(3.14, -3.14, 1, nil)
-
-	// float64 'n int
-	test(-int64(12), -3.14, -1, nil)
-	test(int64(3), 3.0, 0, nil)
-	test(int64(3), -3.14, 1, nil)
-
-	// strings
-	test(nil, "bar", -1, nil)
-	test("bar", nil, 1, nil)
-	test("foo", "bar", 1, nil)
-	test("foo", "foo", 0, nil)
-	test("bar", "foo", -1, nil)
-	test("foofoo", "foo", 1, nil)
-	test("foo", "foofoo", -1, nil)
-	test("foo", "Foo", 1, nil)
-
-	// bytes
-	test(nil, []byte("bar"), -1, nil)
-	test([]byte("bar"), nil, 1, nil)
-	test([]byte("foo"), []byte("bar"), 1, nil)
-	test([]byte("bar"), []byte("bar"), 0, nil)
-	test([]byte("bar"), []byte("foo"), -1, nil)
-
-	// combos
-	test(int64(42), "string", 0, errCmp)
-	test("string", int64(42), 0, errCmp)
-	test(int64(42), []byte("byte"), 0, errCmp)
-	test([]byte("byte"), int64(42), 0, errCmp)
-	test(3.14, "string", 0, errCmp)
-	test("string", 3.14, 0, errCmp)
-	test(3.14, []byte("byte"), 0, errCmp)
-	test([]byte("byte"), 3.14, 0, errCmp)
-	test([]byte("byte"), "string", 0, errCmp)
-	test("string", []byte("byte"), 0, errCmp)
-}
-
 func TestRecordCompare(t *testing.T) {
 	test := func(a, b Record, want int) {
 		t.Helper()
