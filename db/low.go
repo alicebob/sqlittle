@@ -147,15 +147,7 @@ func (in *Index) Scan(cb RecordCB) error {
 	_, err = root.Iter(
 		maxRecursion,
 		in.db,
-		func(pl cellPayload) (bool, error) {
-			full, err := addOverflow(in.db, pl)
-			if err != nil {
-				return false, err
-			}
-			rec, err := parseRecord(full)
-			if err != nil {
-				return false, err
-			}
+		func(rec Record) (bool, error) {
 			return cb(rec), nil
 		},
 	)
@@ -214,7 +206,7 @@ func (in *Index) ScanEq(key Record, cb RecordCB) error {
 //
 // For a non-rowid table this is a primary key lookup
 //
-// This uses binary searches, so be you'll have to compensate for DESC index
+// This uses binary searches, so you'll have to compensate for DESC index
 // columns.
 func (in *Index) ScanCmp(cmp []Cmp, cb RecordCB) error {
 	root, err := in.db.openIndex(in.root)

@@ -290,16 +290,8 @@ func TestIndexSingle(t *testing.T) {
 	if _, err := root.Iter(
 		maxRecursion,
 		db,
-		func(pl cellPayload) (bool, error) {
-			pf, err := addOverflow(db, pl)
-			if err != nil {
-				return false, err
-			}
-			irec, err := parseRecord(pf)
-			if err != nil {
-				return false, err
-			}
-			_, row, err := ChompRowid(irec)
+		func(rec Record) (bool, error) {
+			_, row, err := ChompRowid(rec)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
@@ -343,16 +335,8 @@ func TestIndexWords(t *testing.T) {
 	if _, err := root.Iter(
 		maxRecursion,
 		db,
-		func(pl cellPayload) (bool, error) {
-			pf, err := addOverflow(db, pl)
-			if err != nil {
-				return false, err
-			}
-			irec, err := parseRecord(pf)
-			if err != nil {
-				return false, err
-			}
-			_, row, err := ChompRowid(irec)
+		func(rec Record) (bool, error) {
+			_, row, err := ChompRowid(rec)
 			rows = append(rows, row)
 			return false, err
 		}); err != nil {
@@ -552,16 +536,8 @@ func TestScanNoRowid(t *testing.T) {
 		if _, err := root.Iter(
 			maxRecursion,
 			db,
-			func(pl cellPayload) (bool, error) {
-				pf, err := addOverflow(db, pl)
-				if err != nil {
-					return false, err
-				}
-				row, err := parseRecord(pf)
-				if err != nil {
-					return false, err
-				}
-				rows = append(rows, row)
+			func(rec Record) (bool, error) {
+				rows = append(rows, rec)
 				return false, err
 			}); err != nil {
 			t.Fatal(err)
