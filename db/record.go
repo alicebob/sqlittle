@@ -115,22 +115,6 @@ func parseRecord(r []byte) (Record, error) {
 	return res, nil
 }
 
-func (rec Record) cmp(cs []Cmp) int {
-	// TODO: check rec length
-	for i, c := range cs {
-		r := c(rec[i])
-		switch r {
-		case -1, 1:
-			return r
-		case 0:
-			// continue
-		default:
-			panic("invalid cmp value")
-		}
-	}
-	return 0
-}
-
 // Removes the rowid column from an index value (that's the last value from a
 // Record).
 // Returns: rowid, record, error
@@ -144,25 +128,4 @@ func ChompRowid(rec Record) (int64, Record, error) {
 	}
 	rec = rec[:len(rec)-1]
 	return rowid, rec, nil
-}
-
-// Compare two records, column by column, according to the 'Record Sort Order' docs.
-// Only the first min(length(a), length(b)) columns are compared.
-// Returns:
-//   - -1 if `a` is smaller than `b` (first non-equal column of `a` is smaller)
-//   - 0 if all columns from `a` match `b`
-//   - 1 if `a` is bigger than `b` (first non-equal column of `a` is bigger),
-// Note: strings are always compared with binary comparison; no collating
-// functions are used.
-// Will return an error on impossible column pair comparison.
-func cmp(a, b Record) (int, error) {
-	for i, ac := range a {
-		if len(b)-1 < i {
-			return 0, nil
-		}
-		if c := Compare(ac, b[i]); c != 0 {
-			return c, nil
-		}
-	}
-	return 0, nil
 }

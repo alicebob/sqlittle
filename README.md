@@ -51,7 +51,7 @@ Select a primary key:
         name, _ := r.ScanString()
         fmt.Printf("%s\n", name)
     }
-    db.PKSelect("tracks", Row{int64(4)}, cb, "name")
+    db.PKSelect("tracks", Key{int64(4)}, cb, "name")
 
 
 # docs

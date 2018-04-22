@@ -98,7 +98,7 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 //
 // `key` is compared against the index columns. It can have fewer columns than
 // the index.
-func (db *DB) IndexedSelectEq(table, index string, key Row, cb RowCB, columns ...string) error {
+func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
 	}
@@ -108,6 +108,8 @@ func (db *DB) IndexedSelectEq(table, index string, key Row, cb RowCB, columns ..
 	if err != nil {
 		return err
 	}
+
+	dbkey := asDbKey(key)
 
 	ind := s.NamedIndex(index)
 	if ind == nil {
@@ -115,21 +117,21 @@ func (db *DB) IndexedSelectEq(table, index string, key Row, cb RowCB, columns ..
 	}
 
 	if s.WithoutRowid {
-		return indexedSelectEqNonRowid(db.db, s, ind, key, cb, columns)
+		return indexedSelectEqNonRowid(db.db, s, ind, dbkey, cb, columns)
 	} else {
-		return indexedSelectEq(db.db, s, ind, key, cb, columns)
+		return indexedSelectEq(db.db, s, ind, dbkey, cb, columns)
 	}
 }
 
 // Select rows via a Primary Key lookup.
 //
 // `key` is compared against the columns
-// of the primary keu. It can have fewer columns than the
+// of the primary key. It can have fewer columns than the
 // primary key.
 //
 // PKSelect is especially efficient for non-rowid tables, and for rowid tables
 // which have a single 'integer primary key' column.
-func (db *DB) PKSelect(table string, key Row, cb RowCB, columns ...string) error {
+func (db *DB) PKSelect(table string, key Key, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
 	}
@@ -140,9 +142,11 @@ func (db *DB) PKSelect(table string, key Row, cb RowCB, columns ...string) error
 		return err
 	}
 
+	dbkey := asDbKey(key)
+
 	if s.WithoutRowid {
-		return pkSelectNonRowid(db.db, s, key, cb, columns)
+		return pkSelectNonRowid(db.db, s, dbkey, cb, columns)
 	} else {
-		return pkSelect(db.db, s, key, cb, columns)
+		return pkSelect(db.db, s, dbkey, cb, columns)
 	}
 }

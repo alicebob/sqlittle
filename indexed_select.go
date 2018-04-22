@@ -45,7 +45,7 @@ func indexedSelectEq(
 	db *sdb.Database,
 	schema *sdb.Schema,
 	index *sdb.SchemaIndex,
-	key Row,
+	key sdb.Key,
 	cb RowCB,
 	columns []string,
 ) error {
@@ -65,7 +65,7 @@ func indexedSelectEq(
 	}
 
 	return ind.ScanEq(
-		sdb.Record(key),
+		key,
 		func(r sdb.Record) bool {
 			rowid, _, err := sdb.ChompRowid(r)
 			if err != nil {
@@ -105,7 +105,7 @@ func indexedSelectNonRowid(
 
 	cols := pkColumns(schema, index)
 	return ind.Scan(func(r sdb.Record) bool {
-		pk := reRecord(r, cols)
+		pk := asKey(r, cols)
 
 		var found sdb.Record
 		err := tab.ScanEq(pk, func(row sdb.Record) bool { found = row; return true })
@@ -122,7 +122,7 @@ func indexedSelectEqNonRowid(
 	db *sdb.Database,
 	schema *sdb.Schema,
 	index *sdb.SchemaIndex,
-	key Row,
+	key sdb.Key,
 	cb RowCB,
 	columns []string,
 ) error {
@@ -143,9 +143,9 @@ func indexedSelectEqNonRowid(
 
 	cols := pkColumns(schema, index)
 	return ind.ScanEq(
-		sdb.Record(key),
+		key,
 		func(r sdb.Record) bool {
-			pk := reRecord(r, cols)
+			pk := asKey(r, cols)
 
 			var found sdb.Record
 			err := tab.ScanEq(pk, func(row sdb.Record) bool { found = row; return true })

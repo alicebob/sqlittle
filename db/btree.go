@@ -45,9 +45,7 @@ type indexBtree interface {
 	// Iter goes over every record
 	Iter(int, *Database, indexIterCB) (bool, error)
 	// Scan starting from an index value
-	IterMin(int, *Database, Record, indexIterCB) (bool, error)
-	// Scan starting from an index value
-	IterMinCmp(int, *Database, []Cmp, indexIterCB) (bool, error)
+	IterMin(int, *Database, Key, indexIterCB) (bool, error)
 	// Count counts the number of records. For debugging.
 	Count(*Database) (int, error)
 }
@@ -285,37 +283,10 @@ func (l *indexLeaf) Iter(_ int, db *Database, cb indexIterCB) (bool, error) {
 	return false, nil
 }
 
-func (l *indexLeaf) IterMin(_ int, db *Database, min Record, cb indexIterCB) (bool, error) {
-	for _, pl := range l.cells {
-		cmpRes, rec, err := lazyCmp(db, pl, min)
-		if err != nil {
-			return false, err
-		}
-		if cmpRes < 0 {
-			continue
-		}
-
-		if rec == nil {
-			full, err := addOverflow(db, pl)
-			if err != nil {
-				return false, err
-			}
-			if rec, err = parseRecord(full); err != nil {
-				return false, err
-			}
-		}
-
-		if done, err := cb(rec); done || err != nil {
-			return done, err
-		}
-	}
-	return false, nil
-}
-
-func (l *indexLeaf) IterMinCmp(_ int, db *Database, cmp []Cmp, cb indexIterCB) (bool, error) {
+func (l *indexLeaf) IterMin(_ int, db *Database, key Key, cb indexIterCB) (bool, error) {
 	var searchErr error
 	n := sort.Search(len(l.cells), func(n int) bool {
-		r, err := indexBinSearch(db, l.cells[n], cmp)
+		r, err := indexBinSearch(db, l.cells[n], key)
 		if err != nil {
 			searchErr = err
 		}
@@ -403,49 +374,7 @@ func (l *indexInterior) Iter(r int, db *Database, cb indexIterCB) (bool, error) 
 	return page.Iter(r-1, db, cb)
 }
 
-func (l *indexInterior) IterMin(r int, db *Database, min Record, cb indexIterCB) (bool, error) {
-	if r == 0 {
-		return false, ErrRecursion
-	}
-	for _, c := range l.cells {
-		cmpRes, rec, err := lazyCmp(db, c.payload, min)
-		if err != nil {
-			return false, err
-		}
-		// on equal we still need to check left on non-unique indexes.
-		if cmpRes < 0 {
-			continue
-		}
-
-		page, err := db.openIndex(c.left)
-		if err != nil {
-			return false, err
-		}
-		if done, err := page.IterMin(r-1, db, min, cb); done || err != nil {
-			return done, err
-		}
-
-		if rec == nil {
-			full, err := addOverflow(db, c.payload)
-			if err != nil {
-				return false, err
-			}
-			if rec, err = parseRecord(full); err != nil {
-				return false, err
-			}
-		}
-		if done, err := cb(rec); done || err != nil {
-			return done, err
-		}
-	}
-	page, err := db.openIndex(l.rightmost)
-	if err != nil {
-		return false, err
-	}
-	return page.IterMin(r-1, db, min, cb)
-}
-
-func (l *indexInterior) IterMinCmp(r int, db *Database, cmp []Cmp, cb indexIterCB) (bool, error) {
+func (l *indexInterior) IterMin(r int, db *Database, key Key, cb indexIterCB) (bool, error) {
 	if r == 0 {
 		return false, ErrRecursion
 	}
@@ -453,7 +382,7 @@ func (l *indexInterior) IterMinCmp(r int, db *Database, cmp []Cmp, cb indexIterC
 	// binary search the most likely page
 	var searchErr error
 	n := sort.Search(len(l.cells), func(n int) bool {
-		r, err := indexBinSearch(db, l.cells[n].payload, cmp)
+		r, err := indexBinSearch(db, l.cells[n].payload, key)
 		if err != nil {
 			searchErr = err
 		}
@@ -474,7 +403,7 @@ func (l *indexInterior) IterMinCmp(r int, db *Database, cmp []Cmp, cb indexIterC
 				return done, err
 			}
 		} else {
-			if done, err := page.IterMinCmp(r-1, db, cmp, cb); done || err != nil {
+			if done, err := page.IterMin(r-1, db, key, cb); done || err != nil {
 				return done, err
 			}
 		}
@@ -501,7 +430,7 @@ func (l *indexInterior) IterMinCmp(r int, db *Database, cmp []Cmp, cb indexIterC
 	if useIter {
 		return page.Iter(r-1, db, cb)
 	} else {
-		return page.IterMinCmp(r-1, db, cmp, cb)
+		return page.IterMin(r-1, db, key, cb)
 	}
 }
 
@@ -631,27 +560,7 @@ func parseCellpointers(
 	return cs, nil
 }
 
-// Given a (non-expanded) payload, runs cmp() against it.
-// The returned Record may be nil if the non-expanded payload was enough to
-// determine the result.
-// (that's TODO).
-func lazyCmp(db *Database, pl cellPayload, against Record) (int, Record, error) {
-	// The TODO idea is that this function doesn't load the overflow page if it
-	// can determine the outcome without loading the overflow.
-	full, err := addOverflow(db, pl)
-	if err != nil {
-		return 0, nil, err
-	}
-	irec, err := parseRecord(full)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	r, err := cmp(irec, against)
-	return r, irec, err
-}
-
-func indexBinSearch(db *Database, pl cellPayload, cmp []Cmp) (bool, error) {
+func indexBinSearch(db *Database, pl cellPayload, key Key) (bool, error) {
 	// It would be possible to not load the record by default but compare with
 	// what's available, and to only call addOverflow() when that data is
 	// needed.
@@ -664,5 +573,5 @@ func indexBinSearch(db *Database, pl cellPayload, cmp []Cmp) (bool, error) {
 		return true, err
 	}
 
-	return rec.cmp(cmp) >= 0, nil
+	return Compare(key, rec) <= 0, nil
 }

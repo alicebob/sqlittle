@@ -159,7 +159,7 @@ func (in *Index) Scan(cb RecordCB) error {
 // record don't match those in the index an error will be returned.
 // If the callback returns true (done) the scan will be stopped.
 // All comments from Index.Scan are valid here as well.
-func (in *Index) ScanMin(from Record, cb RecordCB) error {
+func (in *Index) ScanMin(from Key, cb RecordCB) error {
 	root, err := in.db.openIndex(in.root)
 	if err != nil {
 		return err
@@ -176,9 +176,13 @@ func (in *Index) ScanMin(from Record, cb RecordCB) error {
 	return err
 }
 
-// Find all records with the given key prefix. For a non-rowid table this is a
-// primary key lookup
-func (in *Index) ScanEq(key Record, cb RecordCB) error {
+// Find all records where cmp(row) == 0
+//
+// For a non-rowid table this is a primary key lookup
+//
+// This uses binary searches, so you'll have to compensate for DESC index
+// columns.
+func (in *Index) ScanEq(key Key, cb RecordCB) error {
 	root, err := in.db.openIndex(in.root)
 	if err != nil {
 		return err
@@ -189,37 +193,7 @@ func (in *Index) ScanEq(key Record, cb RecordCB) error {
 		in.db,
 		key,
 		func(rec Record) (bool, error) {
-			res, err := cmp(rec, key)
-			if err != nil {
-				return false, err
-			}
-			if res > 0 {
-				return true, nil
-			}
-			return cb(rec), nil
-		},
-	)
-	return err
-}
-
-// Find all records where cmp(row) == 0
-//
-// For a non-rowid table this is a primary key lookup
-//
-// This uses binary searches, so you'll have to compensate for DESC index
-// columns.
-func (in *Index) ScanCmp(cmp []Cmp, cb RecordCB) error {
-	root, err := in.db.openIndex(in.root)
-	if err != nil {
-		return err
-	}
-
-	_, err = root.IterMinCmp(
-		maxRecursion,
-		in.db,
-		cmp,
-		func(rec Record) (bool, error) {
-			if rec.cmp(cmp) > 0 {
+			if Compare(key, rec) < 0 {
 				return true, nil
 			}
 			return cb(rec), nil

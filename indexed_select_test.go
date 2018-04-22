@@ -88,7 +88,7 @@ func TestIndexedSelectEq(t *testing.T) {
 		w, _ := r.ScanString()
 		words = append(words, w)
 	}
-	if err := db.IndexedSelectEq("albums", "albums_name", Row{"Abbey Road"}, cb, "name"); err != nil {
+	if err := db.IndexedSelectEq("albums", "albums_name", Key{"Abbey Road"}, cb, "name"); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"Abbey Road"}
@@ -109,7 +109,7 @@ func TestIndexedSelectEqNonRowid(t *testing.T) {
 		w, _ := r.ScanString()
 		words = append(words, w)
 	}
-	if err := db.IndexedSelectEq("tracks", "tracks_length", Row{int64(121)}, cb, "name"); err != nil {
+	if err := db.IndexedSelectEq("tracks", "tracks_length", Key{int64(121)}, cb, "name"); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"Norwegian Wood"}

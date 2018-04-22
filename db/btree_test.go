@@ -354,7 +354,7 @@ func TestIndexWords(t *testing.T) {
 	}
 }
 
-func TestIndexScanMin(t *testing.T) {
+func TestIndexIterMin(t *testing.T) {
 	// scan a index
 	db, err := OpenFile("./../testdata/words.sqlite")
 	if err != nil {
@@ -375,10 +375,10 @@ func TestIndexScanMin(t *testing.T) {
 	if _, err := root.IterMin(
 		maxRecursion,
 		db,
-		Record{"improvise"},
+		Key{"improvise"},
 		func(r Record) (bool, error) {
 			rows = append(rows, r)
-			return false, err
+			return false, nil
 		}); err != nil {
 		t.Fatal(err)
 	}
@@ -393,7 +393,7 @@ func TestIndexScanMin(t *testing.T) {
 	}
 }
 
-func TestIndexScanMin2(t *testing.T) {
+func TestIndexIterMin2(t *testing.T) {
 	// scan a non-unique index
 	db, err := OpenFile("./../testdata/words.sqlite")
 	if err != nil {
@@ -415,89 +415,10 @@ func TestIndexScanMin2(t *testing.T) {
 	if _, err := root.IterMin(
 		maxRecursion,
 		db,
-		Record{int64(15)},
+		Key{int64(15)},
 		func(r Record) (bool, error) {
 			rows = append(rows, r)
-			return false, err
-		}); err != nil {
-		t.Fatal(err)
-	}
-	if have, want := len(rows), 20; have != want {
-		t.Fatalf("have:\n%#v\nwant:\n%#v", have, want)
-	}
-	if have, want := rows[0][1].(string), "commercializing"; have != want {
-		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
-	}
-	if have, want := rows[20-1][1].(string), "internationalism's"; have != want {
-		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
-	}
-}
-
-func TestIndexIterMinCmp(t *testing.T) {
-	// scan a index
-	db, err := OpenFile("./../testdata/words.sqlite")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	index, err := db.Index("words_index_1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, err := db.openIndex(index.root)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var rows []Record
-	if _, err := root.IterMinCmp(
-		maxRecursion,
-		db,
-		[]Cmp{CmpString("improvise")},
-		func(r Record) (bool, error) {
-			rows = append(rows, r)
-			return false, err
-		}); err != nil {
-		t.Fatal(err)
-	}
-	if have, want := len(rows), 460; have != want {
-		t.Fatalf("have:\n%#v\nwant:\n%#v", have, want)
-	}
-	if have, want := rows[0][0].(string), "improvise"; have != want {
-		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
-	}
-	if have, want := rows[460-1][0].(string), "yeshivahs"; have != want {
-		t.Errorf("have:\n%#v\nwant:\n%#v", have, want)
-	}
-}
-
-func TestIndexIterMinCmp2(t *testing.T) {
-	// scan a non-unique index
-	db, err := OpenFile("./../testdata/words.sqlite")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	index, err := db.Index("words_index_2") // index: length(word), word
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, err := db.openIndex(index.root)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Load all rows >= 15 chars
-	var rows []Record
-	if _, err := root.IterMinCmp(
-		maxRecursion,
-		db,
-		[]Cmp{CmpInt64(15)},
-		func(r Record) (bool, error) {
-			rows = append(rows, r)
-			return false, err
+			return false, nil
 		}); err != nil {
 		t.Fatal(err)
 	}
@@ -538,7 +459,7 @@ func TestScanNoRowid(t *testing.T) {
 			db,
 			func(rec Record) (bool, error) {
 				rows = append(rows, rec)
-				return false, err
+				return false, nil
 			}); err != nil {
 			t.Fatal(err)
 		}

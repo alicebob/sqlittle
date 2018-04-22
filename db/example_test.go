@@ -94,7 +94,7 @@ func ExampleTable_Rowid_nonrowid() {
 	if err != nil {
 		panic(err)
 	}
-	if err := table.ScanEq(Record{"awesomely"},
+	if err := table.ScanEq(Key{"awesomely"},
 		func(r Record) bool {
 			fmt.Printf("row: %v\n", r)
 			return false
@@ -157,7 +157,7 @@ func ExampleIndex_ScanMin() {
 		panic(err)
 	}
 	if err := index.ScanMin(
-		Record{"wombat"},
+		Key{"wombat"},
 		func(rec Record) bool {
 			word := rec[0].(string)
 			if word >= "y" {
@@ -192,7 +192,7 @@ func ExampleIndex_ScanEq() {
 		panic(err)
 	}
 	if err := index.ScanEq(
-		Record{"wombat"},
+		Key{"wombat"},
 		func(rec Record) bool {
 			fmt.Printf("%v\n", rec) // word, rowid
 			return false

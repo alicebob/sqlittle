@@ -177,9 +177,9 @@ func stringToInt64(s string) (int64, error) {
 	return int64(f), err
 }
 
-// make a new record from columns from the old record
-func reRecord(r sdb.Record, indexes []int) sdb.Record {
-	n := make(sdb.Record, len(indexes))
+// make a key from columns from the record
+func asKey(r sdb.Record, indexes []int) sdb.Key {
+	n := make(sdb.Key, len(indexes))
 	for i := range n {
 		n[i] = r[indexes[i]]
 	}

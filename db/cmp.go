@@ -8,14 +8,38 @@ import (
 	"strings"
 )
 
-// CmpPrefix can be used as a Cmp value
+// same logic as strings.Compare:
+// returns:
+//   -1 when k is smaller than r
+//   0 when all fields from k match r
+//   1 when k is bigger than r
+//
+// r shouldn't have fewer fields than k.
+func Compare(k Key, r Record) int {
+	for i, ak := range k {
+		if len(r)-1 < i {
+			return 1
+		}
+		if c := compare(ak, r[i]); c != 0 {
+			return c
+		}
+	}
+	return 0
+}
+
+// Key can be compared to a record. It supports DESC and collate related functions.
+// can be: nil, int64, float64, string, []byte, CmpPrefix, CollateRtrim
+type Key []interface{}
+
+// CmpPrefix can be used as a Key value to match a substring. Useful in a
+// IterEq call.
 func CmpPrefix(w string) func(string) int {
 	lw := len(w)
 	return func(s string) int {
 		if len(s) > lw {
 			s = s[:lw]
 		}
-		return Compare(w, s)
+		return compare(w, s)
 	}
 }
 
@@ -23,26 +47,24 @@ func CmpPrefix(w string) func(string) int {
 func CollateRtrim(w string) func(string) int {
 	tw := strings.TrimRight(w, " \t\n\r")
 	return func(s string) int {
-		return Compare(tw, strings.TrimRight(s, " \t\n\r"))
+		return compare(tw, strings.TrimRight(s, " \t\n\r"))
 	}
 }
 
 // NewCmpDesc reverses the comparison logic.
 func NewCmpDesc(a interface{}) func(interface{}) int {
 	return func(b interface{}) int {
-		return -Compare(a, b)
+		return -compare(a, b)
 	}
 }
 
-// nil, int64, float64, string, []byte
-
-// Compare record values, with ordering according to SQLite's type sort order:
+// compare record values, with ordering according to SQLite's type sort order:
 //    nil < {int64|float64} < string < []byte
 // Return value follows memcmp and strings.Compare:
 //    The result will be 0 if a==b, -1 if a < b, and +1 if a > b.
 //
 // In addition to the types mentioned, `a` may be a function on b.
-func Compare(a, b interface{}) int {
+func compare(a, b interface{}) int {
 	switch at := a.(type) {
 	case nil:
 		switch b.(type) {

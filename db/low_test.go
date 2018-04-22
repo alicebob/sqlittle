@@ -97,7 +97,7 @@ func TestLowScanEq(t *testing.T) {
 
 	var found Record
 	if err := table.ScanEq(
-		Record{"crankiest"},
+		Key{"crankiest"},
 		func(r Record) bool {
 			found = r
 			return false
@@ -123,7 +123,7 @@ func TestLowWithoutRowid2(t *testing.T) {
 
 	var found Record
 	if err := table.ScanEq(
-		Record{"consequent", "allegory"},
+		Key{"consequent", "allegory"},
 		func(r Record) bool {
 			found = r
 			return false
@@ -150,8 +150,8 @@ func TestLowScanCmp(t *testing.T) {
 	}
 
 	var found []Record
-	if err := index.ScanCmp(
-		[]Cmp{CmpString("who")},
+	if err := index.ScanEq(
+		Key{"who"},
 		func(r Record) bool {
 			found = append(found, r)
 			return false
@@ -181,8 +181,8 @@ func TestLowScanCmpDesc(t *testing.T) {
 	}
 
 	var found []Record
-	if err := index.ScanCmp(
-		[]Cmp{CmpDesc(CmpString("who"))},
+	if err := index.ScanEq(
+		Key{NewCmpDesc("who")},
 		func(r Record) bool {
 			found = append(found, r)
 			return false

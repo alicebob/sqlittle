@@ -56,12 +56,16 @@ func selectRowid(db *sdb.Database, s *sdb.Schema, rowid int64, columns []string)
 	return toRow(rowid, ci, r), nil
 }
 
-func pkSelect(db *sdb.Database, s *sdb.Schema, key Row, cb RowCB, columns []string) error {
+func pkSelect(db *sdb.Database, s *sdb.Schema, key sdb.Key, cb RowCB, columns []string) error {
 	if s.RowidPK {
 		// `integer primary key` table.
 		var rowid int64
-		if err := key.Scan(&rowid); err != nil {
-			return err
+		if len(key) == 0 {
+			return errors.New("invalid key")
+		}
+		rowid, ok := key[0].(int64)
+		if !ok {
+			return errors.New("invalid key")
 		}
 		row, err := selectRowid(db, s, rowid, columns)
 		if err != nil {
@@ -86,7 +90,7 @@ func pkSelect(db *sdb.Database, s *sdb.Schema, key Row, cb RowCB, columns []stri
 	)
 }
 
-func pkSelectNonRowid(db *sdb.Database, s *sdb.Schema, key Row, cb RowCB, columns []string) error {
+func pkSelectNonRowid(db *sdb.Database, s *sdb.Schema, key sdb.Key, cb RowCB, columns []string) error {
 	ci, err := toColumnIndexNonRowid(s, columns)
 	if err != nil {
 		return err
@@ -97,7 +101,7 @@ func pkSelectNonRowid(db *sdb.Database, s *sdb.Schema, key Row, cb RowCB, column
 	}
 
 	return t.ScanEq(
-		sdb.Record(key),
+		key,
 		func(r sdb.Record) bool {
 			cb(toRow(0, ci, r))
 			return false

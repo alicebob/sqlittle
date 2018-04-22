@@ -66,6 +66,32 @@ func ExampleDB_IndexedSelect() {
 	// Come Together: 259 seconds
 }
 
+func ExampleDB_IndexedSelectEq() {
+	db, err := Open("./testdata/music.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	db.IndexedSelectEq(
+		"tracks",
+		"tracks_length",
+		Key{int64(198)},
+		func(r Row) {
+			var (
+				name   string
+				length int
+			)
+			_ = r.Scan(&name, &length)
+			fmt.Printf("%s: %d seconds\n", name, length)
+		},
+		"name",
+		"length",
+	)
+	// output:
+	// You Wont See Me: 198 seconds
+}
+
 // SELECT a primary key
 func ExampleDB_PKSelect() {
 	db, err := Open("./testdata/music.sqlite")
@@ -76,7 +102,7 @@ func ExampleDB_PKSelect() {
 
 	db.PKSelect(
 		"tracks",
-		Row{int64(4)},
+		Key{int64(4)},
 		func(r Row) {
 			name, _ := r.ScanString()
 			fmt.Printf("%s\n", name)

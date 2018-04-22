@@ -5,10 +5,54 @@ import (
 )
 
 func TestCompare(t *testing.T) {
+	test := func(a Key, b Record, want int) {
+		t.Helper()
+		if have := Compare(a, b); have != want {
+			t.Errorf("have %d, want %d", have, want)
+		}
+	}
+	test(
+		Key{int64(1)},
+		Record{int64(42)},
+		-1,
+	)
+	test(
+		Key{int64(42)},
+		Record{int64(42)},
+		0,
+	)
+	test(
+		Key{int64(42)},
+		Record{int64(1)},
+		1,
+	)
+	test(
+		Key{int64(42)},
+		Record{int64(42), int64(43)},
+		0,
+	)
+	test(
+		Key{int64(42), int64(42)},
+		Record{int64(42), int64(43)},
+		-1,
+	)
+	test(
+		Key{int64(42), int64(44)},
+		Record{int64(42), int64(43)},
+		1,
+	)
+	test( // invalid, a shouldn't have more records than b
+		Key{int64(42), int64(43)},
+		Record{int64(42)},
+		1,
+	)
+}
+
+func Testcompare(t *testing.T) {
 	test := func(a interface{}, b interface{}, want int) {
 		t.Helper()
 
-		if have, want := Compare(a, b), want; have != want {
+		if have, want := compare(a, b), want; have != want {
 			t.Errorf("have %d, want %d", have, want)
 		}
 	}

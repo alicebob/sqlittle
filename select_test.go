@@ -208,7 +208,7 @@ func TestPKSelectNoPK(t *testing.T) {
 	}
 	defer db.Close()
 
-	if have, want := db.PKSelect("hello", Row{"foo"}, nil, "col"), errors.New(`table has no primary key`); !reflect.DeepEqual(have, want) {
+	if have, want := db.PKSelect("hello", Key{"foo"}, nil, "col"), errors.New(`table has no primary key`); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }
@@ -224,7 +224,7 @@ func TestPKSelect(t *testing.T) {
 	cb := func(r Row) {
 		rows = append(rows, r)
 	}
-	if err := db.PKSelect("words", Row{"twofer"}, cb, "word", "rowid"); err != nil {
+	if err := db.PKSelect("words", Key{"twofer"}, cb, "word", "rowid"); err != nil {
 		t.Fatal(err)
 	}
 	want := []Row{Row{"twofer", int64(832)}}
@@ -246,7 +246,7 @@ func TestPKSelectRowid(t *testing.T) {
 		w, _ := r.ScanString()
 		words = append(words, w)
 	}
-	if err := db.PKSelect("albums", Row{int64(2)}, cb, "name"); err != nil {
+	if err := db.PKSelect("albums", Key{int64(2)}, cb, "name"); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"Abbey Road"}
@@ -268,7 +268,7 @@ func TestPKSelectNonRowid(t *testing.T) {
 		w, _ := r.ScanString()
 		words = append(words, w)
 	}
-	if err := db.PKSelect("fuz", Row{"colder"}, cb, "d"); err != nil {
+	if err := db.PKSelect("fuz", Key{"colder"}, cb, "d"); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"destinies"}
