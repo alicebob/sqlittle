@@ -182,7 +182,7 @@ func TestLowScanCmpDesc(t *testing.T) {
 
 	var found []Record
 	if err := index.ScanEq(
-		Key{NewCmpDesc("who")},
+		Key{KeyDesc("who")},
 		func(r Record) bool {
 			found = append(found, r)
 			return false

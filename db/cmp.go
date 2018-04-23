@@ -51,8 +51,8 @@ func CollateRtrim(w string) func(string) int {
 	}
 }
 
-// NewCmpDesc reverses the comparison logic.
-func NewCmpDesc(a interface{}) func(interface{}) int {
+// KeyDesc reverses the comparison logic.
+func KeyDesc(a interface{}) func(interface{}) int {
 	return func(b interface{}) int {
 		return -compare(a, b)
 	}

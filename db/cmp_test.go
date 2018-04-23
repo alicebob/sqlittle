@@ -103,12 +103,12 @@ func Testcompare(t *testing.T) {
 	test(CmpPrefix("aap"), "zapzap", -1)
 	test(CmpPrefix("aap"), []byte("foo"), -1)
 
-	test(NewCmpDesc("aap"), "noot", 1)
-	test(NewCmpDesc("aap"), "aap", 0)
+	test(KeyDesc("aap"), "noot", 1)
+	test(KeyDesc("aap"), "aap", 0)
 
 	test(CollateRtrim("aap"), "noot  ", -1)
 	test(CollateRtrim("aap   "), "aap", 0)
 	test(CollateRtrim("aap"), "aap   ", 0)
 	test(CollateRtrim("aap"), "mies   ", -1)
-	test(NewCmpDesc(CollateRtrim("aap")), "noot  ", 1)
+	test(KeyDesc(CollateRtrim("aap")), "noot  ", 1)
 }

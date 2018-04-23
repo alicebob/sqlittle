@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	sdb "github.com/alicebob/sqlittle/db"
+	"github.com/alicebob/sqlittle/sql"
 )
 
 // Key is used to find a record.
@@ -13,40 +14,53 @@ import (
 // nil, int64, float64, string, []byte
 type Key []interface{}
 
-// TODO: deal with DESC columns, collate, and accept more basic datatypes.
 // asDbKey translates a Key to a db.Key. Applies DESC and collate, and changes
 // values to the few datatypes db.Key accepts.
-func asDbKey(k Key) (sdb.Key, error) {
+// TODO: deal collate
+func asDbKey(k Key, cols []sdb.IndexColumn) (sdb.Key, error) {
 	var dbk sdb.Key
-	for _, kv := range k {
+	for i, kv := range k {
+		if i > len(cols)-1 {
+			return nil, fmt.Errorf("too many columns in Key")
+		}
+		add := func(v interface{}) {
+			dbk = append(dbk, v)
+		}
+		c := cols[i]
+		if c.SortOrder == sql.Desc {
+			oldadd := add
+			add = func(v interface{}) {
+				oldadd(sdb.KeyDesc(v))
+			}
+		}
 		switch kv := kv.(type) {
 		case nil:
-			dbk = append(dbk, nil)
+			add(nil)
 		case int64:
-			dbk = append(dbk, kv)
+			add(kv)
 		case float64:
-			dbk = append(dbk, kv)
+			add(kv)
 		case string:
-			dbk = append(dbk, kv)
+			add(kv)
 		case []byte:
-			dbk = append(dbk, kv)
+			add(kv)
 
 		case int:
-			dbk = append(dbk, int64(kv))
+			add(int64(kv))
 		case uint:
-			dbk = append(dbk, int64(kv))
+			add(int64(kv))
 		case int32:
-			dbk = append(dbk, int64(kv))
+			add(int64(kv))
 		case uint32:
-			dbk = append(dbk, int64(kv))
+			add(int64(kv))
 		case float32:
-			dbk = append(dbk, float64(kv))
+			add(float64(kv))
 		case bool:
 			v := int64(0)
 			if kv {
 				v = 1
 			}
-			dbk = append(dbk, v)
+			add(v)
 
 		default:
 			return nil, fmt.Errorf("unknown Key datatype: %T", kv)

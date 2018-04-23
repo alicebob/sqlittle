@@ -109,14 +109,14 @@ func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ..
 		return err
 	}
 
-	dbkey, err := asDbKey(key)
-	if err != nil {
-		return err
-	}
-
 	ind := s.NamedIndex(index)
 	if ind == nil {
 		return fmt.Errorf("no such index: %q", index)
+	}
+
+	dbkey, err := asDbKey(key, ind.Columns)
+	if err != nil {
+		return err
 	}
 
 	if s.WithoutRowid {
@@ -128,9 +128,8 @@ func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ..
 
 // Select rows via a Primary Key lookup.
 //
-// `key` is compared against the columns
-// of the primary key. It can have fewer columns than the
-// primary key.
+// `key` is compared against the columns of the primary key. It can have fewer
+// columns than the primary key.
 //
 // PKSelect is especially efficient for non-rowid tables, and for rowid tables
 // which have a single 'integer primary key' column.
@@ -145,14 +144,9 @@ func (db *DB) PKSelect(table string, key Key, cb RowCB, columns ...string) error
 		return err
 	}
 
-	dbkey, err := asDbKey(key)
-	if err != nil {
-		return err
-	}
-
 	if s.WithoutRowid {
-		return pkSelectNonRowid(db.db, s, dbkey, cb, columns)
+		return pkSelectNonRowid(db.db, s, key, cb, columns)
 	} else {
-		return pkSelect(db.db, s, dbkey, cb, columns)
+		return pkSelect(db.db, s, key, cb, columns)
 	}
 }

@@ -56,7 +56,7 @@ func selectRowid(db *sdb.Database, s *sdb.Schema, rowid int64, columns []string)
 	return toRow(rowid, ci, r), nil
 }
 
-func pkSelect(db *sdb.Database, s *sdb.Schema, key sdb.Key, cb RowCB, columns []string) error {
+func pkSelect(db *sdb.Database, s *sdb.Schema, key Key, cb RowCB, columns []string) error {
 	if s.RowidPK {
 		// `integer primary key` table.
 		var rowid int64
@@ -80,17 +80,23 @@ func pkSelect(db *sdb.Database, s *sdb.Schema, key sdb.Key, cb RowCB, columns []
 	if ind == nil {
 		return errors.New("table has no primary key")
 	}
+
+	dbkey, err := asDbKey(key, ind.Columns)
+	if err != nil {
+		return err
+	}
+
 	return indexedSelectEq(
 		db,
 		s,
 		ind,
-		key,
+		dbkey,
 		cb,
 		columns,
 	)
 }
 
-func pkSelectNonRowid(db *sdb.Database, s *sdb.Schema, key sdb.Key, cb RowCB, columns []string) error {
+func pkSelectNonRowid(db *sdb.Database, s *sdb.Schema, key Key, cb RowCB, columns []string) error {
 	ci, err := toColumnIndexNonRowid(s, columns)
 	if err != nil {
 		return err
@@ -100,8 +106,13 @@ func pkSelectNonRowid(db *sdb.Database, s *sdb.Schema, key sdb.Key, cb RowCB, co
 		return err
 	}
 
+	dbkey, err := asDbKey(key, s.PK)
+	if err != nil {
+		return err
+	}
+
 	return t.ScanEq(
-		key,
+		dbkey,
 		func(r sdb.Record) bool {
 			cb(toRow(0, ci, r))
 			return false

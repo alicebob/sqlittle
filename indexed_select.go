@@ -4,6 +4,7 @@ import (
 	sdb "github.com/alicebob/sqlittle/db"
 )
 
+// index scan on a rowid table
 func indexedSelect(
 	db *sdb.Database,
 	schema *sdb.Schema,
@@ -41,6 +42,7 @@ func indexedSelect(
 	})
 }
 
+// index (==) search on a rowid table
 func indexedSelectEq(
 	db *sdb.Database,
 	schema *sdb.Schema,
@@ -81,6 +83,7 @@ func indexedSelectEq(
 		})
 }
 
+// index scan on a WITHOUT ROWID table
 func indexedSelectNonRowid(
 	db *sdb.Database,
 	schema *sdb.Schema,
@@ -118,6 +121,7 @@ func indexedSelectNonRowid(
 	})
 }
 
+// index (==) search on a WITHOUT ROWID table
 func indexedSelectEqNonRowid(
 	db *sdb.Database,
 	schema *sdb.Schema,

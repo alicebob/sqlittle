@@ -117,3 +117,31 @@ func TestIndexedSelectEqNonRowid(t *testing.T) {
 		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 	}
 }
+
+func TestIndexedSelectDesc(t *testing.T) {
+	// DESC column should be automatically detected
+	db, err := Open("testdata/prefix.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var words []string
+	cb := func(r Row) {
+		w, _ := r.ScanString()
+		words = append(words, w)
+	}
+	if err := db.IndexedSelectEq("words", "words_prefix_desc", Key{"thi"}, cb,
+		"word"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"thinking",
+		"thirteen",
+		"thickest",
+		"third's",
+	}
+	if have, want := words, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
+}
