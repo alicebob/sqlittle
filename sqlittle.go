@@ -109,7 +109,10 @@ func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ..
 		return err
 	}
 
-	dbkey := asDbKey(key)
+	dbkey, err := asDbKey(key)
+	if err != nil {
+		return err
+	}
 
 	ind := s.NamedIndex(index)
 	if ind == nil {
@@ -142,7 +145,10 @@ func (db *DB) PKSelect(table string, key Key, cb RowCB, columns ...string) error
 		return err
 	}
 
-	dbkey := asDbKey(key)
+	dbkey, err := asDbKey(key)
+	if err != nil {
+		return err
+	}
 
 	if s.WithoutRowid {
 		return pkSelectNonRowid(db.db, s, dbkey, cb, columns)
