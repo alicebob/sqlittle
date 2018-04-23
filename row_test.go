@@ -128,3 +128,17 @@ func TestScanBool(t *testing.T) {
 	fail("hi")
 	fail("0hi")
 }
+
+func TestScanStrings(t *testing.T) {
+	test := func(row Row, want []string) {
+		t.Helper()
+		s := row.ScanStrings()
+		if have, want := s, want; !reflect.DeepEqual(have, want) {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+
+	test(Row{}, []string{})
+	test(Row{"foo", "bar"}, []string{"foo", "bar"})
+	test(Row{"foo", "bar", int64(12)}, []string{"foo", "bar", "12"})
+}
