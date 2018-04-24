@@ -118,13 +118,13 @@ func (r Row) scanInt64(i int) (int64, error) {
 }
 
 // ScanString is a shortcut for row.Scan(&string)
-func (r Row) ScanString(args ...interface{}) (string, error) {
+func (r Row) ScanString() (string, error) {
 	var s1 string
 	return s1, r.Scan(&s1)
 }
 
 // ScanStringString is a shortcut for row.Scan(&string, &string)
-func (r Row) ScanStringString(args ...interface{}) (string, string, error) {
+func (r Row) ScanStringString() (string, string, error) {
 	var s1, s2 string
 	return s1, s2, r.Scan(&s1, &s2)
 }
@@ -132,7 +132,7 @@ func (r Row) ScanStringString(args ...interface{}) (string, string, error) {
 // ScanStrings is a shortcut to scan all columns as string
 //
 // Since everything can be converted to strings nothing can possibly go wrong.
-func (r Row) ScanStrings(args ...interface{}) []string {
+func (r Row) ScanStrings() []string {
 	s := make([]string, len(r))
 	for i := range s {
 		s[i] = r.scanString(i)
