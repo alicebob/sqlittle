@@ -3,11 +3,11 @@
 This document explains the layers of sqlittle.
 
 The code is split in three packages:
-db/ the low level routines which deal with files
-sql/ SQL parser for `CREATE TABLE` and `CREATE INDEX` statements
-/ the higher level routines to hide SQLite quirks.
+- `db/` the low level routines which deal with files
+- `sql/` SQL parser for `CREATE TABLE` and `CREATE INDEX` statements
+- `/` the higher level routines to hide SQLite quirks.
 
-This is mostly about the low level package.
+This document is mostly about the low level package.
 
 This is how the files work together, with the lowest level on the
 bottom:
@@ -66,9 +66,9 @@ flexible query code.
 
 ### high level
 
-/sqlittle.go gives methods which hide most SQLite details. It mostly calls code
-from /select.go and /indexed_select.go .
+`/sqlittle.go` gives methods which hide most SQLite details. It mostly calls code
+from `/select.go` and `/indexed_select.go`.
 
-/row.go has Scan() to deal with data conversions.
+`/row.go` has Scan() to deal with data conversions.
 
-/sqlite.go knows how columns are stored in indexes.
+`/sqlite.go` knows how columns are stored in indexes.
