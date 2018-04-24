@@ -32,7 +32,8 @@ func Compare(k Key, r Record) int {
 type Key []interface{}
 
 // CmpPrefix can be used as a Key value to match a substring. Useful in a
-// IterEq call.
+// IterEq call. It mostly serves as an example how to get creative with Cmp()
+// functions.
 func CmpPrefix(w string) func(string) int {
 	lw := len(w)
 	return func(s string) int {
@@ -161,40 +162,5 @@ func cmpFloat64(a, b float64) int {
 		return 0
 	default:
 		return 1
-	}
-}
-
-// Cmp returns:
-//  -1 if the given value is smaller than what we're looking for
-//  0 if the given value is what we're looking for
-//  1 is the given value is larger than what we're looking for
-type Cmp func(interface{}) int
-
-// CmpDesc reverses any Cmp function. For use in DESC indexes
-func CmpDesc(c Cmp) Cmp {
-	return func(r interface{}) int {
-		return -c(r)
-	}
-}
-
-func CmpString(s string) Cmp {
-	return func(r interface{}) int {
-		switch r := r.(type) {
-		case string:
-			return strings.Compare(r, s)
-		default:
-			panic("cmp string fixme!")
-		}
-	}
-}
-
-func CmpInt64(n int64) Cmp {
-	return func(r interface{}) int {
-		switch r := r.(type) {
-		case int64:
-			return cmpInt64(r, n) // TODO: fix cmpInt64!
-		default:
-			panic("cmp int64 fixme!")
-		}
 	}
 }
