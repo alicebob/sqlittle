@@ -1,9 +1,12 @@
-.PHONY: all test bench format fuzz
+.PHONY: all test ci bench format fuzz
 
 all: format test
 
 test:
 	go test ./...
+
+ci:
+	go test -tags ci ./...
 
 bench:
 	go test -bench . github.com/alicebob/sqlittle/db
