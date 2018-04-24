@@ -11,6 +11,8 @@ type DB struct {
 	db *sdb.Database
 }
 
+// Open a sqlite file. It can be concurrently written to by SQLite in other
+// processes.
 func Open(filename string) (*DB, error) {
 	db, err := sdb.OpenFile(filename)
 	if err != nil {
@@ -21,14 +23,19 @@ func Open(filename string) (*DB, error) {
 	}, nil
 }
 
+// Close the database file
 func (db *DB) Close() error {
 	return db.db.Close()
 }
 
+// RowCB is the callback called for every matching row in the various
+// select-like functions. Use `Scan()` on the `Row` argument to read row
+// values.
 type RowCB func(Row)
 
 // Select the columns from every row from the given table. Order is the rowid
-// order for rowid tables, and the ordered primary key for non-rowid tables.
+// order for rowid tables, and the ordered primary key for non-rowid tables
+// (`WITHOUT ROWID`).
 //
 // For rowid tables the special values "rowid", "oid", and "_rowid_" will load
 // the rowid (unless there is a column with that name).
@@ -51,7 +58,7 @@ func (db *DB) Select(table string, cb RowCB, columns ...string) error {
 }
 
 // Select by rowid. Returns a nil row if the rowid isn't found.
-// Returns an error on a 'WITHOUT ROWID' table.
+// Returns an error on a non-rowid table ('WITHOUT ROWID').
 func (db *DB) SelectRowid(table string, rowid int64, columns ...string) (Row, error) {
 	if err := db.db.RLock(); err != nil {
 		return nil, err
@@ -96,8 +103,8 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 // Select all rows matching key from the given table via the index. The order
 // will be the index order.
 //
-// `key` is compared against the index columns. It can have fewer columns than
-// the index.
+// `key` is compared against the index columns. `key` can have fewer columns than
+// the index, in which case only the given columns need to compare equal.
 func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
@@ -128,11 +135,12 @@ func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ..
 
 // Select rows via a Primary Key lookup.
 //
-// `key` is compared against the columns of the primary key. It can have fewer
-// columns than the primary key.
+// `key` is compared against the columns of the primary key. `key` can have fewer
+// columns than the primary key has, in which case only the given columns need
+// to compare equal.
 //
-// PKSelect is especially efficient for non-rowid tables, and for rowid tables
-// which have a single 'integer primary key' column.
+// PKSelect is especially efficient for non-rowid tables (`WITHOUT ROWID`), and
+// for rowid tables which have a single 'integer primary key' column.
 func (db *DB) PKSelect(table string, key Key, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
