@@ -32,6 +32,53 @@ func TestScanString(t *testing.T) {
 	test([]byte("hello"), "hello")
 }
 
+func TestScanBytes(t *testing.T) {
+	test := func(v interface{}, want []byte) {
+		t.Helper()
+		var n []byte
+		if err := (Row{v}).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := n, want; !reflect.DeepEqual(have, want) {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+
+	test(nil, []byte(nil))
+	test(int64(42), []byte("42"))
+	test(float64(3.14), []byte("3.14"))
+	test("world", []byte("world"))
+	test([]byte("hello"), []byte("hello"))
+}
+
+func TestScanFloat64(t *testing.T) {
+	test := func(v interface{}, want float64) {
+		t.Helper()
+		var f float64
+		if err := (Row{v}).Scan(&f); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := f, want; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+	fail := func(v interface{}) {
+		t.Helper()
+		var f float64
+		if have, want := (Row{v}).Scan(&f), fmt.Errorf("invalid number: %q", v); !reflect.DeepEqual(have, want) {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+	test(nil, 0)
+	test(int64(42), 42)
+	test(float64(3.14), 3.14)
+	test("-3.14", -3.14)
+	test([]byte("2.71828"), 2.71828)
+	fail("hi")
+	fail([]byte("bye"))
+	fail("123world")
+}
+
 func TestScanInt64(t *testing.T) {
 	test := func(v interface{}, want int64) {
 		t.Helper()

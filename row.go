@@ -16,11 +16,13 @@ type Row sdb.Record
 
 // Scan converts a row with database values to the Go values you want.
 // Supported Go types:
-//  - string
-//  - int64
-//  - int32
-//  - int
 //  - bool
+//  - float64
+//  - int
+//  - int32
+//  - int64
+//  - string
+//  - []byte
 //  - nil (skips the column)
 //
 // Conversions are usually stricter than in SQLite:
@@ -39,6 +41,8 @@ func (r Row) Scan(args ...interface{}) error {
 			// skip
 		case *string:
 			*vt = r.scanString(i)
+		case *[]byte:
+			*vt = r.scanBytes(i)
 		case *int64:
 			*vt, err = r.scanInt64(i)
 			if err != nil {
@@ -62,6 +66,12 @@ func (r Row) Scan(args ...interface{}) error {
 				return fmt.Errorf("invalid boolean: %q", r[i])
 			}
 			*vt = n != 0
+		case *float64:
+			n, err := r.scanFloat64(i)
+			if err != nil {
+				return err
+			}
+			*vt = n
 		default:
 			return fmt.Errorf("unsupported Scan() type: %T", v)
 		}
@@ -89,6 +99,26 @@ func (r Row) scanString(i int) string {
 	}
 }
 
+func (r Row) scanBytes(i int) []byte {
+	if len(r) <= i {
+		return nil // Or error?
+	}
+	switch rv := r[i].(type) {
+	case nil:
+		return nil
+	case int64:
+		return []byte(strconv.FormatInt(rv, 10))
+	case float64:
+		return []byte(strconv.FormatFloat(rv, 'g', -1, 64))
+	case string:
+		return []byte(rv)
+	case []byte:
+		return rv
+	default:
+		panic("impossible")
+	}
+}
+
 func (r Row) scanInt64(i int) (int64, error) {
 	if len(r) <= i {
 		return 0, nil // Or error?
@@ -108,6 +138,34 @@ func (r Row) scanInt64(i int) (int64, error) {
 		return vt, nil
 	case []byte:
 		vt, err := stringToInt64(string(rv))
+		if err != nil {
+			return 0, fmt.Errorf("invalid number: %q", rv)
+		}
+		return vt, nil
+	default:
+		panic("impossible")
+	}
+}
+
+func (r Row) scanFloat64(i int) (float64, error) {
+	if len(r) <= i {
+		return 0, nil // Or error?
+	}
+	switch rv := r[i].(type) {
+	case nil:
+		return 0, nil
+	case int64:
+		return float64(rv), nil
+	case float64:
+		return rv, nil
+	case string:
+		vt, err := strconv.ParseFloat(rv, 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid number: %q", rv)
+		}
+		return vt, nil
+	case []byte:
+		vt, err := strconv.ParseFloat(string(rv), 64)
 		if err != nil {
 			return 0, fmt.Errorf("invalid number: %q", rv)
 		}
