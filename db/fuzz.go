@@ -60,7 +60,7 @@ func fuzz(data []byte) error {
 		}
 
 		if err := index.ScanMin(
-			Key{"q"},
+			Key{KeyCol{V: "q"}},
 			func(rec Record) bool {
 				return false
 			},

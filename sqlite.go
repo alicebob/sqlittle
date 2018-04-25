@@ -52,8 +52,8 @@ func toColumnIndexRowid(s *sdb.Schema, columns []string) ([]columIndex, error) {
 }
 
 // given column names returns the index of this column in a row in the index (and
-// the column definition). For database order of the columns depends on the
-// primary key.
+// the column definition). For non-rowid tables the database order of the
+// columns depends on the primary key.
 func toColumnIndexNonRowid(s *sdb.Schema, columns []string) ([]columIndex, error) {
 	stored := columnStoreOrder(s) // column indexes in disk order
 	res := make([]columIndex, 0, len(columns))
@@ -65,25 +65,6 @@ func toColumnIndexNonRowid(s *sdb.Schema, columns []string) ([]columIndex, error
 		res = append(res, columIndex{&s.Columns[n], stored[n], false})
 	}
 	return res, nil
-}
-
-// for non-rowid tables only:
-// given an index gives back the indexes in a row which form the primary key.
-func pkColumns(schema *sdb.Schema, ind *sdb.SchemaIndex) []int {
-	if !schema.WithoutRowid {
-		panic("can't call pkColumns on a rowid table")
-	}
-
-	var res []int
-	for _, c := range schema.PK {
-		if in := ind.Column(c.Column); in < 0 {
-			ind.Columns = append(ind.Columns, c)
-			res = append(res, len(ind.Columns)-1)
-		} else {
-			res = append(res, in)
-		}
-	}
-	return res
 }
 
 // given a non-rowid table, gives the order columns are stored on disk
@@ -117,6 +98,25 @@ loop2:
 				res[i] = j
 				continue loop2
 			}
+		}
+	}
+	return res
+}
+
+// for non-rowid tables only:
+// given an index gives back the indexes in a row which form the primary key.
+func pkColumns(schema *sdb.Schema, ind *sdb.SchemaIndex) []int {
+	if !schema.WithoutRowid {
+		panic("can't call pkColumns on a rowid table")
+	}
+
+	var res []int
+	for _, c := range schema.PK {
+		if in := ind.Column(c.Column); in < 0 {
+			ind.Columns = append(ind.Columns, c)
+			res = append(res, len(ind.Columns)-1)
+		} else {
+			res = append(res, in)
 		}
 	}
 	return res

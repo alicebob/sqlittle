@@ -83,7 +83,7 @@ func TestLowDefs(t *testing.T) {
 	}
 }
 
-func TestLowScanEq(t *testing.T) {
+func TestLowScanEqNonrowid(t *testing.T) {
 	db, err := OpenFile("./../testdata/withoutrowid.sqlite")
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +97,7 @@ func TestLowScanEq(t *testing.T) {
 
 	var found Record
 	if err := table.ScanEq(
-		Key{"crankiest"},
+		Key{KeyCol{V: "crankiest"}},
 		func(r Record) bool {
 			found = r
 			return false
@@ -123,7 +123,7 @@ func TestLowWithoutRowid2(t *testing.T) {
 
 	var found Record
 	if err := table.ScanEq(
-		Key{"consequent", "allegory"},
+		Key{KeyCol{V: "consequent"}, KeyCol{V: "allegory"}},
 		func(r Record) bool {
 			found = r
 			return false
@@ -137,7 +137,7 @@ func TestLowWithoutRowid2(t *testing.T) {
 	}
 }
 
-func TestLowScanCmp(t *testing.T) {
+func TestLowScanEq2(t *testing.T) {
 	db, err := OpenFile("./../testdata/prefix.sqlite")
 	if err != nil {
 		t.Fatal(err)
@@ -151,7 +151,7 @@ func TestLowScanCmp(t *testing.T) {
 
 	var found []Record
 	if err := index.ScanEq(
-		Key{"who"},
+		Key{KeyCol{V: "who"}},
 		func(r Record) bool {
 			found = append(found, r)
 			return false
@@ -168,7 +168,7 @@ func TestLowScanCmp(t *testing.T) {
 	}
 }
 
-func TestLowScanCmpDesc(t *testing.T) {
+func TestLowScanEqDesc(t *testing.T) {
 	db, err := OpenFile("./../testdata/prefix.sqlite")
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +182,7 @@ func TestLowScanCmpDesc(t *testing.T) {
 
 	var found []Record
 	if err := index.ScanEq(
-		Key{KeyDesc("who")},
+		Key{KeyCol{V: "who", Desc: true}},
 		func(r Record) bool {
 			found = append(found, r)
 			return false
@@ -194,6 +194,83 @@ func TestLowScanCmpDesc(t *testing.T) {
 		Record{"who", int64(285)}, // whoop
 		Record{"who", int64(381)}, // whoa
 		Record{"who", int64(920)}, // whorls
+	}
+	if have, want := found, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
+}
+
+func TestLowScanRange(t *testing.T) {
+	db, err := OpenFile("./../testdata/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var found []Record
+	if err := index.ScanRange(
+		Key{KeyCol{V: "tradition"}},
+		Key{KeyCol{V: "twofer"}},
+		func(r Record) bool {
+			found = append(found, r)
+			return false
+		}); err != nil {
+		t.Fatal(err)
+	}
+	want := []Record{
+		Record{"tradition", int64(50)},
+		Record{"training", int64(258)},
+		Record{"tranquiler", int64(384)},
+		Record{"transfigures", int64(927)},
+		Record{"tremulously", int64(389)},
+		Record{"tribalism", int64(105)},
+		Record{"trigger's", int64(962)},
+		Record{"triteness", int64(738)},
+		Record{"trustee's", int64(819)},
+		Record{"trustworthiness", int64(731)},
+		Record{"twiddled", int64(211)},
+		Record{"twirls", int64(547)},
+		// doesn't match "twofer"
+	}
+	if have, want := found, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
+}
+
+func TestLowScanRangeDesc(t *testing.T) {
+	db, err := OpenFile("./../testdata/prefix.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_prefix_desc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var found []Record
+	if err := index.ScanRange(
+		Key{KeyCol{V: "blu", Desc: true}},
+		Key{KeyCol{V: "bla", Desc: true}},
+		func(r Record) bool {
+			found = append(found, r)
+			return false
+		}); err != nil {
+		t.Fatal(err)
+	}
+	want := []Record{
+		Record{"blu", int64(524)}, // blurb's
+		Record{"blo", int64(183)},
+		Record{"blo", int64(563)},
+		Record{"bli", int64(608)},
+		Record{"bli", int64(821)},
+		Record{"ble", int64(69)}, // bleeps
 	}
 	if have, want := found, want; !reflect.DeepEqual(have, want) {
 		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))

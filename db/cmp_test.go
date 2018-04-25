@@ -4,47 +4,84 @@ import (
 	"testing"
 )
 
-func TestCompare(t *testing.T) {
-	test := func(a Key, b Record, want int) {
+func TestSearch(t *testing.T) {
+	test := func(a Key, b Record, equals bool, search bool) {
 		t.Helper()
-		if have := Compare(a, b); have != want {
-			t.Errorf("have %d, want %d", have, want)
+		if have, want := Equals(a, b), equals; have != want {
+			t.Errorf("equals: have %t, want %t", have, want)
+		}
+
+		if have, want := Search(a, b), search; have != want {
+			t.Errorf("search; have %t, want %t", have, want)
 		}
 	}
 	test(
-		Key{int64(1)},
+		Key{{V: int64(1)}},
 		Record{int64(42)},
-		-1,
+		false,
+		true,
 	)
 	test(
-		Key{int64(42)},
+		Key{{V: int64(42)}},
 		Record{int64(42)},
-		0,
+		true,
+		true,
 	)
 	test(
-		Key{int64(42)},
-		Record{int64(1)},
-		1,
+		Key{{V: int64(82)}},
+		Record{int64(42)},
+		false,
+		false,
 	)
 	test(
-		Key{int64(42)},
-		Record{int64(42), int64(43)},
-		0,
+		Key{{V: int64(82)}},
+		Record{int64(82), int64(14)},
+		true,
+		true,
 	)
 	test(
-		Key{int64(42), int64(42)},
-		Record{int64(42), int64(43)},
-		-1,
+		Key{{V: int64(82)}, {V: int64(22)}},
+		Record{int64(82), int64(14)},
+		false,
+		false,
 	)
 	test(
-		Key{int64(42), int64(44)},
-		Record{int64(42), int64(43)},
-		1,
+		Key{{V: int64(82)}, {V: int64(14)}},
+		Record{int64(82), int64(14)},
+		true,
+		true,
 	)
+	test(
+		Key{{V: int64(82)}, {V: int64(12)}},
+		Record{int64(82), int64(14)},
+		false,
+		true,
+	)
+
+	test(
+		Key{{V: int64(82)}, {V: int64(12), Desc: true}},
+		Record{int64(82), int64(14)},
+		false,
+		false,
+	)
+	test(
+		Key{{V: int64(82)}, {V: int64(12), Desc: true}},
+		Record{int64(82), int64(12)},
+		true,
+		true,
+	)
+	test(
+		Key{{V: int64(82)}, {V: int64(14), Desc: true}},
+		Record{int64(82), int64(12)},
+		false,
+		true,
+	)
+
 	test( // invalid, a shouldn't have more records than b
-		Key{int64(42), int64(43)},
-		Record{int64(42)},
-		1,
+		Key{{V: int64(82)}, {V: int64(14)}},
+		Record{int64(82)},
+		false,
+		false,
 	)
 }
 
@@ -96,19 +133,10 @@ func Testcompare(t *testing.T) {
 	test([]byte("aap"), []byte("aap"), 0)
 	test([]byte("aap"), []byte("ap"), -1)
 
-	test(CmpPrefix("aap"), nil, 1)
-	test(CmpPrefix("aap"), "aaaal", 1)
-	test(CmpPrefix("aap"), "aap", 0)
-	test(CmpPrefix("aap"), "aapnootmies", 0)
-	test(CmpPrefix("aap"), "zapzap", -1)
-	test(CmpPrefix("aap"), []byte("foo"), -1)
-
-	test(KeyDesc("aap"), "noot", 1)
-	test(KeyDesc("aap"), "aap", 0)
-
-	test(CollateRtrim("aap"), "noot  ", -1)
-	test(CollateRtrim("aap   "), "aap", 0)
-	test(CollateRtrim("aap"), "aap   ", 0)
-	test(CollateRtrim("aap"), "mies   ", -1)
-	test(KeyDesc(CollateRtrim("aap")), "noot  ", 1)
+	/*
+		test(CollateRtrim("aap"), "noot  ", -1)
+		test(CollateRtrim("aap   "), "aap", 0)
+		test(CollateRtrim("aap"), "aap   ", 0)
+		test(CollateRtrim("aap"), "mies   ", -1)
+	*/
 }

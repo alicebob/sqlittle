@@ -94,7 +94,8 @@ func ExampleTable_Rowid_nonrowid() {
 	if err != nil {
 		panic(err)
 	}
-	if err := table.ScanEq(Key{"awesomely"},
+	if err := table.ScanEq(
+		Key{KeyCol{V: "awesomely"}},
 		func(r Record) bool {
 			fmt.Printf("row: %v\n", r)
 			return false
@@ -157,7 +158,7 @@ func ExampleIndex_ScanMin() {
 		panic(err)
 	}
 	if err := index.ScanMin(
-		Key{"wombat"},
+		Key{KeyCol{V: "wombat"}},
 		func(rec Record) bool {
 			word := rec[0].(string)
 			if word >= "y" {
@@ -179,8 +180,8 @@ func ExampleIndex_ScanMin() {
 	// wusses
 }
 
-func ExampleIndex_ScanEq() {
-	// Find records mathing a key.
+func ExampleIndex_ScanRange() {
+	// Find records matching a range
 	db, err := OpenFile("../testdata/words.sqlite")
 	if err != nil {
 		panic(err)
@@ -191,8 +192,41 @@ func ExampleIndex_ScanEq() {
 	if err != nil {
 		panic(err)
 	}
+	// scan from wombat inclusive to wusses exclusive
+	if err := index.ScanRange(
+		Key{KeyCol{V: "wombat"}},
+		Key{KeyCol{V: "wusses"}},
+		func(rec Record) bool {
+			fmt.Printf("%v\n", rec) // word, rowid
+			return false
+		},
+	); err != nil {
+		panic(err)
+	}
+	// output:
+	// [wombat 159]
+	// [workbook 975]
+	// [world's 114]
+	// [worsens 770]
+	// [wristwatch's 491]
+	// [writhing 343]
+}
+
+func ExampleIndex_ScanEq() {
+	// Find records matching a key.
+	db, err := OpenFile("../testdata/words.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	index, err := db.Index("words_index_1")
+	if err != nil {
+		panic(err)
+	}
+	// match only wombat
 	if err := index.ScanEq(
-		Key{"wombat"},
+		Key{KeyCol{V: "wombat"}},
 		func(rec Record) bool {
 			fmt.Printf("%v\n", rec) // word, rowid
 			return false

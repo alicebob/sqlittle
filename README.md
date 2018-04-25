@@ -106,7 +106,7 @@ TODOs:
   `sqlite_autoindex_...` indexes
 - optimize loading when all requested columns are available in the index
 - expose the locking so you can do bigger read transactions
-- IndexedSelectRange()
+- Scan time values
 
 # &c.
 

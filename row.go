@@ -205,12 +205,3 @@ func stringToInt64(s string) (int64, error) {
 	f, err := strconv.ParseFloat(s, 64)
 	return int64(f), err
 }
-
-// make a key from columns from the record
-func asKey(r sdb.Record, indexes []int) sdb.Key {
-	n := make(sdb.Key, len(indexes))
-	for i := range n {
-		n[i] = r[indexes[i]]
-	}
-	return n
-}

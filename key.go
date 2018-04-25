@@ -16,51 +16,43 @@ type Key []interface{}
 
 // asDbKey translates a Key to a db.Key. Applies DESC and collate, and changes
 // values to the few datatypes db.Key accepts.
-// TODO: deal collate
+// TODO: deal with collate
 func asDbKey(k Key, cols []sdb.IndexColumn) (sdb.Key, error) {
-	var dbk sdb.Key
+	dbk := make(sdb.Key, len(k))
 	for i, kv := range k {
 		if i > len(cols)-1 {
 			return nil, fmt.Errorf("too many columns in Key")
 		}
-		add := func(v interface{}) {
-			dbk = append(dbk, v)
-		}
 		c := cols[i]
-		if c.SortOrder == sql.Desc {
-			oldadd := add
-			add = func(v interface{}) {
-				oldadd(sdb.KeyDesc(v))
-			}
-		}
+		dbk[i].Desc = c.SortOrder == sql.Desc
 		switch kv := kv.(type) {
 		case nil:
-			add(nil)
+			dbk[i].V = nil
 		case int64:
-			add(kv)
+			dbk[i].V = kv
 		case float64:
-			add(kv)
+			dbk[i].V = kv
 		case string:
-			add(kv)
+			dbk[i].V = kv
 		case []byte:
-			add(kv)
+			dbk[i].V = kv
 
 		case int:
-			add(int64(kv))
+			dbk[i].V = int64(kv)
 		case uint:
-			add(int64(kv))
+			dbk[i].V = int64(kv)
 		case int32:
-			add(int64(kv))
+			dbk[i].V = int64(kv)
 		case uint32:
-			add(int64(kv))
+			dbk[i].V = int64(kv)
 		case float32:
-			add(float64(kv))
+			dbk[i].V = float64(kv)
 		case bool:
 			v := int64(0)
 			if kv {
 				v = 1
 			}
-			add(v)
+			dbk[i].V = v
 
 		default:
 			return nil, fmt.Errorf("unknown Key datatype: %T", kv)

@@ -32,7 +32,7 @@ type iterCB func(rowid int64, pl cellPayload) (bool, error)
 type tableBtree interface {
 	// Iter goes over every record
 	Iter(int, *Database, iterCB) (bool, error)
-	// Scan starting from a key
+	// Scan starting from a rowid
 	IterMin(int, *Database, int64, iterCB) (bool, error)
 	// Count counts the number of records. For debugging.
 	Count(*Database) (int, error)
@@ -41,10 +41,11 @@ type tableBtree interface {
 // indexIterCB gets the Record. It returns true when the iter should be
 // stopped.
 type indexIterCB func(row Record) (bool, error)
+
 type indexBtree interface {
 	// Iter goes over every record
 	Iter(int, *Database, indexIterCB) (bool, error)
-	// Scan starting from an index value
+	// Scan starting from a key
 	IterMin(int, *Database, Key, indexIterCB) (bool, error)
 	// Count counts the number of records. For debugging.
 	Count(*Database) (int, error)
@@ -379,7 +380,7 @@ func (l *indexInterior) IterMin(r int, db *Database, key Key, cb indexIterCB) (b
 		return false, ErrRecursion
 	}
 
-	// binary search the most likely page
+	// binary search the page containing the range of the key
 	var searchErr error
 	n := sort.Search(len(l.cells), func(n int) bool {
 		r, err := indexBinSearch(db, l.cells[n].payload, key)
@@ -573,5 +574,5 @@ func indexBinSearch(db *Database, pl cellPayload, key Key) (bool, error) {
 		return true, err
 	}
 
-	return Compare(key, rec) <= 0, nil
+	return Search(key, rec), nil
 }

@@ -375,7 +375,7 @@ func TestIndexIterMin(t *testing.T) {
 	if _, err := root.IterMin(
 		maxRecursion,
 		db,
-		Key{"improvise"},
+		Key{KeyCol{V: "improvise"}},
 		func(r Record) (bool, error) {
 			rows = append(rows, r)
 			return false, nil
@@ -415,7 +415,7 @@ func TestIndexIterMin2(t *testing.T) {
 	if _, err := root.IterMin(
 		maxRecursion,
 		db,
-		Key{int64(15)},
+		Key{KeyCol{V: int64(15)}},
 		func(r Record) (bool, error) {
 			rows = append(rows, r)
 			return false, nil

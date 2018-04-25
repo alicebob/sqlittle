@@ -34,7 +34,7 @@ func indexedSelect(
 		}
 		row, err := tab.Rowid(rowid)
 		if err != nil || row == nil {
-			// should never be nil
+			// row should never be nil
 			return false
 		}
 		cb(toRow(rowid, ci, row))
@@ -75,7 +75,7 @@ func indexedSelectEq(
 			}
 			row, err := tab.Rowid(rowid)
 			if err != nil || row == nil {
-				// should never be nil
+				// row should never be nil
 				return false
 			}
 			cb(toRow(rowid, ci, row))
@@ -107,13 +107,23 @@ func indexedSelectNonRowid(
 	}
 
 	cols := pkColumns(schema, index)
+	// make an empty key with the correct definition which we update in the
+	// callback
+	pk, err := asDbKey(make(Key, len(schema.PK)), schema.PK)
+	if err != nil {
+		return err
+	}
+
 	return ind.Scan(func(r sdb.Record) bool {
-		pk := asKey(r, cols)
+		setKey(r, cols, pk)
 
 		var found sdb.Record
-		err := tab.ScanEq(pk, func(row sdb.Record) bool { found = row; return true })
+		err := tab.ScanEq(pk, func(row sdb.Record) bool {
+			found = row
+			return true
+		})
 		if err != nil || found == nil {
-			// should never be nil
+			// found should never be nil
 			return false
 		}
 		cb(toRow(0, ci, found))
@@ -146,19 +156,34 @@ func indexedSelectEqNonRowid(
 	}
 
 	cols := pkColumns(schema, index)
+	// make an empty key with the correct definition which we update in the
+	// callback
+	pk, err := asDbKey(make(Key, len(schema.PK)), schema.PK)
+	if err != nil {
+		return err
+	}
+
 	return ind.ScanEq(
 		key,
 		func(r sdb.Record) bool {
-			pk := asKey(r, cols)
+			setKey(r, cols, pk)
 
 			var found sdb.Record
 			err := tab.ScanEq(pk, func(row sdb.Record) bool { found = row; return true })
 			if err != nil || found == nil {
-				// should never be nil
+				// found should never be nil
 				return false
 			}
 			cb(toRow(0, ci, found))
 			return false
 		},
 	)
+}
+
+// make a key from columns from the record
+// updates key
+func setKey(r sdb.Record, indexes []int, key sdb.Key) {
+	for i, v := range indexes {
+		key[i].V = r[v]
+	}
 }

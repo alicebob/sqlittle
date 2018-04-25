@@ -154,9 +154,30 @@ func (in *Index) Scan(cb RecordCB) error {
 	return err
 }
 
+// Scan all record matching key
+func (in *Index) ScanEq(key Key, cb RecordCB) error {
+	root, err := in.db.openIndex(in.root)
+	if err != nil {
+		return err
+	}
+
+	_, err = root.IterMin(
+		maxRecursion,
+		in.db,
+		key,
+		func(rec Record) (bool, error) {
+			if !Equals(key, rec) {
+				return true, nil
+			}
+			return cb(rec), nil
+		},
+	)
+	return err
+}
+
 // ScanMin calls cb() for every row in the index, starting from the first
-// record equal or bigger than the given record. If the type of columns in the given
-// record don't match those in the index an error will be returned.
+// record where key is true.
+//
 // If the callback returns true (done) the scan will be stopped.
 // All comments from Index.Scan are valid here as well.
 func (in *Index) ScanMin(from Key, cb RecordCB) error {
@@ -176,13 +197,11 @@ func (in *Index) ScanMin(from Key, cb RecordCB) error {
 	return err
 }
 
-// Find all records where cmp(row) == 0
+// Find all records where from(index) is true, and to(index) is false.
 //
-// For a non-rowid table this is a primary key lookup
+// You'll have to compensate for DESC columns.
 //
-// This uses binary searches, so you'll have to compensate for DESC index
-// columns.
-func (in *Index) ScanEq(key Key, cb RecordCB) error {
+func (in *Index) ScanRange(from, to Key, cb RecordCB) error {
 	root, err := in.db.openIndex(in.root)
 	if err != nil {
 		return err
@@ -191,9 +210,9 @@ func (in *Index) ScanEq(key Key, cb RecordCB) error {
 	_, err = root.IterMin(
 		maxRecursion,
 		in.db,
-		key,
+		from,
 		func(rec Record) (bool, error) {
-			if Compare(key, rec) < 0 {
+			if Search(to, rec) {
 				return true, nil
 			}
 			return cb(rec), nil

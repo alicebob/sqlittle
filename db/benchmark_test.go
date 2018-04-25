@@ -51,7 +51,7 @@ func Benchmark_RandomIndex(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for _, w := range words {
 			index.ScanEq(
-				Key{w},
+				Key{KeyCol{V: w}},
 				func(r Record) bool {
 					if have, want := r[0].(string), w; have != want {
 						b.Errorf("have %v, want %v", have, want)

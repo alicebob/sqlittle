@@ -79,6 +79,7 @@ func execute(
 	file string,
 	sql string,
 ) [][]string {
+	t.Helper()
 	r, err := sqlite(file, sql)
 	if err != nil {
 		t.Fatal(err)
