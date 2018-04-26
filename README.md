@@ -72,6 +72,7 @@ See [CODE.md](CODE.md) for an overview how the code is structured.
 - detects corrupt journal files
 - hides all SQLite low level storage details
 - DESC indexes are handled automatically
+- Scan() to most Go datatypes, including `time.Time`
 
 
 # constraints
@@ -106,7 +107,6 @@ TODOs:
   `sqlite_autoindex_...` indexes
 - optimize loading when all requested columns are available in the index
 - expose the locking so you can do bigger read transactions
-- Scan time values
 
 # &c.
 

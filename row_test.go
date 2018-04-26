@@ -1,9 +1,11 @@
 package sqlittle
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestScanNil(t *testing.T) {
@@ -174,6 +176,32 @@ func TestScanBool(t *testing.T) {
 	test([]byte("0.0"), false)
 	fail("hi")
 	fail("0hi")
+}
+
+func TestScanTime(t *testing.T) {
+	test := func(v interface{}, want time.Time) {
+		t.Helper()
+		var tim time.Time
+		if err := (Row{v}).Scan(&tim); err != nil {
+			t.Fatal(err)
+		}
+		if have, want := tim, want; !have.Equal(want) {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+	fail := func(v interface{}, err error) {
+		t.Helper()
+		var tim time.Time
+		if have, want := (Row{v}).Scan(&tim), err; !reflect.DeepEqual(have, want) {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+	test(nil, time.Time{})
+	test(int64(42), time.Unix(42, 0))
+	test("1999-02-22 23:45:34.333", time.Date(1999, 2, 22, 23, 45, 34, 333000000, time.UTC))
+	fail([]byte("aaa"), errors.New("BLOB timestamps are invalid"))
+	fail("aaa", errors.New(`invalid time: "aaa"`))
+	fail(float64(3.14), errors.New("float timestamps not supported")) // TODO
 }
 
 func TestScanStrings(t *testing.T) {

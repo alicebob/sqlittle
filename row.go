@@ -1,8 +1,10 @@
 package sqlittle
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	sdb "github.com/alicebob/sqlittle/db"
 )
@@ -23,6 +25,7 @@ type Row sdb.Record
 //  - int64
 //  - string
 //  - []byte
+//  - time.Time
 //  - nil (skips the column)
 //
 // Conversions are usually stricter than in SQLite:
@@ -72,6 +75,12 @@ func (r Row) Scan(args ...interface{}) error {
 				return err
 			}
 			*vt = n
+		case *time.Time:
+			t, err := r.scanTime(i)
+			if err != nil {
+				return err
+			}
+			*vt = t
 		default:
 			return fmt.Errorf("unsupported Scan() type: %T", v)
 		}
@@ -170,6 +179,33 @@ func (r Row) scanFloat64(i int) (float64, error) {
 			return 0, fmt.Errorf("invalid number: %q", rv)
 		}
 		return vt, nil
+	default:
+		panic("impossible")
+	}
+}
+
+func (r Row) scanTime(i int) (time.Time, error) {
+	if len(r) <= i {
+		return time.Time{}, nil // Or error?
+	}
+	switch rv := r[i].(type) {
+	case nil:
+		return time.Time{}, nil
+	case int64:
+		return time.Unix(rv, 0), nil
+	case float64:
+		// Should be:
+		// "the number of days since noon in Greenwich on November 24, 4714
+		// B.C. according to the proleptic Gregorian calendar"
+		return time.Time{}, errors.New("float timestamps not supported")
+	case string:
+		t, err := time.Parse("2006-01-02 15:04:05.000", rv)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid time: %q", rv)
+		}
+		return t, nil
+	case []byte:
+		return time.Time{}, errors.New("BLOB timestamps are invalid")
 	default:
 		panic("impossible")
 	}
