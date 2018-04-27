@@ -199,6 +199,10 @@ func (r Row) scanTime(i int) (time.Time, error) {
 		// B.C. according to the proleptic Gregorian calendar"
 		return time.Time{}, errors.New("float timestamps not supported")
 	case string:
+		// docs specify with milliseconds, but my sqlite3 doesn't add those
+		if t, err := time.Parse("2006-01-02 15:04:05", rv); err == nil {
+			return t, nil
+		}
 		t, err := time.Parse("2006-01-02 15:04:05.000", rv)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("invalid time: %q", rv)
