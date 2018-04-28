@@ -83,13 +83,26 @@ func TestSearch(t *testing.T) {
 		false,
 		false,
 	)
+
+	test(
+		Key{{V: "foo  ", Collate: "rtrim"}},
+		Record{"foo"},
+		true,
+		true,
+	)
+	test(
+		Key{{V: "fOo", Collate: "nocase"}},
+		Record{"foO"},
+		true,
+		true,
+	)
 }
 
 func Testcompare(t *testing.T) {
 	test := func(a interface{}, b interface{}, want int) {
 		t.Helper()
 
-		if have, want := compare(a, b), want; have != want {
+		if have, want := compare(a, b, CollateFuncs[""]), want; have != want {
 			t.Errorf("have %d, want %d", have, want)
 		}
 	}

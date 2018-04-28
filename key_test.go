@@ -43,6 +43,9 @@ func TestKeys(t *testing.T) {
 	test(Key{true}, cols, sdb.Key{sdb.KeyCol{V: int64(1)}}, nil)
 	test(Key{false}, cols, sdb.Key{sdb.KeyCol{V: int64(0)}}, nil)
 
+	test(Key{1}, []sdb.IndexColumn{{Column: "test", Collate: "RtrIM"}}, sdb.Key{sdb.KeyCol{V: int64(1), Collate: "rtrim"}}, nil)
+	test(Key{1}, []sdb.IndexColumn{{Column: "test", Collate: "nosuch"}}, nil, errors.New(`unknown collate function: "nosuch"`))
+
 	twoCols := []sdb.IndexColumn{{Column: "test"}, {Column: "test2", SortOrder: sql.Desc}}
 	test(
 		Key{int64(1), "foo"},

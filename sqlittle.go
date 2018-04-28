@@ -85,7 +85,7 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 
 	s, err := db.db.Schema(table)
 	if err != nil {
-		return err
+		return fmt.Errorf("schema err: %s", err)
 	}
 
 	ind := s.NamedIndex(index)
@@ -113,7 +113,7 @@ func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ..
 
 	s, err := db.db.Schema(table)
 	if err != nil {
-		return err
+		return fmt.Errorf("schema err: %s", err)
 	}
 
 	ind := s.NamedIndex(index)

@@ -2,6 +2,7 @@ package sqlittle
 
 import (
 	"fmt"
+	"strings"
 
 	sdb "github.com/alicebob/sqlittle/db"
 	"github.com/alicebob/sqlittle/sql"
@@ -16,7 +17,6 @@ type Key []interface{}
 
 // asDbKey translates a Key to a db.Key. Applies DESC and collate, and changes
 // values to the few datatypes db.Key accepts.
-// TODO: deal with collate
 func asDbKey(k Key, cols []sdb.IndexColumn) (sdb.Key, error) {
 	dbk := make(sdb.Key, len(k))
 	for i, kv := range k {
@@ -25,6 +25,12 @@ func asDbKey(k Key, cols []sdb.IndexColumn) (sdb.Key, error) {
 		}
 		c := cols[i]
 		dbk[i].Desc = c.SortOrder == sql.Desc
+		if collate := strings.ToLower(c.Collate); collate != "" {
+			if _, ok := sdb.CollateFuncs[collate]; !ok {
+				return nil, fmt.Errorf("unknown collate function: %q", collate)
+			}
+			dbk[i].Collate = collate
+		}
 		switch kv := kv.(type) {
 		case nil:
 			dbk[i].V = nil

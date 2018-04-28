@@ -8,12 +8,38 @@ import (
 	"strings"
 )
 
+type collate func(string, string) int
+
+// available collate functions
+var CollateFuncs = map[string]func(string, string) int{
+	"":       strings.Compare,
+	"binary": strings.Compare,
+	"rtrim": func(a, b string) int {
+		return strings.Compare(
+			strings.TrimRight(a, " \t\r\n"),
+			strings.TrimRight(b, " \t\r\n"),
+		)
+	},
+	"nocase": func(a, b string) int {
+		lc := func(r rune) rune {
+			if r >= 'A' && r <= 'Z' {
+				return rune(strings.ToLower(string(r))[0])
+			}
+			return r
+		}
+		return strings.Compare(
+			strings.Map(lc, a),
+			strings.Map(lc, b),
+		)
+	},
+}
+
 type Key []KeyCol
 
 type KeyCol struct {
-	V interface{}
-	// Cmp  func(a, b interface{}) int
-	Desc bool
+	V       interface{}
+	Collate string // either empty or points to a valid Collate key
+	Desc    bool
 }
 
 func Equals(key Key, r Record) bool {
@@ -21,8 +47,7 @@ func Equals(key Key, r Record) bool {
 		if len(r)-1 < i {
 			return false
 		}
-		// if k.Cmp(k.V, r[i]) != 0 {
-		if compare(k.V, r[i]) != 0 {
+		if compare(k.V, r[i], CollateFuncs[k.Collate]) != 0 {
 			return false
 		}
 	}
@@ -35,8 +60,7 @@ func Search(key Key, r Record) bool {
 		if len(r)-1 < i {
 			return false
 		}
-		// cmp := k.Cmp(k.V, r[i])
-		cmp := compare(k.V, r[i])
+		cmp := compare(k.V, r[i], CollateFuncs[k.Collate])
 		if k.Desc {
 			switch {
 			case cmp > 0:
@@ -66,7 +90,7 @@ func Search(key Key, r Record) bool {
 //   -1 when a is smaller than b
 //   0 when all fields from a match b
 //   1 when a is bigger than b
-func compare(a, b interface{}) int {
+func compare(a, b interface{}, c collate) int {
 	switch at := a.(type) {
 	case nil:
 		switch b.(type) {
@@ -108,7 +132,7 @@ func compare(a, b interface{}) int {
 		case nil, int64, float64:
 			return 1
 		case string:
-			return strings.Compare(at, bt)
+			return c(at, bt)
 		case []byte:
 			return -1
 		default:
