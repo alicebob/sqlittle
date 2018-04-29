@@ -352,3 +352,28 @@ func TestSchemaUnique2(t *testing.T) {
 		nil,
 	)
 }
+
+func TestSchemaCollate(t *testing.T) {
+	// collate on a column ends up on the index
+	testSchema(
+		t,
+		"foo9",
+		[]sqliteMaster{
+			{"table", "foo9", "foo9", 42, `CREATE TABLE foo9 (a collate rtrim)`},
+			{"index", "fooi2", "foo9", 42, `CREATE INDEX fooi2 ON foo9 (a)`},
+		},
+		&Schema{
+			Table: "foo9",
+			Columns: []TableColumn{
+				{Column: "a", Null: true, Collate: "rtrim"},
+			},
+			Indexes: []SchemaIndex{
+				{
+					Index:   "fooi2",
+					Columns: []IndexColumn{{Column: "a", Collate: "rtrim"}},
+				},
+			},
+		},
+		nil,
+	)
+}

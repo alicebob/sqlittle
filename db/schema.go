@@ -32,7 +32,6 @@ type TableColumn struct {
 	Default interface{}
 	Collate string
 	Rowid   bool
-	// todo: Affinity string // based on Type
 }
 
 type SchemaIndex struct {
@@ -168,20 +167,17 @@ constraint:
 				for _, co := range c.IndexedColumns {
 					st.column(co.Column).Null = false
 				}
-				st.setPK(toIndexColumns(c.IndexedColumns))
+				st.setPK(st.toIndexColumns(c.IndexedColumns))
 				autoindex++
 				continue
 			}
 			name := fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex)
-			if st.addIndex(true, name, toIndexColumns(c.IndexedColumns)) {
+			if st.addIndex(true, name, st.toIndexColumns(c.IndexedColumns)) {
 				autoindex++
 			}
 		case sql.TableUnique:
-			if st.addIndex(
-				false,
-				fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex),
-				toIndexColumns(c.IndexedColumns),
-			) {
+			name := fmt.Sprintf("sqlite_autoindex_%s_%d", st.Table, autoindex)
+			if st.addIndex(false, name, st.toIndexColumns(c.IndexedColumns)) {
 				autoindex++
 			}
 		}
@@ -195,16 +191,26 @@ constraint:
 func (st *Schema) addCreateIndex(ci sql.CreateIndexStmt) {
 	st.Indexes = append(st.Indexes, SchemaIndex{
 		Index:   ci.Index,
-		Columns: toIndexColumns(ci.IndexedColumns),
+		Columns: st.toIndexColumns(ci.IndexedColumns),
 	})
 }
 
-func toIndexColumns(ci []sql.IndexedColumn) []IndexColumn {
+// change sql index columns to schema index column. Looks up defaults from the
+// column definitions
+func (st *Schema) toIndexColumns(ci []sql.IndexedColumn) []IndexColumn {
 	var cs []IndexColumn
 	for _, col := range ci {
+		base := st.column(col.Column)
+		if base == nil {
+			base = &TableColumn{} // shouldn't happen
+		}
+		collate := base.Collate
+		if col.Collate != "" {
+			collate = col.Collate
+		}
 		cs = append(cs, IndexColumn{
 			Column:    col.Column,
-			Collate:   col.Collate,
+			Collate:   collate,
 			SortOrder: col.SortOrder,
 		})
 	}
@@ -250,9 +256,9 @@ func (st *Schema) setPK(cols []IndexColumn) {
 
 // Returns the index of the named column, or -1.
 func (st *Schema) Column(name string) int {
-	u := strings.ToUpper(name)
+	u := strings.ToLower(name)
 	for i, col := range st.Columns {
-		if strings.ToUpper(col.Column) == u {
+		if strings.ToLower(col.Column) == u {
 			return i
 		}
 	}

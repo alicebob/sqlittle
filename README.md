@@ -64,14 +64,15 @@ See [CODE.md](CODE.md) for an overview how the code is structured.
 
 # features
 
-- table scan in row order, or table scan in index order, simple searches with
+- table scan in row order; table scan in index order; simple searches with
   use of (partial) indexes
-- works on both rowid and non-rowid tables
+- works on both rowid and non-rowid (`WITHOUT ROWID`) tables
 - files can be used concurrently with sqlite (compatible locks)
 - behaves nicely on corrupted database files (no panics)
 - detects corrupt journal files
 - hides all SQLite low level storage details
 - DESC indexes are handled automatically
+- Collate functions are used automatically
 - Scan() to most Go datatypes, including `time.Time`
 
 
@@ -79,10 +80,9 @@ See [CODE.md](CODE.md) for an overview how the code is structured.
 
 - read-only
 - only supports UTF8 strings
-- only supports binary string comparisons
 - no joins
 - WAL files are not supported
-- indexes are used for sorting; no on-the-fly sorting
+- indexes are used for sorting, but there is no on-the-fly sorting
 - indexes with expression (either in columns or as a `WHERE`) are not supported
 
 
@@ -100,7 +100,6 @@ with reading single tables; don't even try joins or SQL or query planning), but
 the API might still change.
 
 TODOs:
-- deal with collate functions
 - the table and index definitions SQL parser is not finished enough
 - add some more databases found in the wild to sqlittle-ci
 - add a helper to find indexes. That would be especially useful for the

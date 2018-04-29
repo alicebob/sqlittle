@@ -10,9 +10,10 @@ import (
 
 type collate func(string, string) int
 
+var DefaultCollate = "binary"
+
 // available collate functions
 var CollateFuncs = map[string]func(string, string) int{
-	"":       strings.Compare,
 	"binary": strings.Compare,
 	"rtrim": func(a, b string) int {
 		return strings.Compare(
@@ -38,7 +39,7 @@ type Key []KeyCol
 
 type KeyCol struct {
 	V       interface{}
-	Collate string // either empty or points to a valid Collate key
+	Collate string // either empty or names a valid CollateFuncs key
 	Desc    bool
 }
 
@@ -47,7 +48,11 @@ func Equals(key Key, r Record) bool {
 		if len(r)-1 < i {
 			return false
 		}
-		if compare(k.V, r[i], CollateFuncs[k.Collate]) != 0 {
+		coll := DefaultCollate
+		if k.Collate != "" {
+			coll = k.Collate
+		}
+		if compare(k.V, r[i], CollateFuncs[coll]) != 0 {
 			return false
 		}
 	}
@@ -60,7 +65,11 @@ func Search(key Key, r Record) bool {
 		if len(r)-1 < i {
 			return false
 		}
-		cmp := compare(k.V, r[i], CollateFuncs[k.Collate])
+		coll := DefaultCollate
+		if k.Collate != "" {
+			coll = k.Collate
+		}
+		cmp := compare(k.V, r[i], CollateFuncs[coll])
 		if k.Desc {
 			switch {
 			case cmp > 0:

@@ -19,7 +19,7 @@ INSERT INTO col values ('ondt på mig   ');
 INSERT INTO col values ('OnDT på MIG');
 CREATE INDEX col_a_nocase ON col (a collate rtrim);
 `,
-		`SELECT rowid, a FROM col ORDER BY a collate 'rtrim'`,
+		`SELECT rowid, a FROM col ORDER BY a collate rtrim`,
 		func(t *testing.T, db *sqlittle.DB) [][]string {
 			var rows [][]string
 			cb := func(r sqlittle.Row) {
@@ -34,6 +34,7 @@ CREATE INDEX col_a_nocase ON col (a collate rtrim);
 }
 
 func TestCollateEq(t *testing.T) {
+	// IndexedSelectEq needs to use the collate from the index
 	Compare(
 		t,
 		`
@@ -43,7 +44,7 @@ INSERT INTO col values ('ondt på mig   ');
 INSERT INTO col values ('OnDT på MIG');
 CREATE INDEX col_a_nocase ON col (a collate rtrim);
 `,
-		`SELECT rowid, a FROM col where a='ondt på mig' collate 'rtrim'`,
+		`SELECT rowid, a FROM col where a='ondt på mig' collate rtrim`,
 		func(t *testing.T, db *sqlittle.DB) [][]string {
 			var rows [][]string
 			cb := func(r sqlittle.Row) {
@@ -58,7 +59,6 @@ CREATE INDEX col_a_nocase ON col (a collate rtrim);
 }
 
 func TestCollateIndexedEqCol(t *testing.T) {
-	t.Skip("broken")
 	// collate on a column should end up on the index
 	Compare(
 		t,
@@ -76,6 +76,31 @@ CREATE INDEX col_a_nocase ON col (a);
 				rows = append(rows, r.ScanStrings())
 			}
 			if err := db.IndexedSelectEq("col", "col_a_nocase", sqlittle.Key{"ondt på mig"}, cb, "rowid", "a"); err != nil {
+				t.Fatal(err)
+			}
+			return rows
+		},
+	)
+}
+
+func TestCollateIndexedEqCol2(t *testing.T) {
+	// index overrides the collate from the column
+	Compare(
+		t,
+		`
+CREATE TABLE col (a text collate rtrim);
+INSERT INTO col values ('Ondt på mig');
+INSERT INTO col values ('ondt på mig   ');
+INSERT INTO col values ('OnDT på MIG');
+CREATE INDEX col_a_nocase ON col (a collate binary);
+`,
+		`SELECT rowid, a FROM col ORDER BY a collate binary`,
+		func(t *testing.T, db *sqlittle.DB) [][]string {
+			var rows [][]string
+			cb := func(r sqlittle.Row) {
+				rows = append(rows, r.ScanStrings())
+			}
+			if err := db.IndexedSelect("col", "col_a_nocase", cb, "rowid", "a"); err != nil {
 				t.Fatal(err)
 			}
 			return rows
