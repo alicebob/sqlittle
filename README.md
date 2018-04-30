@@ -1,9 +1,9 @@
-Pure Go SQLite3 file reader
+Package SQLittle provides pure Go, read-only, access to SQLite (version 3) database
+files.
 
-# what
-
-SQLittle can read SQLite3 tables and indexes. It can iterate over tables, and
-can search efficiently using indexes.  SQLittle will deal with all SQLite
+## What
+SQLittle reads SQLite3 tables and indexes. It iterates over tables, and
+can search efficiently using indexes. SQLittle will deal with all SQLite
 storage quirks, but otherwise it doesn't try to be smart; if you want to use
 an index you have to give the name of the index.
 
@@ -12,60 +12,22 @@ possible you'll have to use the low level code.
 
 Based on https://sqlite.org/fileformat2.html and some SQLite source code reading.
 
-
-# why
-
+## Why
 This whole thing is mostly for fun. The normal SQLite libraries are perfectly great, and
 there is no real need for this. However, since this library is pure Go
 cross-compilation is much easier. Given the constraints a valid use-case would
 for example be storing app configuration in read-only sqlite files.
 
-# example
-
-simple SELECT over the whole table:
-
-    db, _ := Open("./testdata/music.sqlite")
-    defer db.Close()
-
-    cb := func(r Row) {
-        var (
-            name   string
-            length int
-        )
-        _ = r.Scan(&name, &length)
-        fmt.Printf("%s: %d seconds\n", name, length)
-    }
-    // iterate in rowid order:
-    db.Select("tracks", cb, "name", "length")
-
-    // iterate by length, using an index
-    db.IndexedSelect("tracks", "tracks_length", cb, "name, "length")
-
-
-Select a primary key:
-
-    db, _ := Open("./testdata/music.sqlite")
-    defer db.Close()
-
-    cb := func(r Row) {
-        name, _ := r.ScanString()
-        fmt.Printf("%s\n", name)
-    }
-    db.PKSelect("tracks", Key{int64(4)}, cb, "name")
-
-
-# docs
-
+## Docs
 https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 
 See [LOWLEVEL.md](LOWLEVEL.md) about the low level reader.
 See [CODE.md](CODE.md) for an overview how the code is structured.
 
+Features
 
-# features
-
-- table scan in row order; table scan in index order; simple searches with
-  use of (partial) indexes
+```
+- table scan in row order; table scan in index order; simple searches with use of (partial) indexes
 - works on both rowid and non-rowid (`WITHOUT ROWID`) tables
 - files can be used concurrently with sqlite (compatible locks)
 - behaves nicely on corrupted database files (no panics)
@@ -74,43 +36,108 @@ See [CODE.md](CODE.md) for an overview how the code is structured.
 - DESC indexes are handled automatically
 - Collate functions are used automatically
 - Scan() to most Go datatypes, including `time.Time`
+```
 
+Constraints
 
-# constraints
-
+```
 - read-only
 - only supports UTF8 strings
 - no joins
 - WAL files are not supported
 - indexes are used for sorting, but there is no on-the-fly sorting
 - indexes with expression (either in columns or as a `WHERE`) are not supported
+```
 
-
-# locks
-
+## Locks
 SQLittle has a read-lock on the file during the whole execution of the
 select-like functions. It's safe to update the database using SQLite while the
 file is opened in SQLittle.
 
-
-# status
-
+## Status
 The current level of abstraction is likely the final one (that is: deal
 with reading single tables; don't even try joins or SQL or query planning), but
 the API might still change.
 
-TODOs:
+Todos
+
+```
 - the table and index definitions SQL parser is not finished enough
-- add some more databases found in the wild to sqlittle-ci
-- add a helper to find indexes. That would be especially useful for the
-  `sqlite_autoindex_...` indexes
+- add a helper to find indexes. That would be especially useful for the `sqlite_autoindex_...` indexes
 - optimize loading when all requested columns are available in the index
 - expose the locking so you can do bigger read transactions
+```
+
+
+
+# Examples
+
+## Basic SELECT
+Code:
+
+```
+{
+	db, err := sqlittle.Open("./testdata/music.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	db.Select("tracks", func(r sqlittle.Row) {
+		var (
+			name   string
+			length int
+		)
+		_ = r.Scan(&name, &length)
+		fmt.Printf("%s: %d seconds\n", name, length)
+	}, "name", "length")
+}
+```
+Output:
+
+```
+Drive My Car: 145 seconds
+Norwegian Wood: 121 seconds
+You Wont See Me: 198 seconds
+Come Together: 259 seconds
+Something: 182 seconds
+Maxwells Silver Hammer: 207 seconds
+
+```
+
+
+
+## SELECT by primary key
+Code:
+
+```
+{
+	db, err := sqlittle.Open("./testdata/music.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	db.PKSelect("tracks", sqlittle.Key{4}, func(r sqlittle.Row) {
+		name, _ := r.ScanString()
+		fmt.Printf("%s\n", name)
+	}, "name")
+}
+```
+Output:
+
+```
+Come Together
+
+```
+
+
 
 # &c.
 
-[Travis](https://travis-ci.org/alicebob/sqlittle)
+[![GoDoc](https://godoc.org/github.com/alicebob/sqlittle?status.svg)](https://godoc.org/github.com/alicebob/sqlittle)
+[![Build Status](https://travis-ci.org/alicebob/sqlittle.png?branch=master)](https://travis-ci.org/alicebob/sqlittle)
 
 `make fuzz` uses [go-fuzz](https://github.com/dvyukov/go-fuzz)
 
-https://github.com/cznic/sqlite2go/ for another approach to pure Go SQLite
+The README is generated with [autoreadme](https://github.com/jimmyfrasche/autoreadme)
+
+See [sqlite2go](https://github.com/cznic/sqlite2go/) for another approach to pure Go SQLite

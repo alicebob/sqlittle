@@ -1,4 +1,4 @@
-.PHONY: all test ci bench format fuzz
+.PHONY: all test ci bench format fuzz readme
 
 all: format test
 
@@ -22,3 +22,7 @@ fuzz:
 	mkdir -p workdir
 	cp -r corpus workdir
 	go-fuzz -bin=sqlittle-fuzz.zip -workdir=workdir
+
+readme:
+	go get github.com/jimmyfrasche/autoreadme
+	autoreadme -f -template README.template

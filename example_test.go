@@ -1,12 +1,14 @@
-package sqlittle
+package sqlittle_test
 
 import (
 	"fmt"
+
+	"github.com/alicebob/sqlittle"
 )
 
 // Basic SELECT
 func ExampleDB_Select() {
-	db, err := Open("./testdata/music.sqlite")
+	db, err := sqlittle.Open("./testdata/music.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -14,7 +16,7 @@ func ExampleDB_Select() {
 
 	db.Select(
 		"tracks",
-		func(r Row) {
+		func(r sqlittle.Row) {
 			var (
 				name   string
 				length int
@@ -37,7 +39,7 @@ func ExampleDB_Select() {
 
 // SELECT in index order
 func ExampleDB_IndexedSelect() {
-	db, err := Open("./testdata/music.sqlite")
+	db, err := sqlittle.Open("./testdata/music.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +48,7 @@ func ExampleDB_IndexedSelect() {
 	db.IndexedSelect(
 		"tracks",
 		"tracks_length",
-		func(r Row) {
+		func(r sqlittle.Row) {
 			var (
 				name   string
 				length int
@@ -67,7 +69,7 @@ func ExampleDB_IndexedSelect() {
 }
 
 func ExampleDB_IndexedSelectEq() {
-	db, err := Open("./testdata/music.sqlite")
+	db, err := sqlittle.Open("./testdata/music.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -76,8 +78,8 @@ func ExampleDB_IndexedSelectEq() {
 	db.IndexedSelectEq(
 		"tracks",
 		"tracks_length",
-		Key{int64(198)},
-		func(r Row) {
+		sqlittle.Key{198},
+		func(r sqlittle.Row) {
 			var (
 				name   string
 				length int
@@ -94,7 +96,7 @@ func ExampleDB_IndexedSelectEq() {
 
 // SELECT a primary key
 func ExampleDB_PKSelect() {
-	db, err := Open("./testdata/music.sqlite")
+	db, err := sqlittle.Open("./testdata/music.sqlite")
 	if err != nil {
 		panic(err)
 	}
@@ -102,8 +104,8 @@ func ExampleDB_PKSelect() {
 
 	db.PKSelect(
 		"tracks",
-		Key{int64(4)},
-		func(r Row) {
+		sqlittle.Key{4},
+		func(r sqlittle.Row) {
 			name, _ := r.ScanString()
 			fmt.Printf("%s\n", name)
 		},
