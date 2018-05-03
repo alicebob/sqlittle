@@ -20,6 +20,7 @@ func sqlOK(t *testing.T, sql string, want interface{}) {
 	stmt, err := Parse(sql)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if have := stmt; !reflect.DeepEqual(have, want) {
 		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
@@ -39,11 +40,6 @@ func TestSQL(t *testing.T) {
 }
 
 func TestSelect(t *testing.T) {
-	sqlOK(t,
-		"SELECT * FROM foo",
-		SelectStmt{Columns: []string{"*"}, Table: "foo"},
-	)
-
 	sqlOK(t,
 		"SELECT aap,noot, mies FROM foo2",
 		SelectStmt{Columns: []string{"aap", "noot", "mies"}, Table: "foo2"},
@@ -298,4 +294,24 @@ func TestCreateIndex(t *testing.T) {
 			},
 		},
 	)
+
+	for sql, where := range map[string]interface{}{
+		"1":       int64(1),
+		"2>3":     ExBinaryOp{">", int64(2), int64(3)},
+		"2>=3":    ExBinaryOp{">=", int64(2), int64(3)},
+		"(2>3)":   ExBinaryOp{">", int64(2), int64(3)},
+		"1>(2>3)": ExBinaryOp{">", int64(1), ExBinaryOp{">", int64(2), int64(3)}},
+	} {
+		sqlOK(t,
+			"CREATE INDEX foo_index ON foo (name) WHERE "+sql,
+			CreateIndexStmt{
+				Index: "foo_index",
+				Table: "foo",
+				IndexedColumns: []IndexedColumn{
+					{Column: "name"},
+				},
+				Where: where,
+			},
+		)
+	}
 }

@@ -122,7 +122,7 @@ type CreateIndexStmt struct {
 	Table          string
 	Unique         bool
 	IndexedColumns []IndexedColumn
-	// Where
+	Where          Expression
 }
 
 // Indexed column, for CreateIndexStmt, and index table constraints
@@ -130,6 +130,13 @@ type IndexedColumn struct {
 	Column    string
 	Collate   string
 	SortOrder SortOrder
+}
+
+type Expression interface{}
+
+type ExBinaryOp struct {
+	Op          string
+	Left, Right Expression
 }
 
 // Parse is the main function. It will return either an error or a *Stmt

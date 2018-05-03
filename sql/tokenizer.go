@@ -38,7 +38,16 @@ var (
 		"TABLE":         TABLE,
 		"UNIQUE":        UNIQUE,
 		"UPDATE":        UPDATE,
+		"WHERE":         WHERE,
 		"WITHOUT":       WITHOUT,
+	}
+	operators = map[string]bool{
+		"||": true,
+		">=": true,
+		"<=": true,
+		"==": true,
+		"!=": true,
+		"<>": true,
 	}
 )
 
@@ -87,28 +96,35 @@ func tokenize(s string) ([]token, error) {
 			}
 			res = append(res, token{tSignedNumber, "", n})
 			i += l - 1
-		case c == '(' || c == ')' || c == ',' || c == '*':
-			res = append(res, token{int(c), string(c), 0})
-		case c == '\'':
-			bt, bl := readSingleQuoted(s[i+1:])
-			if bl == -1 {
-				return res, errors.New("no terminating ' found")
-			}
-			res = append(res, token{tLiteral, bt, 0})
-			i += bl
-		case c == '"' || c == '`' || c == '[':
-			close := c
-			if close == '[' {
-				close = ']'
-			}
-			bt, bl := readQuoted(close, s[i+1:])
-			if bl == -1 {
-				return res, fmt.Errorf("no terminating %q found", close)
-			}
-			res = append(res, token{tIdentifier, bt, 0})
-			i += bl
 		default:
-			return nil, fmt.Errorf("unexpected char at pos:%d: %q", i, c)
+			switch c {
+			case '>', '<', '|', '*', '/', '%', '&':
+				op := readOp(s[i:])
+				res = append(res, stoken(tOperator, op))
+				i += len(op) - 1
+			case '(', ')', ',':
+				res = append(res, token{int(c), string(c), 0})
+			case '\'':
+				bt, bl := readSingleQuoted(s[i+1:])
+				if bl == -1 {
+					return res, errors.New("no terminating ' found")
+				}
+				res = append(res, stoken(tLiteral, bt))
+				i += bl
+			case '"', '`', '[':
+				close := c
+				if close == '[' {
+					close = ']'
+				}
+				bt, bl := readQuoted(close, s[i+1:])
+				if bl == -1 {
+					return res, fmt.Errorf("no terminating %q found", close)
+				}
+				res = append(res, token{tIdentifier, bt, 0})
+				i += bl
+			default:
+				return nil, fmt.Errorf("unexpected char at pos:%d: %q", i, c)
+			}
 		}
 		i += l
 	}
@@ -125,6 +141,16 @@ func readBareword(s string) (string, int) {
 		}
 	}
 	return s, len(s)
+}
+
+func readOp(s string) string {
+	if len(s) == 1 {
+		return s
+	}
+	if _, ok := operators[s[:2]]; ok {
+		return s[:2]
+	}
+	return s[:1]
 }
 
 func readSignedNumber(s string) (int64, int) {

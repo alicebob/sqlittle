@@ -60,7 +60,7 @@ func TestTokens(t *testing.T) {
 			sql: "select * from foo",
 			want: []token{
 				stoken(SELECT, "select"),
-				stoken('*', "*"),
+				stoken(tOperator, "*"),
 				stoken(FROM, "from"),
 				stoken(tBare, "foo"),
 			},
@@ -70,7 +70,7 @@ func TestTokens(t *testing.T) {
 			sql: "  \tselect\n*\nfrom   foo ",
 			want: []token{
 				stoken(SELECT, "select"),
-				stoken('*', "*"),
+				stoken(tOperator, "*"),
 				stoken(FROM, "from"),
 				stoken(tBare, "foo"),
 			},
@@ -92,6 +92,16 @@ func TestTokens(t *testing.T) {
 				stoken(tIdentifier, "id 2"),
 				stoken(tIdentifier, "id 3"),
 				stoken(tLiteral, "lit 1"),
+			},
+		},
+		{
+			sql: "|| | * > >=",
+			want: []token{
+				stoken(tOperator, "||"),
+				stoken(tOperator, "|"),
+				stoken(tOperator, "*"),
+				stoken(tOperator, ">"),
+				stoken(tOperator, ">="),
 			},
 		},
 		{

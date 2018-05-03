@@ -6,7 +6,7 @@ package sql
 	literal string
 	identifier string
 	signedNumber int64
-	expr interface{}
+	statement interface{}
 	columnNameList []string
 	columnName string
 	columnDefList []ColumnDef
@@ -26,12 +26,13 @@ package sql
 	triggerAction TriggerAction
 	trigger Trigger
 	triggerList []Trigger
+	expr Expression
 }
 
-%type<expr> program
-%type<expr> selectStmt
-%type<expr> createTableStmt
-%type<expr> createIndexStmt
+%type<statement> program
+%type<statement> selectStmt
+%type<statement> createTableStmt
+%type<statement> createIndexStmt
 %type<identifier> identifier
 %type<literal> literal
 %type<signedNumber> signedNumber
@@ -54,6 +55,8 @@ package sql
 %type<triggerAction> triggerAction
 %type<trigger> trigger
 %type<triggerList> triggerList
+%type<expr> where
+%type<expr> expr
 
 %token ACTION
 %token ASC
@@ -82,8 +85,10 @@ package sql
 %token TABLE
 %token UNIQUE
 %token UPDATE
+%token WHERE
 %token WITHOUT
 %token<identifier> tBare tLiteral tIdentifier
+%token<identifier> tOperator
 %token<signedNumber> tSignedNumber
 
 %%
@@ -135,9 +140,6 @@ optColumnNameList:
 resultColumn:
 	columnName {
 		$$ = $1
-	} |
-	'*' {
-		$$ = "*"
 	}
 
 resultColumnList:
@@ -328,6 +330,23 @@ triggerList:
 		$$ = append($1, $2)
 	}
 
+where:
+	{ } |
+	WHERE expr {
+		$$ = $2
+	}
+
+expr:
+	signedNumber {
+		$$ = $1
+	} |
+	expr tOperator expr {
+		$$ = ExBinaryOp{$2, $1, $3}
+	} |
+	'(' expr ')' {
+		$$ = $2
+	}
+
 selectStmt:
 	SELECT resultColumnList FROM identifier {
 		yylex.(*lexer).result = SelectStmt{ Columns: $2, Table: $4 }
@@ -344,11 +363,12 @@ createTableStmt:
 	}
 
 createIndexStmt:
-	CREATE unique INDEX identifier ON identifier '(' indexedColumnList ')' {
+	CREATE unique INDEX identifier ON identifier '(' indexedColumnList ')' where {
 		yylex.(*lexer).result = CreateIndexStmt{
 			Index: $4,
 			Table: $6,
 			Unique: $2,
 			IndexedColumns: $8,
+			Where: $10,
 		}
 	}
