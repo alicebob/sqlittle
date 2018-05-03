@@ -111,8 +111,6 @@ TODOs:
 
 [Travis](https://travis-ci.org/alicebob/sqlittle)
 
-https://github.com/alicebob/sqlittle-ci tests sqlite and sqlittle interaction
-
 `make fuzz` uses [go-fuzz](https://github.com/dvyukov/go-fuzz)
 
 https://github.com/cznic/sqlite2go/ for another approach to pure Go SQLite
