@@ -7,14 +7,14 @@ import (
 	sdb "github.com/alicebob/sqlittle/db"
 )
 
-type columIndex struct {
+type columnIndex struct {
 	col      *sdb.TableColumn
 	rowIndex int
 	rowid    bool
 }
 
 // Regroups a Record to a Row, filling in missing columns as needed.
-func toRow(rowid int64, cis []columIndex, r sdb.Record) Row {
+func toRow(rowid int64, cis []columnIndex, r sdb.Record) Row {
 	row := make(Row, len(cis))
 	for i, c := range cis {
 		if c.rowid {
@@ -33,20 +33,20 @@ func toRow(rowid int64, cis []columIndex, r sdb.Record) Row {
 
 // given column names returns the index in a Row this column is expected, and
 // the column definition. Allows 'rowid' alias.
-func toColumnIndexRowid(s *sdb.Schema, columns []string) ([]columIndex, error) {
-	res := make([]columIndex, 0, len(columns))
+func toColumnIndexRowid(s *sdb.Schema, columns []string) ([]columnIndex, error) {
+	res := make([]columnIndex, 0, len(columns))
 	for _, c := range columns {
 		n := s.Column(c)
 		if n < 0 {
 			cup := strings.ToUpper(c)
 			if cup == "ROWID" || cup == "OID" || cup == "_ROWID_" {
-				res = append(res, columIndex{nil, n, true})
+				res = append(res, columnIndex{nil, n, true})
 				continue
 			} else {
 				return nil, fmt.Errorf("no such column: %q", c)
 			}
 		}
-		res = append(res, columIndex{&s.Columns[n], n, false})
+		res = append(res, columnIndex{&s.Columns[n], n, false})
 	}
 	return res, nil
 }
@@ -54,15 +54,15 @@ func toColumnIndexRowid(s *sdb.Schema, columns []string) ([]columIndex, error) {
 // given column names returns the index of this column in a row in the index (and
 // the column definition). For non-rowid tables the database order of the
 // columns depends on the primary key.
-func toColumnIndexNonRowid(s *sdb.Schema, columns []string) ([]columIndex, error) {
+func toColumnIndexNonRowid(s *sdb.Schema, columns []string) ([]columnIndex, error) {
 	stored := columnStoreOrder(s) // column indexes in disk order
-	res := make([]columIndex, 0, len(columns))
+	res := make([]columnIndex, 0, len(columns))
 	for _, c := range columns {
 		n := s.Column(c)
 		if n < 0 {
 			return nil, fmt.Errorf("no such column: %q", c)
 		}
-		res = append(res, columIndex{&s.Columns[n], stored[n], false})
+		res = append(res, columnIndex{&s.Columns[n], stored[n], false})
 	}
 	return res, nil
 }
