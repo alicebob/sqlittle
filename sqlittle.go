@@ -76,7 +76,7 @@ func (db *DB) SelectRowid(table string, rowid int64, columns ...string) (Row, er
 }
 
 // Select all rows from the given table via the index. The order will be the
-// index order.
+// index order (every `DESC` field will iterate in descending order).
 func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
@@ -101,7 +101,8 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 }
 
 // Select all rows matching key from the given table via the index. The order
-// will be the index order.
+// will be the index order (every `DESC` field will iterate in descending order).
+// Any collate function defined in the schema will be applied automatically.
 //
 // `key` is compared against the index columns. `key` can have fewer columns than
 // the index, in which case only the given columns need to compare equal.
@@ -138,6 +139,7 @@ func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ..
 // `key` is compared against the columns of the primary key. `key` can have fewer
 // columns than the primary key has, in which case only the given columns need
 // to compare equal.
+// Any collate function defined in the schema will be applied automatically.
 //
 // PKSelect is especially efficient for non-rowid tables (`WITHOUT ROWID`), and
 // for rowid tables which have a single 'integer primary key' column.
