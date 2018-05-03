@@ -17,6 +17,19 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+func tmpfile(t *testing.T) (string, func()) {
+	t.Helper()
+	f, err := ioutil.TempFile("", t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := f.Name()
+	f.Close()
+	return file, func() {
+		os.Remove(file)
+	}
+}
+
 // Compare is a helper to create a table, and compare sqlite and sqlittle
 // queries.
 func Compare(
@@ -25,16 +38,8 @@ func Compare(
 	sqlSelect string,
 	little func(*testing.T, *sqlittle.DB) [][]string,
 ) {
-	t.Helper()
-	f, err := ioutil.TempFile("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	file := f.Name()
-	defer func() {
-		f.Close()
-		os.Remove(file)
-	}()
+	file, close := tmpfile(t)
+	defer close()
 
 	create(t, file, sqlCreate)
 
