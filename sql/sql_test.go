@@ -15,205 +15,185 @@ func init() {
 	spew.Config.SortKeys = true
 }
 
-type sqlCase struct {
-	sql  string
-	want interface{}
-	err  error
+func sqlOK(t *testing.T, sql string, want interface{}) {
+	t.Helper()
+	stmt, err := Parse(sql)
+	if err != nil {
+		t.Error(err)
+	}
+	if have := stmt; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
 }
 
-func testSQL(t *testing.T, cases []sqlCase) {
+func sqlError(t *testing.T, sql string, want error) {
 	t.Helper()
-	for n, c := range cases {
-		stmt, err := Parse(c.sql)
-		if have, want := err, c.err; !reflect.DeepEqual(have, want) {
-			t.Errorf("case %d: have %#v, want %#v", n, have, want)
-			continue
-		}
-		if c.err != nil {
-			continue
-		}
-		if have, want := stmt, c.want; !reflect.DeepEqual(have, want) {
-			t.Errorf("case %d: diff:\n%s", n, diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
-		}
+	_, err := Parse(sql)
+	if have := err; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestSQL(t *testing.T) {
-	testSQL(
-		t,
-		[]sqlCase{
-			// unknown
-			{
-				sql: "INSERT INTO FOO",
-				err: errors.New("syntax error"),
-			},
-		},
-	)
+	sqlError(t, "INSERT INTO FOO", errors.New("syntax error"))
 }
 
 func TestSelect(t *testing.T) {
-	testSQL(
-		t,
-		[]sqlCase{
-			// select
-			{
-				sql:  "SELECT * FROM foo",
-				want: SelectStmt{Columns: []string{"*"}, Table: "foo"},
-			},
-			{
-				sql:  "SELECT aap,noot, mies FROM foo2",
-				want: SelectStmt{Columns: []string{"aap", "noot", "mies"}, Table: "foo2"},
-			},
-
-			// create what?
-			{
-				sql: "CREATE nothing foo",
-				err: errors.New("syntax error"),
-			},
-		},
+	sqlOK(t,
+		"SELECT * FROM foo",
+		SelectStmt{Columns: []string{"*"}, Table: "foo"},
 	)
+
+	sqlOK(t,
+		"SELECT aap,noot, mies FROM foo2",
+		SelectStmt{Columns: []string{"aap", "noot", "mies"}, Table: "foo2"},
+	)
+
+	// create what?
+	sqlError(t, "CREATE nothing foo", errors.New("syntax error"))
 }
 
 func TestCreateTable(t *testing.T) {
-	testSQL(
-		t,
-		[]sqlCase{
-			{
-				sql: "CREATE TABLE foo",
-				err: errors.New("syntax error"),
+	sqlError(t,
+		"CREATE TABLE foo",
+		errors.New("syntax error"),
+	)
+	sqlOK(t,
+		"CREATE table animals (name varchar not null, age int)",
+		CreateTableStmt{
+			Table: "animals",
+			Columns: []ColumnDef{
+				{Name: "name", Type: "varchar"}, {Name: "age", Type: "int", Null: true},
 			},
-			{
-				sql: "CREATE table animals (name varchar not null, age int)",
-				want: CreateTableStmt{
-					Table: "animals",
-					Columns: []ColumnDef{
-						{Name: "name", Type: "varchar"}, {Name: "age", Type: "int", Null: true},
+		},
+	)
+	sqlOK(t,
+		`create table "table" ([table] "table")`,
+		CreateTableStmt{
+			Table: "table",
+			Columns: []ColumnDef{
+				{Name: "table", Type: "table", Null: true},
+			},
+		},
+	)
+	// (you can sort-of use a string literal as a name in sqlite)
+	sqlError(t,
+		`create table "table" ([table] 'table')`,
+		errors.New("syntax error"),
+	)
+
+	// WITHOUT ROWID
+	sqlOK(t,
+		"CREATE TABLE foo (name NOT NULL PRIMARY KEY) WITHOUT ROWID",
+		CreateTableStmt{
+			Table: "foo",
+			Columns: []ColumnDef{
+				{Name: "name", Type: "", PrimaryKey: true},
+			},
+			WithoutRowid: true,
+		},
+	)
+
+	sqlOK(t,
+		"CREATE TABLE aap (noot, mies, PRIMARY KEY (noot, mies DESC))",
+		CreateTableStmt{
+			Table: "aap",
+			Columns: []ColumnDef{
+				{Name: "noot", Null: true},
+				{Name: "mies", Null: true},
+			},
+			Constraints: []TableConstraint{
+				TablePrimaryKey{
+					IndexedColumns: []IndexedColumn{
+						{Column: "noot", SortOrder: Asc},
+						{Column: "mies", SortOrder: Desc},
 					},
 				},
 			},
-			{
-				sql: `create table "table" ([table] "table")`,
-				want: CreateTableStmt{
-					Table: "table",
-					Columns: []ColumnDef{
-						{Name: "table", Type: "table", Null: true},
+		},
+	)
+
+	// constraint names (ignored)
+	sqlOK(t,
+		"CREATE TABLE aap (noot, mies, CONSTRAINT foo PRIMARY KEY (noot), CONSTRAINT bar UNIQUE (mies))",
+		CreateTableStmt{
+			Table: "aap",
+			Columns: []ColumnDef{
+				{Name: "noot", Null: true},
+				{Name: "mies", Null: true},
+			},
+			Constraints: []TableConstraint{
+				TablePrimaryKey{IndexedColumns: []IndexedColumn{{Column: "noot"}}},
+				TableUnique{IndexedColumns: []IndexedColumn{{Column: "mies"}}},
+			},
+		},
+	)
+
+	sqlOK(t,
+		"CREATE TABLE aap (noot, mies, UNIQUE (mies DESC), UNIQUE (noot))",
+		CreateTableStmt{
+			Table: "aap",
+			Columns: []ColumnDef{
+				{Name: "noot", Null: true},
+				{Name: "mies", Null: true},
+			},
+			Constraints: []TableConstraint{
+				TableUnique{
+					IndexedColumns: []IndexedColumn{
+						{Column: "mies", SortOrder: Desc},
+					},
+				},
+				TableUnique{
+					IndexedColumns: []IndexedColumn{
+						{Column: "noot", SortOrder: Asc},
 					},
 				},
 			},
-			{
-				// (you can sort-of use a string literal as a name in sqlite)
-				sql: `create table "table" ([table] 'table')`,
-				err: errors.New("syntax error"),
+		},
+	)
+
+	sqlOK(t,
+		"CREATE TABLE aap (noot, FOREIGN KEY (noot) REFERENCES something (fnoot) ON DELETE NO ACTION ON UPDATE CASCADE ON UPDATE RESTRICT ON DELETE SET NULL ON UPDATE SET DEFAULT)",
+		CreateTableStmt{
+			Table: "aap",
+			Columns: []ColumnDef{
+				{Name: "noot", Null: true},
 			},
-			{
-				// WITHOUT ROWID
-				sql: "CREATE TABLE foo (name NOT NULL PRIMARY KEY) WITHOUT ROWID",
-				want: CreateTableStmt{
-					Table: "foo",
-					Columns: []ColumnDef{
-						{Name: "name", Type: "", PrimaryKey: true},
-					},
-					WithoutRowid: true,
-				},
-			},
-			{
-				sql: "CREATE TABLE aap (noot, mies, PRIMARY KEY (noot, mies DESC))",
-				want: CreateTableStmt{
-					Table: "aap",
-					Columns: []ColumnDef{
-						{Name: "noot", Null: true},
-						{Name: "mies", Null: true},
-					},
-					Constraints: []TableConstraint{
-						TablePrimaryKey{
-							IndexedColumns: []IndexedColumn{
-								{Column: "noot", SortOrder: Asc},
-								{Column: "mies", SortOrder: Desc},
-							},
-						},
+			Constraints: []TableConstraint{
+				TableForeignKey{
+					Columns:        []string{"noot"},
+					ForeignTable:   "something",
+					ForeignColumns: []string{"fnoot"},
+					Triggers: []Trigger{
+						TriggerOnDelete(ActionNoAction),
+						TriggerOnUpdate(ActionCascade),
+						TriggerOnUpdate(ActionRestrict),
+						TriggerOnDelete(ActionSetNull),
+						TriggerOnUpdate(ActionSetDefault),
 					},
 				},
 			},
-			{
-				// constraint names (ignored)
-				sql: "CREATE TABLE aap (noot, mies, CONSTRAINT foo PRIMARY KEY (noot), CONSTRAINT bar UNIQUE (mies))",
-				want: CreateTableStmt{
-					Table: "aap",
-					Columns: []ColumnDef{
-						{Name: "noot", Null: true},
-						{Name: "mies", Null: true},
-					},
-					Constraints: []TableConstraint{
-						TablePrimaryKey{IndexedColumns: []IndexedColumn{{Column: "noot"}}},
-						TableUnique{IndexedColumns: []IndexedColumn{{Column: "mies"}}},
+		},
+	)
+
+	sqlOK(t,
+		"create table foo3 (a unique, b PRIMARY KEY, c, unique(a), unique(c))",
+		CreateTableStmt{
+			Table: "foo3",
+			Columns: []ColumnDef{
+				{Name: "a", Null: true, Unique: true},
+				{Name: "b", Null: true, PrimaryKey: true},
+				{Name: "c", Null: true},
+			},
+			Constraints: []TableConstraint{
+				TableUnique{
+					IndexedColumns: []IndexedColumn{
+						{Column: "a", SortOrder: Asc},
 					},
 				},
-			},
-			{
-				sql: "CREATE TABLE aap (noot, mies, UNIQUE (mies DESC), UNIQUE (noot))",
-				want: CreateTableStmt{
-					Table: "aap",
-					Columns: []ColumnDef{
-						{Name: "noot", Null: true},
-						{Name: "mies", Null: true},
-					},
-					Constraints: []TableConstraint{
-						TableUnique{
-							IndexedColumns: []IndexedColumn{
-								{Column: "mies", SortOrder: Desc},
-							},
-						},
-						TableUnique{
-							IndexedColumns: []IndexedColumn{
-								{Column: "noot", SortOrder: Asc},
-							},
-						},
-					},
-				},
-			},
-			{
-				sql: "CREATE TABLE aap (noot, FOREIGN KEY (noot) REFERENCES something (fnoot) ON DELETE NO ACTION ON UPDATE CASCADE ON UPDATE RESTRICT ON DELETE SET NULL ON UPDATE SET DEFAULT)",
-				want: CreateTableStmt{
-					Table: "aap",
-					Columns: []ColumnDef{
-						{Name: "noot", Null: true},
-					},
-					Constraints: []TableConstraint{
-						TableForeignKey{
-							Columns:        []string{"noot"},
-							ForeignTable:   "something",
-							ForeignColumns: []string{"fnoot"},
-							Triggers: []Trigger{
-								TriggerOnDelete(ActionNoAction),
-								TriggerOnUpdate(ActionCascade),
-								TriggerOnUpdate(ActionRestrict),
-								TriggerOnDelete(ActionSetNull),
-								TriggerOnUpdate(ActionSetDefault),
-							},
-						},
-					},
-				},
-			},
-			{
-				sql: "create table foo3 (a unique, b PRIMARY KEY, c, unique(a), unique(c))",
-				want: CreateTableStmt{
-					Table: "foo3",
-					Columns: []ColumnDef{
-						{Name: "a", Null: true, Unique: true},
-						{Name: "b", Null: true, PrimaryKey: true},
-						{Name: "c", Null: true},
-					},
-					Constraints: []TableConstraint{
-						TableUnique{
-							IndexedColumns: []IndexedColumn{
-								{Column: "a", SortOrder: Asc},
-							},
-						},
-						TableUnique{
-							IndexedColumns: []IndexedColumn{
-								{Column: "c", SortOrder: Asc},
-							},
-						},
+				TableUnique{
+					IndexedColumns: []IndexedColumn{
+						{Column: "c", SortOrder: Asc},
 					},
 				},
 			},
@@ -278,45 +258,43 @@ func TestCreateTable(t *testing.T) {
 }
 
 func TestCreateIndex(t *testing.T) {
-	testSQL(
-		t,
-		[]sqlCase{
-			{
-				sql: "CREATE INDEX foo",
-				err: errors.New("syntax error"),
+	sqlError(t,
+		"CREATE INDEX foo",
+		errors.New("syntax error"),
+	)
+
+	sqlOK(t,
+		"CREATE INDEX foo_index ON foo (name DESC, age)",
+		CreateIndexStmt{
+			Index: "foo_index",
+			Table: "foo",
+			IndexedColumns: []IndexedColumn{
+				{Column: "name", SortOrder: Desc},
+				{Column: "age", SortOrder: Asc},
 			},
-			{
-				sql: "CREATE INDEX foo_index ON foo (name DESC, age)",
-				want: CreateIndexStmt{
-					Index: "foo_index",
-					Table: "foo",
-					IndexedColumns: []IndexedColumn{
-						{Column: "name", SortOrder: Desc},
-						{Column: "age", SortOrder: Asc},
-					},
-				},
+		},
+	)
+
+	sqlOK(t,
+		"CREATE UNIQUE INDEX foo_index ON foo (name)",
+		CreateIndexStmt{
+			Index:  "foo_index",
+			Table:  "foo",
+			Unique: true,
+			IndexedColumns: []IndexedColumn{
+				{Column: "name", SortOrder: Asc},
 			},
-			{
-				sql: "CREATE UNIQUE INDEX foo_index ON foo (name)",
-				want: CreateIndexStmt{
-					Index:  "foo_index",
-					Table:  "foo",
-					Unique: true,
-					IndexedColumns: []IndexedColumn{
-						{Column: "name", SortOrder: Asc},
-					},
-				},
-			},
-			{
-				sql: "CREATE UNIQUE INDEX foo_index ON foo (name COLLATE RTRIM DESC)",
-				want: CreateIndexStmt{
-					Index:  "foo_index",
-					Table:  "foo",
-					Unique: true,
-					IndexedColumns: []IndexedColumn{
-						{Column: "name", Collate: "RTRIM", SortOrder: Desc},
-					},
-				},
+		},
+	)
+
+	sqlOK(t,
+		"CREATE UNIQUE INDEX foo_index ON foo (name COLLATE RTRIM DESC)",
+		CreateIndexStmt{
+			Index:  "foo_index",
+			Table:  "foo",
+			Unique: true,
+			IndexedColumns: []IndexedColumn{
+				{Column: "name", Collate: "RTRIM", SortOrder: Desc},
 			},
 		},
 	)
