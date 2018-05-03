@@ -46,7 +46,12 @@ func toColumnIndexRowid(s *sdb.Schema, columns []string) ([]columnIndex, error) 
 				return nil, fmt.Errorf("no such column: %q", c)
 			}
 		}
-		res = append(res, columnIndex{&s.Columns[n], n, false})
+		c := &s.Columns[n]
+		if c.Rowid {
+			res = append(res, columnIndex{nil, n, true})
+		} else {
+			res = append(res, columnIndex{c, n, false})
+		}
 	}
 	return res, nil
 }

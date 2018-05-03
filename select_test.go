@@ -110,6 +110,30 @@ func TestSelectAlter(t *testing.T) {
 	}
 }
 
+func TestSelectRowidColumn(t *testing.T) {
+	// column which is an alias for the rowid
+	db, err := Open("testdata/music.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var ids []int64
+	cb := func(r Row) {
+		var n int64
+		if err := r.Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, n)
+	}
+	if err := db.Select("albums", cb, "id", "name"); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := ids, []int64{1, 2}; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
 func TestSelectColumnRowid(t *testing.T) {
 	// special column named "rowid"
 	db, err := Open("testdata/words.sqlite")
