@@ -38,6 +38,17 @@ func Compare(
 
 	create(t, file, sqlCreate)
 
+	CompareSelect(t, file, sqlSelect, little)
+}
+
+func CompareSelect(
+	t *testing.T,
+	file string,
+	sqlSelect string,
+	little func(*testing.T, *sqlittle.DB) [][]string,
+) {
+	t.Helper()
+
 	lite := execute(t, file, sqlSelect)
 
 	db, err := sqlittle.Open(file)
