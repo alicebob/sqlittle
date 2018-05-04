@@ -12,6 +12,7 @@ import (
 var (
 	keywords = map[string]int{
 		"ACTION":        ACTION,
+		"AND":           AND,
 		"ASC":           ASC,
 		"AUTOINCREMENT": AUTOINCREMENT,
 		"CASCADE":       CASCADE,
@@ -23,14 +24,21 @@ var (
 		"DESC":          DESC,
 		"FOREIGN":       FOREIGN,
 		"FROM":          FROM,
+		"GLOB":          GLOB,
+		"IN":            IN,
 		"INDEX":         INDEX,
+		"IS":            IS,
 		"KEY":           KEY,
+		"LIKE":          LIKE,
+		"MATCH":         MATCH,
 		"NO":            NO,
 		"NOT":           NOT,
 		"NULL":          NULL,
 		"ON":            ON,
+		"OR":            OR,
 		"PRIMARY":       PRIMARY,
 		"REFERENCES":    REFERENCES,
+		"REGEXP":        REGEXP,
 		"RESTRICT":      RESTRICT,
 		"ROWID":         ROWID,
 		"SELECT":        SELECT,
@@ -41,13 +49,15 @@ var (
 		"WHERE":         WHERE,
 		"WITHOUT":       WITHOUT,
 	}
-	operators = map[string]bool{
-		"||": true,
-		">=": true,
-		"<=": true,
-		"==": true,
-		"!=": true,
-		"<>": true,
+	operators = map[string]struct{}{
+		"||": struct{}{},
+		">=": struct{}{},
+		"<=": struct{}{},
+		"==": struct{}{},
+		"!=": struct{}{},
+		"<>": struct{}{},
+		">>": struct{}{},
+		"<<": struct{}{},
 	}
 )
 
@@ -78,6 +88,15 @@ func tokenize(s string) ([]token, error) {
 			return res, nil
 		}
 		c, l := utf8.DecodeRuneInString(s[i:])
+
+		if unicode.IsDigit(c) || c == '+' || c == '-' {
+			// + and - can be either numbers or operators.
+			if n, l := readSignedNumber(s[i:]); l > 0 {
+				res = append(res, token{tSignedNumber, "", n})
+				i += l
+				continue
+			}
+		}
 		switch {
 		case unicode.IsSpace(c):
 			// ignore
@@ -89,16 +108,9 @@ func tokenize(s string) ([]token, error) {
 			}
 			res = append(res, token{tnr, bt, 0})
 			i += bl - 1
-		case unicode.IsDigit(c) || c == '+' || c == '-':
-			n, l := readSignedNumber(s[i:])
-			if l == -1 {
-				return res, errors.New("unsupported number")
-			}
-			res = append(res, token{tSignedNumber, "", n})
-			i += l - 1
 		default:
 			switch c {
-			case '>', '<', '|', '*', '/', '%', '&':
+			case '>', '<', '|', '*', '/', '%', '&', '+', '-', '=', '!', '~':
 				op := readOp(s[i:])
 				res = append(res, stoken(tOperator, op))
 				i += len(op) - 1

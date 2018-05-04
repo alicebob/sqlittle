@@ -4,6 +4,9 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/andreyvit/diff"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestTokens(t *testing.T) {
@@ -15,7 +18,7 @@ func TestTokens(t *testing.T) {
 			return
 		}
 		if have := ts; !reflect.DeepEqual(have, want) {
-			t.Errorf("have %#v, want %#v", have, want)
+			t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 		}
 	}
 	testError := func(sql string, want error) {
@@ -46,6 +49,7 @@ func TestTokens(t *testing.T) {
 			ntoken(tSignedNumber, +34),
 		},
 	)
+
 	testOK(
 		"create table foo",
 		[]token{
@@ -91,6 +95,7 @@ func TestTokens(t *testing.T) {
 			stoken(tBare, "foo"),
 		},
 	)
+
 	testOK(
 		"from FROM 'from' ''",
 		[]token{
@@ -112,13 +117,41 @@ func TestTokens(t *testing.T) {
 		},
 	)
 	testOK(
-		"|| | * > >=",
+		"|| * / % + - << >> & | < <= > >= = == != <> ~",
 		[]token{
 			stoken(tOperator, "||"),
-			stoken(tOperator, "|"),
 			stoken(tOperator, "*"),
+			stoken(tOperator, "/"),
+			stoken(tOperator, "%"),
+			stoken(tOperator, "+"),
+			stoken(tOperator, "-"),
+			stoken(tOperator, "<<"),
+			stoken(tOperator, ">>"),
+			stoken(tOperator, "&"),
+			stoken(tOperator, "|"),
+			stoken(tOperator, "<"),
+			stoken(tOperator, "<="),
 			stoken(tOperator, ">"),
 			stoken(tOperator, ">="),
+			stoken(tOperator, "="),
+			stoken(tOperator, "=="),
+			stoken(tOperator, "!="),
+			stoken(tOperator, "<>"),
+			stoken(tOperator, "~"),
+		},
+	)
+	testOK(
+		"IS NOT IN LIKE GLOB MATCH REGEXP AND OR",
+		[]token{
+			stoken(IS, "IS"),
+			stoken(NOT, "NOT"),
+			stoken(IN, "IN"),
+			stoken(LIKE, "LIKE"),
+			stoken(GLOB, "GLOB"),
+			stoken(MATCH, "MATCH"),
+			stoken(REGEXP, "REGEXP"),
+			stoken(AND, "AND"),
+			stoken(OR, "OR"),
 		},
 	)
 

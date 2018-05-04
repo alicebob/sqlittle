@@ -59,6 +59,7 @@ package sql
 %type<expr> expr
 
 %token ACTION
+%token AND
 %token ASC
 %token AUTOINCREMENT
 %token CASCADE
@@ -70,14 +71,21 @@ package sql
 %token DESC
 %token FOREIGN
 %token FROM
+%token GLOB
+%token IN
 %token INDEX
+%token IS
 %token KEY
+%token LIKE
+%token MATCH
 %token NO
 %token NOT
 %token NULL
 %token ON
+%token OR
 %token PRIMARY
 %token REFERENCES
+%token REGEXP
 %token RESTRICT
 %token ROWID
 %token SELECT
