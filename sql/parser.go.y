@@ -98,6 +98,7 @@ package sql
 %token<identifier> tBare tLiteral tIdentifier
 %token<identifier> tOperator
 %token<signedNumber> tSignedNumber
+%token<float> tFloat
 
 %%
 

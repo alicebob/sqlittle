@@ -44,9 +44,30 @@ func TestTokens(t *testing.T) {
 	testOK(
 		"1 -12 +34",
 		[]token{
-			ntoken(tSignedNumber, 1),
-			ntoken(tSignedNumber, -12),
-			ntoken(tSignedNumber, +34),
+			ntoken(1),
+			optoken("-"),
+			ntoken(12),
+			optoken("+"),
+			ntoken(34),
+		},
+	)
+	testOK(
+		"3.14 .14 3e3 3E3 2e+3 13e-12",
+		[]token{
+			ftoken(3.14),
+			ftoken(.14),
+			ftoken(3e3),
+			ftoken(3e3),
+			ftoken(2e3),
+			ftoken(13e-12),
+		},
+	)
+	testOK(
+		"0x1234 0X1234 0x8000000000000000",
+		[]token{
+			ntoken(4660),
+			ntoken(4660),
+			ntoken(-9223372036854775808),
 		},
 	)
 
@@ -119,25 +140,25 @@ func TestTokens(t *testing.T) {
 	testOK(
 		"|| * / % + - << >> & | < <= > >= = == != <> ~",
 		[]token{
-			stoken(tOperator, "||"),
-			stoken(tOperator, "*"),
-			stoken(tOperator, "/"),
-			stoken(tOperator, "%"),
-			stoken(tOperator, "+"),
-			stoken(tOperator, "-"),
-			stoken(tOperator, "<<"),
-			stoken(tOperator, ">>"),
-			stoken(tOperator, "&"),
-			stoken(tOperator, "|"),
-			stoken(tOperator, "<"),
-			stoken(tOperator, "<="),
-			stoken(tOperator, ">"),
-			stoken(tOperator, ">="),
-			stoken(tOperator, "="),
-			stoken(tOperator, "=="),
-			stoken(tOperator, "!="),
-			stoken(tOperator, "<>"),
-			stoken(tOperator, "~"),
+			optoken("||"),
+			optoken("*"),
+			optoken("/"),
+			optoken("%"),
+			optoken("+"),
+			optoken("-"),
+			optoken("<<"),
+			optoken(">>"),
+			optoken("&"),
+			optoken("|"),
+			optoken("<"),
+			optoken("<="),
+			optoken(">"),
+			optoken(">="),
+			optoken("="),
+			optoken("=="),
+			optoken("!="),
+			optoken("<>"),
+			optoken("~"),
 		},
 	)
 	testOK(

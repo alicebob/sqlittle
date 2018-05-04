@@ -65,6 +65,7 @@ type token struct {
 	typ int
 	s   string
 	n   int64
+	f   float64
 }
 
 func stoken(typ int, s string) token {
@@ -74,10 +75,24 @@ func stoken(typ int, s string) token {
 	}
 }
 
-func ntoken(typ int, n int64) token {
+func ntoken(n int64) token {
 	return token{
-		typ: typ,
+		typ: tSignedNumber,
 		n:   n,
+	}
+}
+
+func ftoken(f float64) token {
+	return token{
+		typ: tFloat,
+		f:   f,
+	}
+}
+
+func optoken(s string) token {
+	return token{
+		typ: tOperator,
+		s:   s,
 	}
 }
 
@@ -89,14 +104,6 @@ func tokenize(s string) ([]token, error) {
 		}
 		c, l := utf8.DecodeRuneInString(s[i:])
 
-		if unicode.IsDigit(c) || c == '+' || c == '-' {
-			// + and - can be either numbers or operators.
-			if n, l := readSignedNumber(s[i:]); l > 0 {
-				res = append(res, token{tSignedNumber, "", n})
-				i += l
-				continue
-			}
-		}
 		switch {
 		case unicode.IsSpace(c):
 			// ignore
@@ -106,8 +113,16 @@ func tokenize(s string) ([]token, error) {
 			if n, ok := keywords[strings.ToUpper(bt)]; ok {
 				tnr = n
 			}
-			res = append(res, token{tnr, bt, 0})
+			res = append(res, stoken(tnr, bt))
 			i += bl - 1
+		case unicode.IsDigit(c) || c == '.':
+			tok, l := readNumericLiteral(s[i:])
+			if l < 0 {
+				return res, errors.New("unsupported number")
+
+			}
+			res = append(res, tok)
+			i += l - 1
 		default:
 			switch c {
 			case '>', '<', '|', '*', '/', '%', '&', '+', '-', '=', '!', '~':
@@ -115,7 +130,7 @@ func tokenize(s string) ([]token, error) {
 				res = append(res, stoken(tOperator, op))
 				i += len(op) - 1
 			case '(', ')', ',':
-				res = append(res, token{int(c), string(c), 0})
+				res = append(res, stoken(int(c), string(c)))
 			case '\'':
 				bt, bl := readSingleQuoted(s[i+1:])
 				if bl == -1 {
@@ -132,7 +147,7 @@ func tokenize(s string) ([]token, error) {
 				if bl == -1 {
 					return res, fmt.Errorf("no terminating %q found", close)
 				}
-				res = append(res, token{tIdentifier, bt, 0})
+				res = append(res, stoken(tIdentifier, bt))
 				i += bl
 			default:
 				return nil, fmt.Errorf("unexpected char at pos:%d: %q", i, c)
@@ -165,23 +180,48 @@ func readOp(s string) string {
 	return s[:1]
 }
 
-func readSignedNumber(s string) (int64, int) {
-	// TODO: decimals, scientific notation
+func readNumericLiteral(s string) (token, int) {
+	float := false
+	hex := false
+	allowSigns := false
 loop:
 	for i, r := range s {
 		switch {
-		case i == 0 && r == '+' || r == '-':
 		case unicode.IsDigit(r):
+		case (r == '-' || r == '+') && allowSigns:
+			allowSigns = false
+		case r == 'x' || r == 'X':
+			hex = true
+		case r == '.':
+			float = true
+		case r == 'e' || r == 'E':
+			float = true
+			allowSigns = true // only after an 'e' we accept a sign
 		default:
 			s = s[:i]
 			break loop
 		}
 	}
-	n, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return 0, -1
+	if hex && (strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X")) {
+		n, err := strconv.ParseUint(s[2:], 16, 64)
+		if err != nil {
+			return token{}, -1
+		}
+		// 64-bit two's-complement
+		return ntoken(int64(n)), len(s)
 	}
-	return n, len(s)
+	if float {
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return token{}, -1
+		}
+		return ftoken(f), len(s)
+	}
+	n, err := strconv.ParseInt(s, 0, 64)
+	if err != nil {
+		return token{}, -1
+	}
+	return ntoken(n), len(s)
 }
 
 // parse a 'bareword'. Opening ' is already gone. No escape sequences.
