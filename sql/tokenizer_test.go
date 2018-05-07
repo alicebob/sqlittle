@@ -138,6 +138,18 @@ func TestTokens(t *testing.T) {
 		},
 	)
 	testOK(
+		`'foo''bar' '''' '\n' "fo""o"`,
+		[]token{
+			stoken(tLiteral, "foo'bar"),
+			stoken(tLiteral, "'"),
+			stoken(tLiteral, `\n`),
+			stoken(tIdentifier, `fo"o`),
+		},
+	)
+	testError(`'foo''`, errors.New("no terminating ' found"))
+	testError(`[foo]]]`, errors.New("unexpected char at pos:5: ']'"))
+
+	testOK(
 		"|| * / % + - << >> & | < <= > >= = == != <> ~",
 		[]token{
 			optoken("||"),

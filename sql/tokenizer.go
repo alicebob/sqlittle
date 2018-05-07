@@ -133,7 +133,7 @@ func tokenize(s string) ([]token, error) {
 				// + and - might be binary or unary. let the lexer figure that out
 				res = append(res, stoken(int(c), string(c)))
 			case '\'':
-				bt, bl := readSingleQuoted(s[i+1:])
+				bt, bl := readQuoted('\'', s[i+1:], true)
 				if bl == -1 {
 					return res, errors.New("no terminating ' found")
 				}
@@ -141,10 +141,12 @@ func tokenize(s string) ([]token, error) {
 				i += bl
 			case '"', '`', '[':
 				close := c
+				allowEscape := true
 				if close == '[' {
 					close = ']'
+					allowEscape = false
 				}
-				bt, bl := readQuoted(close, s[i+1:])
+				bt, bl := readQuoted(close, s[i+1:], allowEscape)
 				if bl == -1 {
 					return res, fmt.Errorf("no terminating %q found", close)
 				}
@@ -225,23 +227,18 @@ loop:
 	return ntoken(n), len(s)
 }
 
-// parse a 'bareword'. Opening ' is already gone. No escape sequences.
-func readSingleQuoted(s string) (string, int) {
-	for i, r := range s {
-		switch r {
-		case '\'':
-			return s[:i], i + 1
-		default:
-		}
-	}
-	return "", -1
-}
-
-// parse a quoted string until `close`. Opening char is already gone. No escape sequences.
-func readQuoted(close rune, s string) (string, int) {
+// parse a quoted string until `close`. Opening char is already gone.
+// >  A single quote within the string can be encoded by putting two single
+// > quotes in a row - as in Pascal. C-style escapes using the backslash
+// > character are not supported because they are not standard SQL.
+func readQuoted(close rune, s string, allowEscape bool) (string, int) {
 	for i, r := range s {
 		switch r {
 		case close:
+			if allowEscape && len(s) > i+1 && rune(s[i+1]) == close {
+				ss, si := readQuoted(close, s[i+2:], allowEscape)
+				return s[:i+1] + ss, i + si + 2
+			}
 			return s[:i], i + 1
 		default:
 		}
