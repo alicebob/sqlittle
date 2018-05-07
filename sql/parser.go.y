@@ -27,6 +27,7 @@ package sql
 	trigger Trigger
 	triggerList []Trigger
 	expr Expression
+	float float64
 }
 
 %type<statement> program
@@ -36,6 +37,7 @@ package sql
 %type<identifier> identifier
 %type<literal> literal
 %type<signedNumber> signedNumber
+%type<float> floatNumber
 %type<columnName> columnName resultColumn
 %type<columnNameList> columnNameList optColumnNameList resultColumnList
 %type<columnDefList> columnDefList
@@ -126,6 +128,23 @@ identifier:
 signedNumber:
 	tSignedNumber {
 		$$ = $1
+	} |
+	'-' signedNumber {
+		$$ = - $2
+	} |
+	'+' signedNumber {
+		$$ = $2
+	}
+
+floatNumber:
+	tFloat {
+		$$ = $1
+	} |
+	'-' floatNumber {
+		$$ = - $2
+	} |
+	'+' floatNumber {
+		$$ = $2
 	}
 
 columnName:
@@ -349,8 +368,17 @@ expr:
 	signedNumber {
 		$$ = $1
 	} |
+	floatNumber {
+		$$ = $1
+	} |
 	expr tOperator expr {
 		$$ = ExBinaryOp{$2, $1, $3}
+	} |
+	expr '+' expr {
+		$$ = ExBinaryOp{"+", $1, $3}
+	} |
+	expr '-' expr {
+		$$ = ExBinaryOp{"-", $1, $3}
 	} |
 	'(' expr ')' {
 		$$ = $2

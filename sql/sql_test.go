@@ -173,6 +173,16 @@ func TestCreateTable(t *testing.T) {
 	)
 
 	sqlOK(t,
+		"CREATE TABLE aap (noot DEFAULT -12)",
+		CreateTableStmt{
+			Table: "aap",
+			Columns: []ColumnDef{
+				{Name: "noot", Null: true, Default: int64(-12)},
+			},
+		},
+	)
+
+	sqlOK(t,
 		"create table foo3 (a unique, b PRIMARY KEY, c, unique(a), unique(c))",
 		CreateTableStmt{
 			Table: "foo3",
@@ -297,10 +307,16 @@ func TestCreateIndex(t *testing.T) {
 
 	for sql, where := range map[string]interface{}{
 		"1":       int64(1),
+		"- 1":     int64(-1),
+		"- - 1":   int64(1),
 		"2>3":     ExBinaryOp{">", int64(2), int64(3)},
 		"2>=3":    ExBinaryOp{">=", int64(2), int64(3)},
 		"(2>3)":   ExBinaryOp{">", int64(2), int64(3)},
 		"1>(2>3)": ExBinaryOp{">", int64(1), ExBinaryOp{">", int64(2), int64(3)}},
+		"3.14":    float64(3.14),
+		"+3":      int64(3),
+		"-3.14":   -3.14,
+		"2+3":     ExBinaryOp{"+", int64(2), int64(3)},
 	} {
 		sqlOK(t,
 			"CREATE INDEX foo_index ON foo (name) WHERE "+sql,

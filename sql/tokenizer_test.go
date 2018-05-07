@@ -45,9 +45,9 @@ func TestTokens(t *testing.T) {
 		"1 -12 +34",
 		[]token{
 			ntoken(1),
-			optoken("-"),
+			stoken('-', "-"),
 			ntoken(12),
-			optoken("+"),
+			stoken('+', "+"),
 			ntoken(34),
 		},
 	)
@@ -144,8 +144,8 @@ func TestTokens(t *testing.T) {
 			optoken("*"),
 			optoken("/"),
 			optoken("%"),
-			optoken("+"),
-			optoken("-"),
+			stoken('+', "+"),
+			stoken('-', "-"),
 			optoken("<<"),
 			optoken(">>"),
 			optoken("&"),
@@ -158,7 +158,7 @@ func TestTokens(t *testing.T) {
 			optoken("=="),
 			optoken("!="),
 			optoken("<>"),
-			optoken("~"),
+			stoken('~', "~"),
 		},
 	)
 	testOK(
