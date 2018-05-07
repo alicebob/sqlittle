@@ -27,6 +27,7 @@ package sql
 	trigger Trigger
 	triggerList []Trigger
 	expr Expression
+	exprList []Expression
 	float float64
 }
 
@@ -57,8 +58,8 @@ package sql
 %type<triggerAction> triggerAction
 %type<trigger> trigger
 %type<triggerList> triggerList
-%type<expr> where
-%type<expr> expr
+%type<expr> where expr
+%type<exprList> exprList
 
 %token ACTION
 %token AND
@@ -365,11 +366,26 @@ where:
 	}
 
 expr:
+	NULL {
+		$$ = nil
+	} |
+	identifier '(' exprList ')' {
+		$$ = ExFunction{$1, $3}
+	} |
 	signedNumber {
 		$$ = $1
 	} |
 	floatNumber {
 		$$ = $1
+	} |
+	tLiteral {
+		$$ = $1
+	} |
+	tBare {
+		$$ = $1
+	} |
+	tIdentifier {
+		$$ = ExColumn($1)
 	} |
 	expr tOperator expr {
 		$$ = ExBinaryOp{$2, $1, $3}
@@ -382,6 +398,15 @@ expr:
 	} |
 	'(' expr ')' {
 		$$ = $2
+	}
+
+exprList:
+	{ } |
+	expr {
+		$$ = []Expression{$1}
+	} |
+	exprList ',' expr {
+		$$ = append($1, $3)
 	}
 
 selectStmt:

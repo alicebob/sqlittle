@@ -139,6 +139,13 @@ type ExBinaryOp struct {
 	Left, Right Expression
 }
 
+type ExColumn string
+
+type ExFunction struct {
+	F    string
+	Args []Expression
+}
+
 // Parse is the main function. It will return either an error or a *Stmt
 // struct.
 func Parse(sql string) (interface{}, error) {

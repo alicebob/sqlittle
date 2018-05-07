@@ -305,18 +305,30 @@ func TestCreateIndex(t *testing.T) {
 		},
 	)
 
+	// WHERE expressions
 	for sql, where := range map[string]interface{}{
-		"1":       int64(1),
-		"- 1":     int64(-1),
-		"- - 1":   int64(1),
-		"2>3":     ExBinaryOp{">", int64(2), int64(3)},
-		"2>=3":    ExBinaryOp{">=", int64(2), int64(3)},
-		"(2>3)":   ExBinaryOp{">", int64(2), int64(3)},
-		"1>(2>3)": ExBinaryOp{">", int64(1), ExBinaryOp{">", int64(2), int64(3)}},
-		"3.14":    float64(3.14),
-		"+3":      int64(3),
-		"-3.14":   -3.14,
-		"2+3":     ExBinaryOp{"+", int64(2), int64(3)},
+		"1":                  int64(1),
+		"- 1":                int64(-1),
+		"- - 1":              int64(1),
+		"2>3":                ExBinaryOp{">", int64(2), int64(3)},
+		"2>=3":               ExBinaryOp{">=", int64(2), int64(3)},
+		"(2>3)":              ExBinaryOp{">", int64(2), int64(3)},
+		"1>(2>3)":            ExBinaryOp{">", int64(1), ExBinaryOp{">", int64(2), int64(3)}},
+		"3.14":               float64(3.14),
+		"+3":                 int64(3),
+		"-3.14":              -3.14,
+		"2+3":                ExBinaryOp{"+", int64(2), int64(3)},
+		"'abc'":              "abc",
+		"foo":                "foo", // literal
+		"[foo]":              ExColumn("foo"),
+		"NULL":               nil,
+		`length('abcdef')`:   ExFunction{"length", []Expression{"abcdef"}},
+		`length()`:           ExFunction{"length", nil},
+		`"length"('abcdef')`: ExFunction{"length", []Expression{"abcdef"}},
+		`f(g(), 123)`: ExFunction{"f", []Expression{
+			ExFunction{"g", nil},
+			int64(123),
+		}},
 	} {
 		sqlOK(t,
 			"CREATE INDEX foo_index ON foo (name) WHERE "+sql,
