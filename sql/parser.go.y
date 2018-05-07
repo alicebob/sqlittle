@@ -46,7 +46,7 @@ package sql
 %type<columnDef> columnDef
 %type<indexedColumnList> indexedColumnList
 %type<indexedColumn> indexedColumn
-%type<name> typeName constraintName indexedColumnName
+%type<name> typeName constraintName
 %type<unique> unique
 %type<withoutRowid> withoutRowid
 %type<collate> collate
@@ -60,6 +60,7 @@ package sql
 %type<trigger> trigger
 %type<triggerList> triggerList
 %type<where> where
+%type<expr> indexedColumnExpr
 %type<expr> expr
 %type<exprList> exprList
 
@@ -321,18 +322,14 @@ indexedColumnList:
 		$$ = append($1, $3)
 	}
 
-indexedColumnName:
+indexedColumnExpr:
 	expr {
-		$$ = AsString($1)
+		$$ = $1
 	}
 
 indexedColumn:
-	indexedColumnName collate sortOrder {
-		$$ = IndexedColumn{
-			Expression: $1,
-			Collate: $2,
-			SortOrder: $3,
-		}
+	indexedColumnExpr collate sortOrder {
+		$$ = newIndexColumn($1, $2, $3)
 	}
 
 triggerAction:
@@ -389,7 +386,7 @@ expr:
 		$$ = $1
 	} |
 	tBare {
-		$$ = ExBare($1)
+		$$ = ExColumn($1)
 	} |
 	tIdentifier {
 		$$ = ExColumn($1)

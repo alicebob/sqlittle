@@ -130,11 +130,29 @@ type CreateIndexStmt struct {
 	Where          Expression
 }
 
-// Indexed column, for CreateIndexStmt, and index table constraints
+// Indexed column, for CreateIndexStmt, and index table constraints.
+// Either Column or Expression is filled. Column is filled if the expression is
+// a single column (as is always the case for PRIMARY KEY and UNIQUE
+// constraints), and Expression is filled in every other case.
 type IndexedColumn struct {
+	Column     string
 	Expression string
 	Collate    string
 	SortOrder  SortOrder
+}
+
+func newIndexColumn(e Expression, collate string, sort SortOrder) IndexedColumn {
+	col := AsColumn(e)
+	ex := ""
+	if col == "" {
+		ex = AsString(e)
+	}
+	return IndexedColumn{
+		Column:     col,
+		Expression: ex,
+		Collate:    collate,
+		SortOrder:  sort,
+	}
 }
 
 type Expression interface{}
@@ -145,8 +163,6 @@ type ExBinaryOp struct {
 }
 
 type ExColumn string
-
-type ExBare string
 
 type ExFunction struct {
 	F    string
@@ -163,8 +179,6 @@ func AsString(e Expression) string {
 		return fmt.Sprintf("'%s'", v)
 	case ExColumn:
 		return fmt.Sprintf(`"%s"`, string(v))
-	case ExBare:
-		return fmt.Sprintf(`%s`, string(v))
 	case ExFunction:
 		var args []string
 		for _, a := range v.Args {
@@ -175,6 +189,16 @@ func AsString(e Expression) string {
 		return fmt.Sprintf(`%s%s%s`, AsString(v.Left), v.Op, AsString(v.Right))
 	default:
 		return "bug"
+	}
+}
+
+// gives the column name if the expression is a simple single column
+func AsColumn(e Expression) string {
+	switch v := e.(type) {
+	case ExColumn:
+		return fmt.Sprintf(`%s`, string(v))
+	default:
+		return ""
 	}
 }
 

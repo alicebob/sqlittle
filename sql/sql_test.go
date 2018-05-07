@@ -29,7 +29,7 @@ func TestExpr(t *testing.T) {
 				Index: "foo_index",
 				Table: "foo",
 				IndexedColumns: []IndexedColumn{
-					{Expression: "name"},
+					{Column: "name"},
 				},
 				Where: src,
 			},
@@ -131,8 +131,8 @@ func TestCreateTable(t *testing.T) {
 			Constraints: []TableConstraint{
 				TablePrimaryKey{
 					IndexedColumns: []IndexedColumn{
-						{Expression: "noot", SortOrder: Asc},
-						{Expression: "mies", SortOrder: Desc},
+						{Column: "noot", SortOrder: Asc},
+						{Column: "mies", SortOrder: Desc},
 					},
 				},
 			},
@@ -149,8 +149,12 @@ func TestCreateTable(t *testing.T) {
 				{Name: "mies", Null: true},
 			},
 			Constraints: []TableConstraint{
-				TablePrimaryKey{IndexedColumns: []IndexedColumn{{Expression: "noot"}}},
-				TableUnique{IndexedColumns: []IndexedColumn{{Expression: "mies"}}},
+				TablePrimaryKey{IndexedColumns: []IndexedColumn{
+					{Column: "noot"},
+				}},
+				TableUnique{IndexedColumns: []IndexedColumn{
+					{Column: "mies"},
+				}},
 			},
 		},
 	)
@@ -166,12 +170,12 @@ func TestCreateTable(t *testing.T) {
 			Constraints: []TableConstraint{
 				TableUnique{
 					IndexedColumns: []IndexedColumn{
-						{Expression: "mies", SortOrder: Desc},
+						{Column: "mies", SortOrder: Desc},
 					},
 				},
 				TableUnique{
 					IndexedColumns: []IndexedColumn{
-						{Expression: "noot", SortOrder: Asc},
+						{Column: "noot", SortOrder: Asc},
 					},
 				},
 			},
@@ -224,12 +228,12 @@ func TestCreateTable(t *testing.T) {
 			Constraints: []TableConstraint{
 				TableUnique{
 					IndexedColumns: []IndexedColumn{
-						{Expression: "a", SortOrder: Asc},
+						{Column: "a", SortOrder: Asc},
 					},
 				},
 				TableUnique{
 					IndexedColumns: []IndexedColumn{
-						{Expression: "c", SortOrder: Asc},
+						{Column: "c", SortOrder: Asc},
 					},
 				},
 			},
@@ -305,8 +309,8 @@ func TestCreateIndex(t *testing.T) {
 			Index: "foo_index",
 			Table: "foo",
 			IndexedColumns: []IndexedColumn{
-				{Expression: "name", SortOrder: Desc},
-				{Expression: "age", SortOrder: Asc},
+				{Column: "name", SortOrder: Desc},
+				{Column: "age", SortOrder: Asc},
 			},
 		},
 	)
@@ -318,7 +322,7 @@ func TestCreateIndex(t *testing.T) {
 			Table:  "foo",
 			Unique: true,
 			IndexedColumns: []IndexedColumn{
-				{Expression: "name", SortOrder: Asc},
+				{Column: "name", SortOrder: Asc},
 			},
 		},
 	)
@@ -330,7 +334,7 @@ func TestCreateIndex(t *testing.T) {
 			Table:  "foo",
 			Unique: true,
 			IndexedColumns: []IndexedColumn{
-				{Expression: "name", Collate: "RTRIM", SortOrder: Desc},
+				{Column: "name", Collate: "RTRIM", SortOrder: Desc},
 			},
 		},
 	)
@@ -349,7 +353,7 @@ func TestCreateIndex(t *testing.T) {
 		"-3.14":              -3.14,
 		"2+3":                ExBinaryOp{"+", int64(2), int64(3)},
 		"'abc'":              "abc",
-		"foo":                ExBare("foo"),
+		"foo":                ExColumn("foo"),
 		"[foo]":              ExColumn("foo"),
 		"NULL":               nil,
 		`length('abcdef')`:   ExFunction{"length", []Expression{"abcdef"}},
@@ -367,7 +371,7 @@ func TestCreateIndex(t *testing.T) {
 				Index: "foo_index",
 				Table: "foo",
 				IndexedColumns: []IndexedColumn{
-					{Expression: "name"},
+					{Column: "name"},
 				},
 				Where: where,
 			},
@@ -380,7 +384,7 @@ func TestCreateIndex(t *testing.T) {
 			Index: "foo_index",
 			Table: "foo",
 			IndexedColumns: []IndexedColumn{
-				{Expression: `"length"(name)+12`},
+				{Expression: `"length"("name")+12`},
 			},
 		},
 	)
@@ -391,8 +395,8 @@ func TestCreateIndex(t *testing.T) {
 			Index: "foo_index",
 			Table: "foo",
 			IndexedColumns: []IndexedColumn{
-				{Expression: `name`, SortOrder: Desc},
-				{Expression: `"length"(name)`, SortOrder: Desc},
+				{Column: "name", SortOrder: Desc},
+				{Expression: `"length"("name")`, SortOrder: Desc},
 			},
 		},
 	)
