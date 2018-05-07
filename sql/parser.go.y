@@ -26,6 +26,7 @@ package sql
 	triggerAction TriggerAction
 	trigger Trigger
 	triggerList []Trigger
+	where Expression
 	expr Expression
 	exprList []Expression
 	float float64
@@ -45,7 +46,7 @@ package sql
 %type<columnDef> columnDef
 %type<indexedColumnList> indexedColumnList
 %type<indexedColumn> indexedColumn
-%type<name> typeName constraintName
+%type<name> typeName constraintName indexedColumnName
 %type<unique> unique
 %type<withoutRowid> withoutRowid
 %type<collate> collate
@@ -58,7 +59,8 @@ package sql
 %type<triggerAction> triggerAction
 %type<trigger> trigger
 %type<triggerList> triggerList
-%type<expr> where expr
+%type<where> where
+%type<expr> expr
 %type<exprList> exprList
 
 %token ACTION
@@ -319,10 +321,15 @@ indexedColumnList:
 		$$ = append($1, $3)
 	}
 
+indexedColumnName:
+	expr {
+		$$ = AsString($1)
+	}
+
 indexedColumn:
-	identifier collate sortOrder {
+	indexedColumnName collate sortOrder {
 		$$ = IndexedColumn{
-			Column: $1,
+			Expression: $1,
 			Collate: $2,
 			SortOrder: $3,
 		}
@@ -382,7 +389,7 @@ expr:
 		$$ = $1
 	} |
 	tBare {
-		$$ = $1
+		$$ = ExBare($1)
 	} |
 	tIdentifier {
 		$$ = ExColumn($1)
@@ -401,7 +408,9 @@ expr:
 	}
 
 exprList:
-	{ } |
+	{
+		$$ = nil
+	} |
 	expr {
 		$$ = []Expression{$1}
 	} |

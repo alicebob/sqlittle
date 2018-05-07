@@ -1,5 +1,10 @@
 package sql
 
+import (
+	"fmt"
+	"strings"
+)
+
 type SortOrder int
 
 const (
@@ -127,9 +132,9 @@ type CreateIndexStmt struct {
 
 // Indexed column, for CreateIndexStmt, and index table constraints
 type IndexedColumn struct {
-	Column    string
-	Collate   string
-	SortOrder SortOrder
+	Expression string
+	Collate    string
+	SortOrder  SortOrder
 }
 
 type Expression interface{}
@@ -141,9 +146,36 @@ type ExBinaryOp struct {
 
 type ExColumn string
 
+type ExBare string
+
 type ExFunction struct {
 	F    string
 	Args []Expression
+}
+
+func AsString(e Expression) string {
+	switch v := e.(type) {
+	case int64:
+		return fmt.Sprintf("%d", v)
+	case float64:
+		return fmt.Sprintf("%g", v)
+	case string:
+		return fmt.Sprintf("'%s'", v)
+	case ExColumn:
+		return fmt.Sprintf(`"%s"`, string(v))
+	case ExBare:
+		return fmt.Sprintf(`%s`, string(v))
+	case ExFunction:
+		var args []string
+		for _, a := range v.Args {
+			args = append(args, AsString(a))
+		}
+		return fmt.Sprintf(`"%s"(%s)`, v.F, strings.Join(args, `, `))
+	case ExBinaryOp:
+		return fmt.Sprintf(`%s%s%s`, AsString(v.Left), v.Op, AsString(v.Right))
+	default:
+		return "bug"
+	}
 }
 
 // Parse is the main function. It will return either an error or a *Stmt
