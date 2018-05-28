@@ -38,6 +38,8 @@ func Compare(
 	sqlSelect string,
 	little func(*testing.T, *sqlittle.DB) [][]string,
 ) {
+	t.Helper()
+
 	file, close := tmpfile(t)
 	defer close()
 

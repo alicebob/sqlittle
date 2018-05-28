@@ -3,6 +3,7 @@
 package ci
 
 import (
+	"os"
 	"testing"
 
 	"github.com/alicebob/sqlittle"
@@ -10,6 +11,9 @@ import (
 
 func TestExprCol(t *testing.T) {
 	// index with expression column
+	if os.Getenv("TRAVIS") != "" {
+		t.Skip("travis has old sqlite3 version")
+	}
 	Compare(
 		t,
 		`
