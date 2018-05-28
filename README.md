@@ -36,13 +36,13 @@ Things SQLittle can do:
 - hides all SQLite low level storage details
 - DESC indexes are handled automatically
 - Collate functions are used automatically
+- indexes with expression (either in columns or as a `WHERE`) are (partially) supported
 - Scan() to most Go datatypes, including `time.Time`
 ```
 
 Things SQLittle should do:
 
 ```
-- the table and index definitions SQL parser is not finished enough
 - add a helper to find indexes. That would be especially useful for the `sqlite_autoindex_...` indexes
 - optimize loading when all requested columns are available in the index
 - expose the locking so you can do bigger read transactions
@@ -56,7 +56,6 @@ Things SQLittle can not do:
 - no joins
 - WAL files are not supported
 - indexes are used for sorting, but there is no on-the-fly sorting
-- indexes with expression (either in columns or as a `WHERE`) are not supported
 ```
 
 ## Locks
