@@ -33,6 +33,8 @@ See [CODE.md](CODE.md) for an overview how the code is structured.
 
 Features
 
+Things SQLittle can do:
+
  - table scan in row order; table scan in index order; simple searches with use of (partial) indexes
  - works on both rowid and non-rowid (`WITHOUT ROWID`) tables
  - files can be used concurrently with sqlite (compatible locks)
@@ -43,8 +45,15 @@ Features
  - Collate functions are used automatically
  - Scan() to most Go datatypes, including `time.Time`
 
+Things SQLittle should do:
 
-Constraints
+ - the table and index definitions SQL parser is not finished enough
+ - add a helper to find indexes. That would be especially useful for the `sqlite_autoindex_...` indexes
+ - optimize loading when all requested columns are available in the index
+ - expose the locking so you can do bigger read transactions
+
+
+Things SQLittle can not do:
 
  - read-only
  - only supports UTF8 strings
@@ -67,13 +76,6 @@ The current level of abstraction is likely the final one (that is: deal
 with reading single tables; don't even try joins or SQL or query planning), but
 the API might still change.
 
-
-Todos
-
- - the table and index definitions SQL parser is not finished enough
- - add a helper to find indexes. That would be especially useful for the `sqlite_autoindex_...` indexes
- - optimize loading when all requested columns are available in the index
- - expose the locking so you can do bigger read transactions
 
 */
 package sqlittle

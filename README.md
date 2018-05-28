@@ -24,7 +24,8 @@ https://godoc.org/github.com/alicebob/sqlittle for the go doc and examples.
 See [LOWLEVEL.md](LOWLEVEL.md) about the low level reader.
 See [CODE.md](CODE.md) for an overview how the code is structured.
 
-Features
+## Features
+Things SQLittle can do:
 
 ```
 - table scan in row order; table scan in index order; simple searches with use of (partial) indexes
@@ -38,7 +39,16 @@ Features
 - Scan() to most Go datatypes, including `time.Time`
 ```
 
-Constraints
+Things SQLittle should do:
+
+```
+- the table and index definitions SQL parser is not finished enough
+- add a helper to find indexes. That would be especially useful for the `sqlite_autoindex_...` indexes
+- optimize loading when all requested columns are available in the index
+- expose the locking so you can do bigger read transactions
+```
+
+Things SQLittle can not do:
 
 ```
 - read-only
@@ -58,15 +68,6 @@ file is opened in SQLittle.
 The current level of abstraction is likely the final one (that is: deal
 with reading single tables; don't even try joins or SQL or query planning), but
 the API might still change.
-
-Todos
-
-```
-- the table and index definitions SQL parser is not finished enough
-- add a helper to find indexes. That would be especially useful for the `sqlite_autoindex_...` indexes
-- optimize loading when all requested columns are available in the index
-- expose the locking so you can do bigger read transactions
-```
 
 
 
