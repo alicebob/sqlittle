@@ -77,6 +77,13 @@ func (db *DB) SelectRowid(table string, rowid int64, columns ...string) (Row, er
 
 // Select all rows from the given table via the index. The order will be the
 // index order (every `DESC` field will iterate in descending order).
+//
+// `columns` are the name of the columns you want, their values always come
+// from the data table. Index columns can have expressions, but that doesn't do
+// anything (except maybe change the order).
+//
+// If the index has a WHERE expression only the rows matching that expression
+// will be matched.
 func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
@@ -106,6 +113,21 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 //
 // `key` is compared against the index columns. `key` can have fewer columns than
 // the index, in which case only the given columns need to compare equal.
+// If the index column is an expression then `key` is compared against the
+// value stored in the index.
+//
+// For example, given a table:
+//    1: "aap", 1
+//    2: "aap", 13
+//    3: "noot", 12
+// matches:
+//    Key{"aap", 1} will match rows 1
+//    Key{"aap"} will match rows 1 and 2
+//    Key{"noot", 1} will not match any row
+//    Key{} will match every row
+//
+// If the index has a WHERE expression only the rows matching that expression
+// will be matched.
 func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
@@ -138,7 +160,7 @@ func (db *DB) IndexedSelectEq(table, index string, key Key, cb RowCB, columns ..
 //
 // `key` is compared against the columns of the primary key. `key` can have fewer
 // columns than the primary key has, in which case only the given columns need
-// to compare equal.
+// to compare equal (see `IndexedSelectEq` for an example).
 // Any collate function defined in the schema will be applied automatically.
 //
 // PKSelect is especially efficient for non-rowid tables (`WITHOUT ROWID`), and
