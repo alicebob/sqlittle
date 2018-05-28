@@ -40,9 +40,10 @@ type SchemaIndex struct {
 }
 
 type IndexColumn struct {
-	Column    string
-	Collate   string
-	SortOrder sql.SortOrder
+	Column     string
+	Expression string
+	Collate    string
+	SortOrder  sql.SortOrder
 }
 
 func newSchema(table string, master []sqliteMaster) (*Schema, error) {
@@ -200,19 +201,23 @@ func (st *Schema) addCreateIndex(ci sql.CreateIndexStmt) {
 func (st *Schema) toIndexColumns(ci []sql.IndexedColumn) []IndexColumn {
 	var cs []IndexColumn
 	for _, col := range ci {
-		base := st.column(col.Column)
-		if base == nil {
-			base = &TableColumn{} // shouldn't happen
+		c := IndexColumn{
+			Column:     col.Column,
+			Expression: col.Expression,
+			SortOrder:  col.SortOrder,
 		}
-		collate := base.Collate
-		if col.Collate != "" {
-			collate = col.Collate
+		if col.Column != "" {
+			// not an expression column
+			base := st.column(col.Column)
+			if base != nil {
+				collate := base.Collate
+				if col.Collate != "" {
+					collate = col.Collate
+				}
+				c.Collate = collate
+			}
 		}
-		cs = append(cs, IndexColumn{
-			Column:    col.Column,
-			Collate:   collate,
-			SortOrder: col.SortOrder,
-		})
+		cs = append(cs, c)
 	}
 	return cs
 }

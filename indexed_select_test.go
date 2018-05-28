@@ -145,3 +145,65 @@ func TestIndexedSelectDesc(t *testing.T) {
 		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 	}
 }
+
+func TestIndexedSelectExprWhere(t *testing.T) {
+	// index with a WHERE expression
+	db, err := Open("testdata/expr.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var words []string
+	cb := func(r Row) {
+		w, _ := r.ScanString()
+		words = append(words, w)
+	}
+	if err := db.IndexedSelect(
+		"expr",
+		"expr_where",
+		cb,
+		"name",
+	); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"longestnameever",
+		"qqq",
+	}
+	if have, want := words, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
+}
+
+func TestIndexedSelectExprCol(t *testing.T) {
+	// index with an expression column
+	db, err := Open("testdata/expr.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var words []string
+	cb := func(r Row) {
+		w, _ := r.ScanString()
+		words = append(words, w)
+	}
+	if err := db.IndexedSelect(
+		"expr",
+		"expr_name",
+		cb,
+		"name",
+	); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"aap",
+		"foo",
+		"longestnameever", // substr() expression, but we get the value from the row
+		"qqq",
+	}
+	if have, want := words, want; !reflect.DeepEqual(have, want) {
+		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
+	}
+}

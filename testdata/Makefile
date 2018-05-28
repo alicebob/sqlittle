@@ -3,6 +3,7 @@
 ALL:= \
     alter.sqlite \
     empty.sqlite \
+    expr.sqlite \
     four.sqlite \
     funkykey.sqlite \
     index.sqlite \
