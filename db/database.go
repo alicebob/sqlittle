@@ -351,7 +351,7 @@ func (db *Database) openPage(page int) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, err := newBtree(buf, page == 1)
+	p, err := newBtree(buf, page == 1, db.header.PageSize)
 	if err == nil {
 		db.btreeCache.set(page, p)
 	}

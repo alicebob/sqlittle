@@ -88,7 +88,7 @@ var (
 	_ indexBtree = &indexInterior{}
 )
 
-func newBtree(b []byte, isFileHeader bool) (interface{}, error) {
+func newBtree(b []byte, isFileHeader bool, pageSize int) (interface{}, error) {
 	hb := b
 	if isFileHeader {
 		hb = b[headerSize:]
@@ -96,15 +96,15 @@ func newBtree(b []byte, isFileHeader bool) (interface{}, error) {
 	cells := int(binary.BigEndian.Uint16(hb[3:5]))
 	switch typ := int(hb[0]); typ {
 	case 0x0d:
-		return newLeafTableBtree(cells, hb[8:], b)
+		return newLeafTableBtree(cells, hb[8:], b, pageSize)
 	case 0x05:
 		rightmostPointer := int(binary.BigEndian.Uint32(hb[8:12]))
 		return newInteriorTableBtree(cells, hb[12:], b, rightmostPointer)
 	case 0x0a:
-		return newLeafIndex(cells, b[8:], b)
+		return newLeafIndex(cells, b[8:], b, pageSize)
 	case 0x02:
 		rightmostPointer := int(binary.BigEndian.Uint32(b[8:12]))
-		return newInteriorIndex(cells, b[12:], b, rightmostPointer)
+		return newInteriorIndex(cells, b[12:], b, rightmostPointer, pageSize)
 	default:
 		return nil, errors.New("unsupported page type")
 	}
@@ -114,6 +114,7 @@ func newLeafTableBtree(
 	count int,
 	pointers []byte,
 	content []byte,
+	pageSize int,
 ) (*tableLeaf, error) {
 	cells, err := parseCellpointers(count, pointers, len(content))
 	if err != nil {
@@ -121,7 +122,7 @@ func newLeafTableBtree(
 	}
 	leafs := make([]tableLeafCell, len(cells))
 	for i, start := range cells {
-		leafs[i], err = parseTableLeaf(content[start:])
+		leafs[i], err = parseTableLeaf(content[start:], pageSize)
 		if err != nil {
 			return nil, err
 		}
@@ -250,6 +251,7 @@ func newLeafIndex(
 	count int,
 	pointers []byte,
 	content []byte,
+	pageSize int,
 ) (*indexLeaf, error) {
 	cells, err := parseCellpointers(count, pointers, len(content))
 	if err != nil {
@@ -257,7 +259,7 @@ func newLeafIndex(
 	}
 	cs := make([]cellPayload, len(cells))
 	for i, start := range cells {
-		cs[i], err = parseIndexLeaf(content[start:])
+		cs[i], err = parseIndexLeaf(content[start:], pageSize)
 		if err != nil {
 			return nil, err
 		}
@@ -323,6 +325,7 @@ func newInteriorIndex(
 	pointers []byte,
 	content []byte,
 	rightmost int,
+	pageSize int,
 ) (*indexInterior, error) {
 	cells, err := parseCellpointers(count, pointers, len(content))
 	if err != nil {
@@ -330,7 +333,7 @@ func newInteriorIndex(
 	}
 	cs := make([]indexInteriorCell, len(cells))
 	for i, start := range cells {
-		cs[i], err = parseIndexInterior(content[start:])
+		cs[i], err = parseIndexInterior(content[start:], pageSize)
 		if err != nil {
 			return nil, err
 		}
@@ -458,28 +461,48 @@ func (l *indexInterior) Count(db *Database) (int, error) {
 	return total + n, err
 }
 
+func calculateCellInPageBytes(l int64, pageSize int, maxInPagePayload int) int {
+	// Overflow calculation described in the file format spec. The
+	// variable names and magic constants are from the spec exactly.
+	u := int64(pageSize)
+	p := l
+	x := int64(maxInPagePayload)
+	m := ((u - 12) * 32 / 255) - 23
+	k := m + ((p - m) % (u - 4))
+
+	if p <= x {
+		return int(l)
+	} else if k <= x {
+		return int(k)
+	} else {
+		return int(m)
+	}
+}
+
 // shared code for parsing payload from cells
-func parsePayload(l int64, c []byte) (cellPayload, error) {
+func parsePayload(l int64, c []byte, pageSize int, maxInPagePayload int) (cellPayload, error) {
 	overflow := 0
+	inPageBytes := calculateCellInPageBytes(l, pageSize, maxInPagePayload)
 	if l < 0 {
 		return cellPayload{}, ErrCorrupted
 	}
-	if int64(len(c)) > l {
-		c = c[:l]
+
+	if int64(inPageBytes) == l {
+		return cellPayload{l, c, 0}, nil
 	}
-	if int64(len(c)) != l {
-		if len(c) < 4 {
-			return cellPayload{}, ErrCorrupted
-		}
-		c, overflow = c[:len(c)-4], int(binary.BigEndian.Uint32(c[len(c)-4:]))
-		if overflow == 0 {
-			return cellPayload{}, ErrCorrupted
-		}
+
+	if len(c) < inPageBytes+4 {
+		return cellPayload{}, ErrCorrupted
+	}
+
+	c, overflow = c[:inPageBytes], int(binary.BigEndian.Uint32(c[inPageBytes:inPageBytes+4]))
+	if overflow == 0 {
+		return cellPayload{}, ErrCorrupted
 	}
 	return cellPayload{l, c, overflow}, nil
 }
 
-func parseTableLeaf(c []byte) (tableLeafCell, error) {
+func parseTableLeaf(c []byte, pageSize int) (tableLeafCell, error) {
 	l, n := readVarint(c)
 	if n < 0 {
 		return tableLeafCell{}, ErrCorrupted
@@ -489,7 +512,8 @@ func parseTableLeaf(c []byte) (tableLeafCell, error) {
 	if n < 0 {
 		return tableLeafCell{}, ErrCorrupted
 	}
-	pl, err := parsePayload(l, c[n:])
+
+	pl, err := parsePayload(l, c[n:], pageSize, pageSize-35)
 	return tableLeafCell{
 		left:    rowid,
 		payload: pl,
@@ -511,15 +535,15 @@ func parseTableInterior(c []byte) (tableInteriorCell, error) {
 	}, nil
 }
 
-func parseIndexLeaf(c []byte) (cellPayload, error) {
+func parseIndexLeaf(c []byte, pageSize int) (cellPayload, error) {
 	l, n := readVarint(c)
 	if n < 0 {
 		return cellPayload{}, ErrCorrupted
 	}
-	return parsePayload(l, c[n:])
+	return parsePayload(l, c[n:], pageSize, ((pageSize-12)*64/255)-23)
 }
 
-func parseIndexInterior(c []byte) (indexInteriorCell, error) {
+func parseIndexInterior(c []byte, pageSize int) (indexInteriorCell, error) {
 	if len(c) < 4 {
 		return indexInteriorCell{}, ErrCorrupted
 	}
@@ -529,7 +553,7 @@ func parseIndexInterior(c []byte) (indexInteriorCell, error) {
 	if n < 0 {
 		return indexInteriorCell{}, ErrCorrupted
 	}
-	pl, err := parsePayload(l, c[n:])
+	pl, err := parsePayload(l, c[n:], pageSize, ((pageSize-12)*64/255)-23)
 	return indexInteriorCell{
 		left:    int(left),
 		payload: pl,
