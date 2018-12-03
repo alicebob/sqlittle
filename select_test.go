@@ -300,3 +300,13 @@ func TestPKSelectNonRowid(t *testing.T) {
 		t.Errorf("diff:\n%s", diff.LineDiff(spew.Sdump(want), spew.Sdump(have)))
 	}
 }
+
+func TestSelectOverflow(t *testing.T) {
+	db, err := Open("testdata/page_overflow.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	db.Select("test", func(row Row) {}, "id")
+}
