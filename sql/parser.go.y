@@ -63,6 +63,8 @@ package sql
 %type<expr> indexedColumnExpr
 %type<expr> expr
 %type<exprList> exprList
+%type<bool> deferrable
+%type<bool> initiallyDeferred
 
 %token ACTION
 %token AND
@@ -73,6 +75,8 @@ package sql
 %token CONSTRAINT
 %token CREATE
 %token DEFAULT
+%token DEFERRABLE
+%token DEFERRED
 %token DELETE
 %token DESC
 %token FOREIGN
@@ -80,6 +84,7 @@ package sql
 %token GLOB
 %token IN
 %token INDEX
+%token INITIALLY
 %token IS
 %token KEY
 %token LIKE
@@ -224,12 +229,14 @@ tableConstraint:
 	UNIQUE '(' indexedColumnList ')' {
 		$$ = TableUnique{$3}
 	} |
-	FOREIGN KEY '(' columnNameList ')' REFERENCES identifier optColumnNameList triggerList {
+	FOREIGN KEY '(' columnNameList ')' REFERENCES identifier optColumnNameList deferrable initiallyDeferred triggerList {
 		$$ = TableForeignKey{
 			Columns: $4,
 			ForeignTable: $7,
 			ForeignColumns: $8,
-			Triggers: $9,
+			Deferrable: $9,
+			InitiallyDeferred: $10,
+			Triggers: $11,
 		}
 	}
 
@@ -362,6 +369,22 @@ triggerList:
 	triggerList trigger {
 		$$ = append($1, $2)
 	}
+
+deferrable:
+    {
+        $$ = false
+    } |
+    DEFERRABLE {
+        $$ = true
+    }
+
+initiallyDeferred:
+    {
+        $$ = false
+    } |
+    INITIALLY DEFERRED {
+        $$ = true
+    }
 
 where:
 	{ } |

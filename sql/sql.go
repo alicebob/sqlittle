@@ -100,10 +100,12 @@ type TableUnique struct {
 	IndexedColumns []IndexedColumn
 }
 type TableForeignKey struct {
-	Columns        []string
-	ForeignTable   string
-	ForeignColumns []string
-	Triggers       []Trigger
+	Columns           []string
+	ForeignTable      string
+	ForeignColumns    []string
+	Deferrable        bool
+	InitiallyDeferred bool
+	Triggers          []Trigger
 }
 type Trigger interface{}
 type TriggerOnDelete TriggerAction

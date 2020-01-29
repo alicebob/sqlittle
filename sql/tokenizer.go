@@ -48,6 +48,9 @@ var (
 		"UPDATE":        UPDATE,
 		"WHERE":         WHERE,
 		"WITHOUT":       WITHOUT,
+		"DEFERRABLE":    DEFERRABLE,
+		"INITIALLY":     INITIALLY,
+		"DEFERRED":      DEFERRED,
 	}
 	operators = map[string]struct{}{
 		"||": struct{}{},
