@@ -1,5 +1,9 @@
 %{
 package sql
+import "fmt"
+func yyerror() {
+	fmt.Printf("syntax error")
+	}
 %}
 
 %union {
