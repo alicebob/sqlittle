@@ -98,6 +98,8 @@ type TablePrimaryKey struct {
 }
 type TableUnique struct {
 	IndexedColumns []IndexedColumn
+	Conflict bool
+	Replace bool
 }
 type TableForeignKey struct {
 	Columns           []string
