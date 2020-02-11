@@ -66,12 +66,14 @@ package sql
 %type<bool> deferrable
 %type<bool> initiallyDeferred
 
+%token ABORT
 %token ACTION
 %token AND
 %token ASC
 %token AUTOINCREMENT
 %token CASCADE
 %token COLLATE
+%token CONFLICT
 %token CONSTRAINT
 %token CREATE
 %token DEFAULT
@@ -79,9 +81,11 @@ package sql
 %token DEFERRED
 %token DELETE
 %token DESC
+%token FAIL
 %token FOREIGN
 %token FROM
 %token GLOB
+%token IGNORE
 %token IN
 %token INDEX
 %token INITIALLY
@@ -97,7 +101,9 @@ package sql
 %token PRIMARY
 %token REFERENCES
 %token REGEXP
+%token REPLACE
 %token RESTRICT
+%token ROLLBACK
 %token ROWID
 %token SELECT
 %token SET
@@ -226,8 +232,10 @@ tableConstraint:
 	PRIMARY KEY '(' indexedColumnList ')' {
 		$$ = TablePrimaryKey{$4}
 	} |
-	UNIQUE '(' indexedColumnList ')' {
-		$$ = TableUnique{$3}
+	UNIQUE '(' indexedColumnList ')' onConflict {
+		$$ = TableUnique{
+			IndexedColumns: $3,
+		}
 	} |
 	FOREIGN KEY '(' columnNameList ')' REFERENCES identifier optColumnNameList deferrable initiallyDeferred triggerList {
 		$$ = TableForeignKey{
@@ -321,6 +329,19 @@ unique:
 		$$ = true
 	}
 
+onConflict:
+	{ } |
+	ON CONFLICT ROLLBACK {
+	} |
+	ON CONFLICT ABORT {
+	} |
+	ON CONFLICT FAIL {
+	} |
+	ON CONFLICT IGNORE {
+	} |
+	ON CONFLICT REPLACE {
+	}
+
 indexedColumnList:
 	indexedColumn {
 		$$ = []IndexedColumn{$1}
@@ -371,20 +392,20 @@ triggerList:
 	}
 
 deferrable:
-    {
-        $$ = false
-    } |
-    DEFERRABLE {
-        $$ = true
-    }
+	{
+		$$ = false
+	} |
+	DEFERRABLE {
+		$$ = true
+	}
 
 initiallyDeferred:
-    {
-        $$ = false
-    } |
-    INITIALLY DEFERRED {
-        $$ = true
-    }
+	{
+		$$ = false
+	} |
+	INITIALLY DEFERRED {
+		$$ = true
+	}
 
 where:
 	{ } |

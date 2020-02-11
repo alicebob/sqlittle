@@ -10,3 +10,6 @@ test: parser.go
 
 build: parser.go
 	go build
+
+get:
+	go get golang.org/x/tools/cmd/goyacc
