@@ -1,9 +1,5 @@
 %{
 package sql
-import "fmt"
-func yyerror() {
-	fmt.Printf("syntax error")
-	}
 %}
 
 %union {
@@ -69,10 +65,8 @@ func yyerror() {
 %type<exprList> exprList
 %type<bool> deferrable
 %type<bool> initiallyDeferred
-%type<bool> conflict
-%type<bool> replace
-%type<bool> on
 
+%token ABORT
 %token ACTION
 %token AND
 %token ASC
@@ -87,9 +81,11 @@ func yyerror() {
 %token DEFERRED
 %token DELETE
 %token DESC
+%token FAIL
 %token FOREIGN
 %token FROM
 %token GLOB
+%token IGNORE
 %token IN
 %token INDEX
 %token INITIALLY
@@ -107,6 +103,7 @@ func yyerror() {
 %token REGEXP
 %token REPLACE
 %token RESTRICT
+%token ROLLBACK
 %token ROWID
 %token SELECT
 %token SET
@@ -235,11 +232,9 @@ tableConstraint:
 	PRIMARY KEY '(' indexedColumnList ')' {
 		$$ = TablePrimaryKey{$4}
 	} |
-	UNIQUE '(' indexedColumnList ')' on conflict replace {
+	UNIQUE '(' indexedColumnList ')' onConflict {
 		$$ = TableUnique{
 			IndexedColumns: $3,
-			Conflict: $5,
-			Replace: $6,
 		}
 	} |
 	FOREIGN KEY '(' columnNameList ')' REFERENCES identifier optColumnNameList deferrable initiallyDeferred triggerList {
@@ -334,13 +329,18 @@ unique:
 		$$ = true
 	}
 
-on:
-        {
-        	$$ = false
-        } |
-        ON {
-        	$$ = true
-        }
+onConflict:
+	{ } |
+	ON CONFLICT ROLLBACK {
+	} |
+	ON CONFLICT ABORT {
+	} |
+	ON CONFLICT FAIL {
+	} |
+	ON CONFLICT IGNORE {
+	} |
+	ON CONFLICT REPLACE {
+	}
 
 indexedColumnList:
 	indexedColumn {
@@ -404,22 +404,6 @@ initiallyDeferred:
 		$$ = false
 	} |
 	INITIALLY DEFERRED {
-		$$ = true
-	}
-
-conflict:
-	{
-		$$ = false
-	} |
-	CONFLICT {
-		$$ = true
-	}
-
-replace:
-	{
-		$$ = false
-	} |
-	REPLACE {
 		$$ = true
 	}
 

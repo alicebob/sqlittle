@@ -240,6 +240,23 @@ func TestCreateTable(t *testing.T) {
 		},
 	)
 
+	sqlOK(t,
+		"CREATE TABLE table1 ( data INT, UNIQUE (data) ON CONFLICT REPLACE )",
+		CreateTableStmt{
+			Table: "table1",
+			Columns: []ColumnDef{
+				{Name: "data", Null: true, Type: "INT"},
+			},
+			Constraints: []TableConstraint{
+				TableUnique{
+					IndexedColumns: []IndexedColumn{
+						{Column: "data", SortOrder: Asc},
+					},
+				},
+			},
+		},
+	)
+
 	// CREATE TABLE column definition tests.
 	// a nil value means we expect an error
 	cases := map[string]*ColumnDef{
