@@ -280,6 +280,9 @@ columnDefList:
 columnDef:
 	identifier typeName columnConstraintList {
 		$$ = makeColumnDef($1, $2, $3)
+	} |
+	ROWID typeName columnConstraintList {
+		$$ = makeColumnDef("ROWID", $2, $3)
 	}
 
 typeName:

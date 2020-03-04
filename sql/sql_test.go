@@ -286,6 +286,10 @@ func TestCreateTable(t *testing.T) {
 		"i0 not null default foo":              &ColumnDef{Name: "i0", Default: "foo"},
 		"i0 not null default 'foo'":            &ColumnDef{Name: "i0", Default: "foo"},
 		"i0 not null default [foo]":            nil,
+
+		"integer integer primary key":                    &ColumnDef{Name: "integer", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Asc, Null: true},
+		"ROWID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE": &ColumnDef{Name: "ROWID", Type: "INTEGER", PrimaryKey: true, Unique: true, AutoIncrement: true, Null: true},
+		"select integer primary key":                     nil,
 	}
 
 	for sql, col := range cases {
