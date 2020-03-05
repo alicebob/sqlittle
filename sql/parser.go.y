@@ -283,6 +283,9 @@ columnDef:
 	} |
 	ROWID typeName columnConstraintList {
 		$$ = makeColumnDef("ROWID", $2, $3)
+	} |
+	REPLACE typeName columnConstraintList {
+		$$ = makeColumnDef("REPLACE", $2, $3)
 	}
 
 typeName:
