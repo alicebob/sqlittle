@@ -215,6 +215,9 @@ columnConstraint:
 	} |
 	DEFAULT literal {
 		$$ = ccDefault($2)
+	} |
+	DEFAULT NULL {
+		$$ = ccDefault(nil)
 	}
 
 columnConstraintList:

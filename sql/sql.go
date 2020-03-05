@@ -84,6 +84,8 @@ func makeColumnDef(name string, typ string, cs []columnConstraint) ColumnDef {
 			cd.Collate = string(v)
 		case ccDefault:
 			cd.Default = interface{}(v)
+		case nil:
+			cd.Default = nil
 		default:
 			panic("unhandled constraint")
 		}
