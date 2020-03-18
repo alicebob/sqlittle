@@ -8,7 +8,7 @@ import (
 )
 
 func TestDriver(t *testing.T) {
-	c, err := sql.Open("sqlittle", "sqlittle://foobar")
+	c, err := sql.Open("sqlittle", "../testdata/music.sqlite")
 	require.NoError(t, err)
 	require.NotNil(t, c)
 
@@ -25,20 +25,23 @@ func TestDriver(t *testing.T) {
 		require.NoError(t, err)
 		cols, err := rows.Columns()
 		require.NoError(t, err)
-		require.Equal(t, []string{"test", "columns"}, cols)
+		require.Equal(t, []string{"id", "album", "name", "length"}, cols)
 
 		var res [][]string
 		for rows.Next() {
-			r := make([]string, 2)
-			require.NoError(t, rows.Scan(&r[0], &r[1]))
+			r := make([]string, 4)
+			require.NoError(t, rows.Scan(&r[0], &r[1], &r[2], &r[3]))
 			res = append(res, r)
 		}
 		require.NoError(t, rows.Err())
 		require.NoError(t, rows.Close())
 		require.Equal(t, [][]string{
-			{"aap", "noot"},
-			{"mies", "wim"},
-			{"vuur", "eekhoorn"},
+			{"1", "1", "Drive My Car", "145"},
+			{"2", "1", "Norwegian Wood", "121"},
+			{"3", "1", "You Wont See Me", "198"},
+			{"4", "2", "Come Together", "259"},
+			{"5", "2", "Something", "182"},
+			{"6", "2", "Maxwells Silver Hammer", "207"},
 		}, res)
 	})
 }
