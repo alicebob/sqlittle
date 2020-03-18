@@ -48,8 +48,8 @@ type ColumnDef struct {
 	Unique        bool
 	Default       interface{}
 	Collate       string
+	References    *ForeignKeyClause
 	// Check
-	// foreign key
 }
 
 // column constraints, used while parsing a constraint list
@@ -63,6 +63,7 @@ type ccNull bool
 type ccAutoincrement bool
 type ccCollate string
 type ccDefault interface{}
+type ccReferences ForeignKeyClause
 
 func makeColumnDef(name string, typ string, cs []columnConstraint) ColumnDef {
 	cd := ColumnDef{
@@ -82,6 +83,9 @@ func makeColumnDef(name string, typ string, cs []columnConstraint) ColumnDef {
 			cd.Unique = bool(v)
 		case ccCollate:
 			cd.Collate = string(v)
+		case ccReferences:
+			clause := ForeignKeyClause(v)
+			cd.References = &clause
 		case ccDefault:
 			cd.Default = interface{}(v)
 		case nil:
@@ -93,6 +97,14 @@ func makeColumnDef(name string, typ string, cs []columnConstraint) ColumnDef {
 	return cd
 }
 
+type ForeignKeyClause struct {
+	ForeignTable      string
+	ForeignColumns    []string
+	Deferrable        bool
+	InitiallyDeferred bool
+	Triggers          []Trigger
+}
+
 // CREATE TABLE constraint (primary key, index)
 type TableConstraint interface{}
 type TablePrimaryKey struct {
@@ -102,12 +114,8 @@ type TableUnique struct {
 	IndexedColumns []IndexedColumn
 }
 type TableForeignKey struct {
-	Columns           []string
-	ForeignTable      string
-	ForeignColumns    []string
-	Deferrable        bool
-	InitiallyDeferred bool
-	Triggers          []Trigger
+	Columns []string
+	Clause  ForeignKeyClause
 }
 type Trigger interface{}
 type TriggerOnDelete TriggerAction
