@@ -42,6 +42,7 @@ func TestExpr(t *testing.T) {
 	test(Expression(ExColumn("foo")), `"foo"`)
 	test(Expression(ExFunction{"foo", []Expression{int64(123)}}), `"foo"(123)`)
 	test(Expression(ExBinaryOp{"+", int64(1), int64(2)}), "1+2")
+	test(Expression(ExBinaryOp{">", int64(1), int64(2)}), "1>2")
 	test(Expression(ExFunction{"foo", []Expression{ExBinaryOp{"*", int64(1), int64(2)}}}), `"foo"(1*2)`)
 }
 
@@ -191,15 +192,17 @@ func TestCreateTable(t *testing.T) {
 			},
 			Constraints: []TableConstraint{
 				TableForeignKey{
-					Columns:        []string{"noot"},
-					ForeignTable:   "something",
-					ForeignColumns: []string{"fnoot"},
-					Triggers: []Trigger{
-						TriggerOnDelete(ActionNoAction),
-						TriggerOnUpdate(ActionCascade),
-						TriggerOnUpdate(ActionRestrict),
-						TriggerOnDelete(ActionSetNull),
-						TriggerOnUpdate(ActionSetDefault),
+					Columns: []string{"noot"},
+					Clause: ForeignKeyClause{
+						ForeignTable:   "something",
+						ForeignColumns: []string{"fnoot"},
+						Triggers: []Trigger{
+							TriggerOnDelete(ActionNoAction),
+							TriggerOnUpdate(ActionCascade),
+							TriggerOnUpdate(ActionRestrict),
+							TriggerOnDelete(ActionSetNull),
+							TriggerOnUpdate(ActionSetDefault),
+						},
 					},
 				},
 			},
@@ -288,10 +291,57 @@ func TestCreateTable(t *testing.T) {
 		"i0 not null default [foo]":            nil,
 		"i0 STRING DEFAULT NULL":               &ColumnDef{Name: "i0", Type: "STRING", Null: true, Default: nil},
 
-		"integer integer primary key":                    &ColumnDef{Name: "integer", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Asc, Null: true},
-		"ROWID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE": &ColumnDef{Name: "ROWID", Type: "INTEGER", PrimaryKey: true, Unique: true, AutoIncrement: true, Null: true},
+		"integer integer primary key":                      &ColumnDef{Name: "integer", Type: "integer", PrimaryKey: true, PrimaryKeyDir: Asc, Null: true},
+		"ROWID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE":   &ColumnDef{Name: "ROWID", Type: "INTEGER", PrimaryKey: true, Unique: true, AutoIncrement: true, Null: true},
 		"REPLACE INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE": &ColumnDef{Name: "REPLACE", Type: "INTEGER", PrimaryKey: true, Unique: true, AutoIncrement: true, Null: true},
-		"select integer primary key":                     nil,
+		"select integer primary key":                       nil,
+
+		"message_id INTEGER REFERENCES message (foo)": &ColumnDef{
+			Name: "message_id",
+			Type: "INTEGER",
+			Null: true,
+			References: &ForeignKeyClause{
+				ForeignTable:   "message",
+				ForeignColumns: []string{"foo"},
+				// Triggers:
+			},
+		},
+		"message_id INTEGER REFERENCES message (foo) ON DELETE CASCADE": &ColumnDef{
+			Name: "message_id",
+			Type: "INTEGER",
+			Null: true,
+			References: &ForeignKeyClause{
+				ForeignTable:   "message",
+				ForeignColumns: []string{"foo"},
+				Triggers:       []Trigger{TriggerOnDelete(ActionCascade)},
+			},
+		},
+		"message_id INTEGER REFERENCES message (ROWID) ON DELETE CASCADE": &ColumnDef{
+			Name: "message_id",
+			Type: "INTEGER",
+			Null: true,
+			References: &ForeignKeyClause{
+				ForeignTable:   "message",
+				ForeignColumns: []string{"ROWID"},
+				Triggers:       []Trigger{TriggerOnDelete(ActionCascade)},
+			},
+		},
+
+		"foo integer CHECK ( 1 > 2 ) NOT NULL": &ColumnDef{
+			Name: "foo",
+			Type: "integer",
+			Checks: []Expression{
+				ExBinaryOp{Op: ">", Left: int64(1), Right: int64(2)},
+			},
+		},
+		"foo integer CHECK (foo = 4) NOT NULL": &ColumnDef{
+			Name: "foo",
+			Type: "integer",
+			Checks: []Expression{
+				ExBinaryOp{Op: "=", Left: ExColumn("foo"), Right: int64(4)},
+			},
+		},
+		"foo integer CHECK 12 NOT NULL": nil,
 	}
 
 	for sql, col := range cases {

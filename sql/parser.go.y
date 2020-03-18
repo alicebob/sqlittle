@@ -23,6 +23,7 @@ package sql
 	columnConstraintList []columnConstraint
 	tableConstraint TableConstraint
 	tableConstraintList []TableConstraint
+	foreignKeyClause ForeignKeyClause
 	triggerAction TriggerAction
 	trigger Trigger
 	triggerList []Trigger
@@ -56,6 +57,7 @@ package sql
 %type<columnConstraintList> columnConstraintList
 %type<tableConstraint> tableConstraint
 %type<tableConstraintList> tableConstraintList
+%type<foreignKeyClause> foreignKeyClause
 %type<triggerAction> triggerAction
 %type<trigger> trigger
 %type<triggerList> triggerList
@@ -72,6 +74,7 @@ package sql
 %token ASC
 %token AUTOINCREMENT
 %token CASCADE
+%token CHECK
 %token COLLATE
 %token CONFLICT
 %token CONSTRAINT
@@ -165,6 +168,9 @@ floatNumber:
 columnName:
 	identifier {
 		$$ = $1
+	} |
+	ROWID {
+		$$ = "ROWID"
 	}
 
 columnNameList:
@@ -198,17 +204,17 @@ columnConstraint:
 	PRIMARY KEY sortOrder autoincrement {
 		$$ = ccPrimaryKey{$3, $4}
 	} |
-	UNIQUE {
-		$$ = ccUnique(true)
-	} |
 	NULL {
 		$$ = ccNull(true)
 	} |
 	NOT NULL {
 		$$ = ccNull(false)
 	} |
-	COLLATE identifier {
-		$$ = ccCollate($2)
+	UNIQUE {
+		$$ = ccUnique(true)
+	} |
+	CHECK '(' expr ')' {
+		$$ = ccCheck{expr: $3}
 	} |
 	DEFAULT signedNumber {
 		$$ = ccDefault($2)
@@ -218,6 +224,12 @@ columnConstraint:
 	} |
 	DEFAULT NULL {
 		$$ = ccDefault(nil)
+	} |
+	COLLATE identifier {
+		$$ = ccCollate($2)
+	} |
+	foreignKeyClause {
+		$$ = ccReferences($1)
 	}
 
 columnConstraintList:
@@ -240,14 +252,21 @@ tableConstraint:
 			IndexedColumns: $3,
 		}
 	} |
-	FOREIGN KEY '(' columnNameList ')' REFERENCES identifier optColumnNameList deferrable initiallyDeferred triggerList {
+	FOREIGN KEY '(' columnNameList ')' foreignKeyClause {
 		$$ = TableForeignKey{
 			Columns: $4,
-			ForeignTable: $7,
-			ForeignColumns: $8,
-			Deferrable: $9,
-			InitiallyDeferred: $10,
-			Triggers: $11,
+			Clause: $6,
+		}
+	}
+
+foreignKeyClause:
+	REFERENCES identifier optColumnNameList deferrable initiallyDeferred triggerList {
+		$$ = ForeignKeyClause{
+			ForeignTable: $2,
+			ForeignColumns: $3,
+			Deferrable: $4,
+			InitiallyDeferred: $5,
+			Triggers: $6,
 		}
 	}
 
@@ -281,11 +300,8 @@ columnDefList:
 	}
 
 columnDef:
-	identifier typeName columnConstraintList {
+	columnName typeName columnConstraintList {
 		$$ = makeColumnDef($1, $2, $3)
-	} |
-	ROWID typeName columnConstraintList {
-		$$ = makeColumnDef("ROWID", $2, $3)
 	} |
 	REPLACE typeName columnConstraintList {
 		$$ = makeColumnDef("REPLACE", $2, $3)
