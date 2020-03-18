@@ -25,7 +25,7 @@ func Open(dsn string) (driver.Conn, error) {
 }
 
 // Connection is a single sqlite file
-// It implements the driver.Conn interface
+// It implements the driver.Conn and driver.Tx interfaces
 type Connection struct {
 	File string
 }
@@ -52,6 +52,8 @@ func (c *Connection) Prepare(q string) (driver.Stmt, error) {
 	}, nil
 }
 
+// Statement is a single statement, belonging to a particular Connection.
+// It implements the driver.Stmt interface.
 type Statement struct {
 	SQL string
 }
@@ -60,6 +62,7 @@ func (Statement) Close() error {
 	return nil
 }
 
+// Exec is not relevant and is a NOOP
 func (st Statement) Exec(v []driver.Value) (driver.Result, error) {
 	return driver.RowsAffected(0), nil
 }
@@ -79,6 +82,7 @@ func (st Statement) NumInput() int {
 	return 0
 }
 
+// Rows is the result set. It implements the driver.Rows interface.
 type Rows struct {
 	columns []string
 	rows    [][]string
