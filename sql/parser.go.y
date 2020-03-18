@@ -74,6 +74,7 @@ package sql
 %token ASC
 %token AUTOINCREMENT
 %token CASCADE
+%token CHECK
 %token COLLATE
 %token CONFLICT
 %token CONSTRAINT
@@ -211,6 +212,9 @@ columnConstraint:
 	} |
 	UNIQUE {
 		$$ = ccUnique(true)
+	} |
+	CHECK '(' expr ')' {
+		$$ = ccCheck{expr: $3}
 	} |
 	DEFAULT signedNumber {
 		$$ = ccDefault($2)

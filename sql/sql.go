@@ -49,7 +49,7 @@ type ColumnDef struct {
 	Default       interface{}
 	Collate       string
 	References    *ForeignKeyClause
-	// Check
+	Checks        []Expression
 }
 
 // column constraints, used while parsing a constraint list
@@ -64,6 +64,9 @@ type ccAutoincrement bool
 type ccCollate string
 type ccDefault interface{}
 type ccReferences ForeignKeyClause
+type ccCheck struct {
+	expr Expression
+}
 
 func makeColumnDef(name string, typ string, cs []columnConstraint) ColumnDef {
 	cd := ColumnDef{
@@ -86,6 +89,8 @@ func makeColumnDef(name string, typ string, cs []columnConstraint) ColumnDef {
 		case ccReferences:
 			clause := ForeignKeyClause(v)
 			cd.References = &clause
+		case ccCheck:
+			cd.Checks = append(cd.Checks, v.expr)
 		case ccDefault:
 			cd.Default = interface{}(v)
 		case nil:

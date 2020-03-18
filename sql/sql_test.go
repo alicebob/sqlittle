@@ -42,6 +42,7 @@ func TestExpr(t *testing.T) {
 	test(Expression(ExColumn("foo")), `"foo"`)
 	test(Expression(ExFunction{"foo", []Expression{int64(123)}}), `"foo"(123)`)
 	test(Expression(ExBinaryOp{"+", int64(1), int64(2)}), "1+2")
+	test(Expression(ExBinaryOp{">", int64(1), int64(2)}), "1>2")
 	test(Expression(ExFunction{"foo", []Expression{ExBinaryOp{"*", int64(1), int64(2)}}}), `"foo"(1*2)`)
 }
 
@@ -325,6 +326,22 @@ func TestCreateTable(t *testing.T) {
 				Triggers:       []Trigger{TriggerOnDelete(ActionCascade)},
 			},
 		},
+
+		"foo integer CHECK ( 1 > 2 ) NOT NULL": &ColumnDef{
+			Name: "foo",
+			Type: "integer",
+			Checks: []Expression{
+				ExBinaryOp{Op: ">", Left: int64(1), Right: int64(2)},
+			},
+		},
+		"foo integer CHECK (foo = 4) NOT NULL": &ColumnDef{
+			Name: "foo",
+			Type: "integer",
+			Checks: []Expression{
+				ExBinaryOp{Op: "=", Left: ExColumn("foo"), Right: int64(4)},
+			},
+		},
+		"foo integer CHECK 12 NOT NULL": nil,
 	}
 
 	for sql, col := range cases {
