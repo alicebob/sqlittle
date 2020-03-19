@@ -21,7 +21,6 @@ func TestDriver(t *testing.T) {
 	})
 
 	t.Run("query", func(t *testing.T) {
-		t.Skip("borked")
 		rows, err := c.Query(`SELECT * FROM albums`)
 		require.NoError(t, err)
 		cols, err := rows.Columns()
