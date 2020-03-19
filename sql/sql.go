@@ -25,8 +25,8 @@ func (so SortOrder) String() string {
 
 // A `SELECT` statement
 type SelectStmt struct {
-	Columns []string
 	Table   string
+	Columns []string
 }
 
 // A `CREATE TABLE` statement

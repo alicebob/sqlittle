@@ -3,9 +3,11 @@ package driver
 import (
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"io"
 
 	"github.com/alicebob/sqlittle/db"
+	sqsql "github.com/alicebob/sqlittle/sql"
 )
 
 func init() {
@@ -78,7 +80,16 @@ func (st Statement) Exec(v []driver.Value) (driver.Result, error) {
 }
 
 func (st Statement) Query(v []driver.Value) (driver.Rows, error) {
-	s, err := st.dbh.Schema("tracks")
+	stmt, err := sqsql.Parse(st.SQL)
+	if err != nil {
+		return nil, err
+	}
+	sel, ok := stmt.(sqsql.SelectStmt)
+	if !ok {
+		return nil, fmt.Errorf("only SELECT is supported (we got a %T)", stmt)
+	}
+
+	s, err := st.dbh.Schema(sel.Table)
 	if err != nil {
 		return nil, err
 	}
