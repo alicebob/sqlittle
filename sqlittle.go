@@ -182,3 +182,22 @@ func (db *DB) PKSelect(table string, key Key, cb RowCB, columns ...string) error
 		return pkSelect(db.db, s, key, cb, columns)
 	}
 }
+
+// Columns are the names of the column of the table.
+func (db *DB) Columns(table string) ([]string, error) {
+	if err := db.db.RLock(); err != nil {
+		return nil, err
+	}
+	defer db.db.RUnlock()
+
+	s, err := db.db.Schema(table)
+	if err != nil {
+		return nil, err
+	}
+
+	var cols []string
+	for _, c := range s.Columns {
+		cols = append(cols, c.Column)
+	}
+	return cols, nil
+}
