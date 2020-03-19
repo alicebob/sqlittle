@@ -131,11 +131,11 @@ func tokenize(s string) ([]token, error) {
 			i += l - 1
 		default:
 			switch c {
-			case '>', '<', '|', '*', '/', '%', '&', '=', '!':
+			case '>', '<', '|', '/', '%', '&', '=', '!':
 				op := readOp(s[i:])
 				res = append(res, stoken(tOperator, op))
 				i += len(op) - 1
-			case '(', ')', ',', '+', '-', '~':
+			case '(', ')', ',', '+', '-', '~', '*':
 				// + and - might be binary or unary. let the lexer figure that out
 				res = append(res, stoken(int(c), string(c)))
 			case '\'':

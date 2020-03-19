@@ -100,7 +100,7 @@ func TestTokens(t *testing.T) {
 		"select * from foo",
 		[]token{
 			stoken(SELECT, "select"),
-			stoken(tOperator, "*"),
+			stoken('*', "*"),
 			stoken(FROM, "from"),
 			stoken(tBare, "foo"),
 		},
@@ -111,7 +111,7 @@ func TestTokens(t *testing.T) {
 		"  \tselect\n*\nfrom   foo ",
 		[]token{
 			stoken(SELECT, "select"),
-			stoken(tOperator, "*"),
+			stoken('*', "*"),
 			stoken(FROM, "from"),
 			stoken(tBare, "foo"),
 		},
@@ -153,7 +153,7 @@ func TestTokens(t *testing.T) {
 		"|| * / % + - << >> & | < <= > >= = == != <> ~",
 		[]token{
 			optoken("||"),
-			optoken("*"),
+			stoken('*', "*"),
 			optoken("/"),
 			optoken("%"),
 			stoken('+', "+"),

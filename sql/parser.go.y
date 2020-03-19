@@ -189,6 +189,9 @@ optColumnNameList:
 resultColumn:
 	columnName {
 		$$ = $1
+	} |
+	'*' {
+		$$ = "*"
 	}
 
 resultColumnList:
@@ -462,6 +465,9 @@ expr:
 	} |
 	expr tOperator expr {
 		$$ = ExBinaryOp{$2, $1, $3}
+	} |
+	expr '*' expr {
+		$$ = ExBinaryOp{"*", $1, $3}
 	} |
 	expr '+' expr {
 		$$ = ExBinaryOp{"+", $1, $3}
