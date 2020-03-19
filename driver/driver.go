@@ -70,6 +70,10 @@ type Statement struct {
 	SQL string
 }
 
+var (
+    _ driver.Stmt = (*Statement)(nil)
+)
+
 func (st *Statement) Close() error {
 	return st.dbh.Close()
 }
