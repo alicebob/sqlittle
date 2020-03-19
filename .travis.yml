@@ -3,7 +3,7 @@ language: go
 install: go get -t ./...
 script: make ci
 go:
-- "1.10"
+- "1.14"
 addons:
   apt:
     update: true
