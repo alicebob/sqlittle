@@ -13,11 +13,8 @@ func TestDriver(t *testing.T) {
 	require.NotNil(t, c)
 
 	t.Run("exec", func(t *testing.T) {
-		res, err := c.Exec("foobar")
-		require.NoError(t, err)
-		aff, err := res.RowsAffected()
-		require.NoError(t, err)
-		require.EqualValues(t, 0, aff)
+		_, err := c.Exec("foobar")
+		require.EqualError(t, err, "Exec() is not supported")
 	})
 
 	t.Run("query", func(t *testing.T) {

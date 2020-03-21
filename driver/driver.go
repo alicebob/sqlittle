@@ -3,6 +3,7 @@ package driver
 import (
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"io"
 
@@ -78,9 +79,10 @@ func (st *Statement) Close() error {
 	return st.dbh.Close()
 }
 
-// Exec is not relevant and is a NOOP
-func (st Statement) Exec(v []driver.Value) (driver.Result, error) {
-	return driver.RowsAffected(0), nil
+// Exec is not relevant and always returns an error
+func (st *Statement) Exec(v []driver.Value) (driver.Result, error) {
+	return nil, errors.New("Exec() is not supported")
+	// return driver.ResultNoRows, nil
 }
 
 func (st Statement) Query(v []driver.Value) (driver.Rows, error) {
