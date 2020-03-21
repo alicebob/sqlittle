@@ -85,7 +85,7 @@ func (st *Statement) Exec(v []driver.Value) (driver.Result, error) {
 	// return driver.ResultNoRows, nil
 }
 
-func (st Statement) Query(v []driver.Value) (driver.Rows, error) {
+func (st *Statement) Query(v []driver.Value) (driver.Rows, error) {
 	stmt, err := sqsql.Parse(st.SQL)
 	if err != nil {
 		return nil, err
@@ -96,8 +96,7 @@ func (st Statement) Query(v []driver.Value) (driver.Rows, error) {
 	}
 	table := sel.Table
 
-	// ignore SELECT columns for now
-	cols, err := st.dbh.Columns(sel.Table)
+	cols, err := st.expandSelectColumns(sel)
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +108,7 @@ func (st Statement) Query(v []driver.Value) (driver.Rows, error) {
 		cb := func(row sqlittle.Row) {
 			rows <- row
 		}
+		// FIXME: the error is currently lost
 		st.dbh.Select(table, cb, cols...)
 	}()
 
@@ -120,6 +120,24 @@ func (st Statement) Query(v []driver.Value) (driver.Rows, error) {
 
 func (st Statement) NumInput() int {
 	return 0
+}
+
+// expand the '*' from SELECT statements. Doesn't check column names.
+func (st *Statement) expandSelectColumns(sel sqsql.SelectStmt) ([]string, error) {
+	allCols, err := st.dbh.Columns(sel.Table)
+	if err != nil {
+		return nil, err
+	}
+
+	var cols []string
+	for _, c := range sel.Columns {
+		if c == "*" {
+			cols = append(cols, allCols...)
+			continue
+		}
+		cols = append(cols, c)
+	}
+	return cols, nil
 }
 
 // Rows is the result set. It implements the driver.Rows interface.

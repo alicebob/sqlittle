@@ -38,6 +38,35 @@ func TestDriver(t *testing.T) {
 		}, res)
 	})
 
+	t.Run("query, columns", func(t *testing.T) {
+		rows, err := c.Query(`SELECT name, id, id FROM albums`)
+		require.NoError(t, err)
+		cols, err := rows.Columns()
+		require.NoError(t, err)
+		require.Equal(t, []string{"name", "id", "id"}, cols)
+
+		var res [][]string
+		for rows.Next() {
+			r := make([]string, 3)
+			require.NoError(t, rows.Scan(&r[0], &r[1], &r[2]))
+			res = append(res, r)
+		}
+		require.NoError(t, rows.Err())
+		require.NoError(t, rows.Close())
+		require.Equal(t, [][]string{
+			{"Rubber Soul", "1", "1"},
+			{"Abbey Road", "2", "2"},
+		}, res)
+	})
+
+	t.Run("query, columns with *", func(t *testing.T) {
+		rows, err := c.Query(`SELECT * FROM albums`)
+		require.NoError(t, err)
+		cols, err := rows.Columns()
+		require.NoError(t, err)
+		require.Equal(t, []string{"id", "artist", "name"}, cols)
+	})
+
 	t.Run("query, nonrowid table", func(t *testing.T) {
 		rows, err := c.Query(`SELECT * FROM tracks`)
 		require.NoError(t, err)
@@ -66,6 +95,13 @@ func TestDriver(t *testing.T) {
 	t.Run("query, non-existing table", func(t *testing.T) {
 		rows, err := c.Query(`SELECT * FROM nosuch`)
 		require.EqualError(t, err, `no such table: "nosuch"`)
+		require.Nil(t, rows)
+	})
+
+	t.Run("query, invalid columns", func(t *testing.T) {
+		t.Skip("needs fixing")
+		rows, err := c.Query(`SELECT nope, such FROM albums`)
+		require.EqualError(t, err, "invalid col")
 		require.Nil(t, rows)
 	})
 
