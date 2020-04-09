@@ -106,7 +106,7 @@ func (f *filePager) CheckReservedLock() (bool, error) {
 	lock := &unix.Flock_t{
 		Type:   unix.F_WRLCK,
 		Whence: seek_set,
-		Start:  sqlite_shared_first,
+		Start:  sqlite_reserved_byte,
 		Len:    1,
 	}
 	err := unix.FcntlFlock(f.f.Fd(), unix.F_GETLK, lock)
