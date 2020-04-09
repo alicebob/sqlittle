@@ -1,3 +1,5 @@
+// +build !windows
+
 // unix implementation of the `pager` interface (the file reader) with POSIX
 // advisory locking
 
