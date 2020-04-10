@@ -1,3 +1,5 @@
+// +build !windows
+
 // unix implementation of the `pager` interface (the file reader) with POSIX
 // advisory locking
 
@@ -12,11 +14,7 @@ import (
 )
 
 const (
-	seek_set             = 0 // should be defined in syscall
-	sqlite_pending_byte  = 0x40000000
-	sqlite_reserved_byte = sqlite_pending_byte + 1
-	sqlite_shared_first  = sqlite_pending_byte + 2
-	sqlite_shared_size   = 510
+	seekSet = 0 // should be defined in syscall
 )
 
 type filePager struct {
@@ -62,8 +60,8 @@ func (f *filePager) RLock() error {
 	// - get PENDING lock
 	pending := &unix.Flock_t{
 		Type:   unix.F_RDLCK,
-		Whence: seek_set,
-		Start:  sqlite_pending_byte,
+		Whence: seekSet,
+		Start:  sqlitePendingByte,
 		Len:    1,
 	}
 	if err := f.lock(pending); err != nil {
@@ -79,9 +77,9 @@ func (f *filePager) RLock() error {
 	// Get the read-lock
 	read := &unix.Flock_t{
 		Type:   unix.F_RDLCK,
-		Whence: seek_set,
-		Start:  sqlite_shared_first,
-		Len:    sqlite_shared_size,
+		Whence: seekSet,
+		Start:  sqliteSharedFirst,
+		Len:    sqliteSharedSize,
 	}
 	if err := f.lock(read); err != nil {
 		return err
@@ -105,8 +103,8 @@ func (f *filePager) CheckReservedLock() (bool, error) {
 	// per SQLite's unixCheckReservedLock()
 	lock := &unix.Flock_t{
 		Type:   unix.F_WRLCK,
-		Whence: seek_set,
-		Start:  sqlite_shared_first,
+		Whence: seekSet,
+		Start:  sqliteReservedByte,
 		Len:    1,
 	}
 	err := unix.FcntlFlock(f.f.Fd(), unix.F_GETLK, lock)
