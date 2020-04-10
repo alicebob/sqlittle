@@ -18,13 +18,6 @@ import (
 )
 
 const (
-	sqlite_pending_byte  = 0x40000000
-	sqlite_reserved_byte = sqlite_pending_byte + 1
-	sqlite_shared_first  = sqlite_pending_byte + 2
-	sqlite_shared_size   = 510
-)
-
-const (
 	reserved uint32 = 0
 )
 
@@ -94,7 +87,7 @@ func (f *filePager) RLock() error {
 	//
 	// source: https://github.com/sqlite/sqlite/blob/c398c65bee850b6b8f24a44852872a27f114535d/src/os_win.c#L3280
 	for i := 0; i < 3; i++ {
-		err := f.lock(sqlite_pending_byte, 1)
+		err := f.lock(sqlitePendingByte, 1)
 		if err == nil {
 			break
 		}
@@ -106,11 +99,11 @@ func (f *filePager) RLock() error {
 
 	defer func() {
 		// - drop the pending lock. No idea what to do with the error :/
-		f.unlock(sqlite_pending_byte, 1)
+		f.unlock(sqlitePendingByte, 1)
 	}()
 
 	// Get the read-lock
-	if err := f.lock(sqlite_shared_first, sqlite_shared_size); err != nil {
+	if err := f.lock(sqliteSharedFirst, sqliteSharedSize); err != nil {
 		return err
 	}
 	f.state = Locked
@@ -121,7 +114,7 @@ func (f *filePager) RUnlock() error {
 	if f.state == Unlocked {
 		return errors.New("trying to unlock an unlocked lock") // panic?
 	}
-	if err := f.unlock(sqlite_shared_first, sqlite_shared_size); err != nil {
+	if err := f.unlock(sqliteSharedFirst, sqliteSharedSize); err != nil {
 		return err
 	}
 	f.state = Unlocked
@@ -131,9 +124,9 @@ func (f *filePager) RUnlock() error {
 // True if there is a 'reserved' lock on the database, by any process.
 func (f *filePager) CheckReservedLock() (bool, error) {
 	// per SQLite's winCheckReservedLock()
-	err := f.lock(sqlite_reserved_byte, 1)
+	err := f.lock(sqliteReservedByte, 1)
 	if err == nil {
-		f.unlock(sqlite_reserved_byte, 1)
+		f.unlock(sqliteReservedByte, 1)
 	}
 	return err == nil, err
 }

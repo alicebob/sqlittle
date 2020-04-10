@@ -1,5 +1,12 @@
 package db
 
+const (
+	sqlitePendingByte  = 0x40000000
+	sqliteReservedByte = sqlitePendingByte + 1
+	sqliteSharedFirst  = sqlitePendingByte + 2
+	sqliteSharedSize   = 510
+)
+
 type pager interface {
 	// load a page from storage.
 	page(n int, pagesize int) ([]byte, error)
