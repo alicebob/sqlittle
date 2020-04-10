@@ -38,6 +38,7 @@ Things SQLittle can do:
 - Collate functions are used automatically
 - indexes with expression (either in columns or as a `WHERE`) are (partially) supported
 - Scan() to most Go datatypes, including `time.Time`
+- Works on Linux, Mac OS, and Windows
 ```
 
 Things SQLittle should do:
