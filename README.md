@@ -38,6 +38,7 @@ Things SQLittle can do:
 - Collate functions are used automatically
 - indexes with expression (either in columns or as a `WHERE`) are (partially) supported
 - Scan() to most Go datatypes, including `time.Time`
+- there is an experimental database/sql driver, see below
 ```
 
 Things SQLittle should do:
@@ -129,6 +130,40 @@ Come Together
 
 ```
 
+
+# Driver
+
+The ./driver/ package implements an *experimental* driver for `database/sql`. It currently supports very basic SELECT statements only. Issues, PRs, and feature requests are (as always) welcome.
+
+## Idea
+
+The driver exposes sqlittle as a `database/sql` driver. It uses the main sqlittle package to implement a basic query executor, which can be used as any other Go database driver.
+
+It will never support full SQL, but certain things we can do without implementing an actual database system. For example `ORDER BY` could be supported, as long as you have an index which we can use for it. `LIMIT` should be easy. But `GROUP BY` needs an actual database system, so that's out.
+
+## Supported SQL
+
+These statements are supported. Anything else is not:
+
+- `SELECT * FROM yourtable`
+- `SELECT col1, col2 FROM yourtable`
+
+## example
+
+```
+import (
+	"database/sql"
+
+	_ "github.com/alicebob/sqlittle/driver"
+)
+
+func Albums() {
+	c, err := sql.Open("sqlittle", "../testdata/music.sqlite")
+	rows, err := c.Query(`SELECT * FROM albums`)
+	// normal rows.Next() stuff
+	// Be sure to check rows.Err()!
+}
+```
 
 
 # &c.
