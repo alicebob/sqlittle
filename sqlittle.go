@@ -196,7 +196,7 @@ func (db *DB) PKSelect(table string, key Key, cb RowCB, columns ...string) error
 	}
 }
 
-// Columns are the names of the column of the table.
+// Columns gives the column names in the table.
 func (db *DB) Columns(table string) ([]string, error) {
 	if err := db.db.RLock(); err != nil {
 		return nil, err
