@@ -67,14 +67,17 @@ func (*Tx) Commit() error {
 }
 
 // Statement is a single statement, belonging to a particular Connection.
-// It implements the driver.Stmt interface.
+// It implements the driver.Stmt, driver.StmtExecContext, and
+// driver.StmtQueryContext interfaces.
 type Statement struct {
 	dbh *sqlittle.DB
 	SQL string
 }
 
 var (
-	_ driver.Stmt = (*Statement)(nil)
+	_ driver.Stmt             = (*Statement)(nil)
+	_ driver.StmtExecContext  = (*Statement)(nil)
+	_ driver.StmtQueryContext = (*Statement)(nil)
 )
 
 func (st *Statement) Close() error {
