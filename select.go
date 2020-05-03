@@ -6,7 +6,7 @@ import (
 	sdb "github.com/alicebob/sqlittle/db"
 )
 
-func select_(db *sdb.Database, s *sdb.Schema, cb RowCB, columns []string) error {
+func select_(db *sdb.Database, s *sdb.Schema, cb RowDoneCB, columns []string) error {
 	ci, err := toColumnIndexRowid(s, columns)
 	if err != nil {
 		return err
@@ -17,12 +17,11 @@ func select_(db *sdb.Database, s *sdb.Schema, cb RowCB, columns []string) error 
 		return err
 	}
 	return t.Scan(func(rowid int64, r sdb.Record) bool {
-		cb(toRow(rowid, ci, r))
-		return false
+		return cb(toRow(rowid, ci, r))
 	})
 }
 
-func selectNonRowid(db *sdb.Database, s *sdb.Schema, cb RowCB, columns []string) error {
+func selectNonRowid(db *sdb.Database, s *sdb.Schema, cb RowDoneCB, columns []string) error {
 	ci, err := toColumnIndexNonRowid(s, columns)
 	if err != nil {
 		return err
@@ -33,8 +32,7 @@ func selectNonRowid(db *sdb.Database, s *sdb.Schema, cb RowCB, columns []string)
 		return err
 	}
 	return t.Scan(func(r sdb.Record) bool {
-		cb(toRow(0, ci, r))
-		return false
+		return cb(toRow(0, ci, r))
 	})
 }
 
