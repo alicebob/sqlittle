@@ -103,31 +103,30 @@ func (st *Statement) Query(v []driver.Value) (driver.Rows, error) {
 		return nil, err
 	}
 
-	rows := make(chan sqlittle.Row)
 	ctx, cancel := context.WithCancel(context.Background())
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+
+	rows := &Rows{
+		columns: cols,
+		rows:    make(chan sqlittle.Row),
+		cancel:  cancel,
+	}
+
+	rows.wg.Add(1)
 	go func() {
-		defer close(rows)
+		defer close(rows.rows)
 		cb := func(row sqlittle.Row) bool {
 			select {
 			case <-ctx.Done():
 				return true
-			case rows <- row:
+			case rows.rows <- row:
 				return false
 			}
 		}
-		// FIXME: the error is currently lost
-		st.dbh.SelectDone(table, cb, cols...)
-		wg.Done()
+		rows.err = st.dbh.SelectDone(table, cb, cols...)
+		rows.wg.Done()
 	}()
 
-	return &Rows{
-		columns: cols,
-		rows:    rows,
-		wg:      wg,
-		cancel:  cancel,
-	}, nil
+	return rows, nil
 }
 
 func (st Statement) NumInput() int {
@@ -156,14 +155,15 @@ func (st *Statement) expandSelectColumns(sel sqsql.SelectStmt) ([]string, error)
 type Rows struct {
 	columns []string
 	rows    chan sqlittle.Row
-	wg      *sync.WaitGroup
+	wg      sync.WaitGroup
 	cancel  func()
+	err     error
 }
 
 func (r *Rows) Close() error {
 	r.cancel()
 	r.wg.Wait()
-	return nil
+	return r.err
 }
 
 func (r *Rows) Columns() []string {
@@ -173,6 +173,9 @@ func (r *Rows) Columns() []string {
 func (r *Rows) Next(dest []driver.Value) error {
 	row, ok := <-r.rows
 	if !ok {
+		if r.err != nil {
+			return r.err
+		}
 		return io.EOF
 	}
 

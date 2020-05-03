@@ -99,10 +99,15 @@ func TestDriver(t *testing.T) {
 	})
 
 	t.Run("query, invalid columns", func(t *testing.T) {
-		t.Skip("needs fixing")
 		rows, err := c.Query(`SELECT nope, such FROM albums`)
-		require.EqualError(t, err, "invalid col")
-		require.Nil(t, rows)
+		// - ideally:
+		// require.EqualError(t, err, "invalid col")
+		// require.Nil(t, rows)
+		// - but for now:
+		require.NoError(t, err)
+		require.False(t, rows.Next())
+		require.NoError(t, rows.Close())
+		require.EqualError(t, rows.Err(), `no such column: "nope"`)
 	})
 
 	t.Run("query, index name used as table", func(t *testing.T) {
