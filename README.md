@@ -138,6 +138,4 @@ Come Together
 
 `make fuzz` uses [go-fuzz](https://github.com/dvyukov/go-fuzz)
 
-The README is generated with [autoreadme](https://github.com/jimmyfrasche/autoreadme)
-
 See [sqlite2go](https://github.com/cznic/sqlite2go/) for another approach to pure Go SQLite
