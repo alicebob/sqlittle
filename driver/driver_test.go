@@ -169,3 +169,38 @@ func TestQueryContext(t *testing.T) {
 
 	require.NoError(t, c.Close())
 }
+
+func TestQueryRow(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		c, err := sql.Open("sqlittle", "../testdata/music.sqlite")
+		require.NoError(t, err)
+		require.NotNil(t, c)
+
+		var name string
+		err = c.QueryRow(`SELECT name FROM albums`).Scan(&name)
+		require.NoError(t, err)
+		require.Equal(t, name, "Rubber Soul")
+	})
+
+	t.Run("invalid table", func(t *testing.T) {
+		c, err := sql.Open("sqlittle", "../testdata/music.sqlite")
+		require.NoError(t, err)
+		require.NotNil(t, c)
+
+		var name string
+		err = c.QueryRow(`SELECT name FROM nosuchtable`).Scan(&name)
+		require.EqualError(t, err, `no such table: "nosuchtable"`)
+		require.Equal(t, name, "")
+	})
+
+	t.Run("invalid column", func(t *testing.T) {
+		c, err := sql.Open("sqlittle", "../testdata/music.sqlite")
+		require.NoError(t, err)
+		require.NotNil(t, c)
+
+		var name string
+		err = c.QueryRow(`SELECT nosuch FROM albums`).Scan(&name)
+		require.EqualError(t, err, `no such column: "nosuch"`)
+		require.Equal(t, name, "")
+	})
+}
