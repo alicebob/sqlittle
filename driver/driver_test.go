@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 
@@ -30,8 +31,8 @@ func TestDriver(t *testing.T) {
 			require.NoError(t, rows.Scan(&r[0], &r[1], &r[2]))
 			res = append(res, r)
 		}
-		require.NoError(t, rows.Err())
 		require.NoError(t, rows.Close())
+		require.NoError(t, rows.Err())
 		require.Equal(t, [][]string{
 			{"1", "1", "Rubber Soul"},
 			{"2", "1", "Abbey Road"},
@@ -51,8 +52,8 @@ func TestDriver(t *testing.T) {
 			require.NoError(t, rows.Scan(&r[0], &r[1], &r[2]))
 			res = append(res, r)
 		}
-		require.NoError(t, rows.Err())
 		require.NoError(t, rows.Close())
+		require.NoError(t, rows.Err())
 		require.Equal(t, [][]string{
 			{"Rubber Soul", "1", "1"},
 			{"Abbey Road", "2", "2"},
@@ -80,8 +81,8 @@ func TestDriver(t *testing.T) {
 			require.NoError(t, rows.Scan(&r[0], &r[1], &r[2], &r[3]))
 			res = append(res, r)
 		}
-		require.NoError(t, rows.Err())
 		require.NoError(t, rows.Close())
+		require.NoError(t, rows.Err())
 		require.Equal(t, [][]string{
 			{"1", "1", "Drive My Car", "145"},
 			{"2", "1", "Norwegian Wood", "121"},
@@ -142,8 +143,29 @@ func TestClose(t *testing.T) {
 	require.Equal(t, []string{"id", "artist", "name"}, cols)
 
 	// there are two rows. We load only 1 and then Close().
-	rows.Next()
-	rows.Close()
+	require.True(t, rows.Next())
+	require.NoError(t, rows.Close())
+	require.NoError(t, rows.Err())
 
-	c.Close()
+	require.NoError(t, c.Close())
+}
+
+func TestQueryContext(t *testing.T) {
+	c, err := sql.Open("sqlittle", "../testdata/music.sqlite")
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	rows, err := c.QueryContext(ctx, `SELECT * FROM albums`)
+	require.NoError(t, err)
+	cols, err := rows.Columns()
+	require.NoError(t, err)
+	require.Equal(t, []string{"id", "artist", "name"}, cols)
+
+	// there are two rows. We load only 1 and then cancel the context.
+	require.True(t, rows.Next())
+	cancel()
+	require.NoError(t, rows.Err())
+
+	require.NoError(t, c.Close())
 }

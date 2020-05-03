@@ -81,13 +81,24 @@ func (st *Statement) Close() error {
 	return st.dbh.Close()
 }
 
-// Exec is not relevant and always returns an error
-func (st *Statement) Exec(v []driver.Value) (driver.Result, error) {
-	return nil, errors.New("Exec() is not supported")
-	// return driver.ResultNoRows, nil
+// See ExecContext() instead
+func (st *Statement) Exec([]driver.Value) (driver.Result, error) {
+	return nil, driver.ErrSkip
 }
 
-func (st *Statement) Query(v []driver.Value) (driver.Rows, error) {
+// ExecContext is not relevant and always returns an error
+func (st *Statement) ExecContext(context.Context, []driver.NamedValue) (driver.Result, error) {
+	return nil, errors.New("Exec() is not supported")
+}
+
+// See QueryContext() instead
+func (st *Statement) Query([]driver.Value) (driver.Rows, error) {
+	return nil, driver.ErrSkip
+}
+
+func (st *Statement) QueryContext(ctx context.Context, v []driver.NamedValue) (driver.Rows, error) {
+	ctx, cancel := context.WithCancel(ctx)
+
 	stmt, err := sqsql.Parse(st.SQL)
 	if err != nil {
 		return nil, err
@@ -102,8 +113,6 @@ func (st *Statement) Query(v []driver.Value) (driver.Rows, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
 
 	rows := &Rows{
 		columns: cols,
