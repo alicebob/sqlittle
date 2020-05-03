@@ -124,3 +124,21 @@ func TestDriver(t *testing.T) {
 		require.Nil(t, rows)
 	})
 }
+
+func TestClose(t *testing.T) {
+	c, err := sql.Open("sqlittle", "../testdata/music.sqlite")
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	rows, err := c.Query(`SELECT * FROM albums`)
+	require.NoError(t, err)
+	cols, err := rows.Columns()
+	require.NoError(t, err)
+	require.Equal(t, []string{"id", "artist", "name"}, cols)
+
+	// there are two rows. We load only 1 and then Close().
+	rows.Next()
+	rows.Close()
+
+	c.Close()
+}

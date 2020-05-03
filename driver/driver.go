@@ -1,11 +1,13 @@
 package driver
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/alicebob/sqlittle"
 	sqsql "github.com/alicebob/sqlittle/sql"
@@ -102,19 +104,29 @@ func (st *Statement) Query(v []driver.Value) (driver.Rows, error) {
 	}
 
 	rows := make(chan sqlittle.Row)
+	ctx, cancel := context.WithCancel(context.Background())
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
-		// fix error reporting and Close()
 		defer close(rows)
-		cb := func(row sqlittle.Row) {
-			rows <- row
+		cb := func(row sqlittle.Row) bool {
+			select {
+			case <-ctx.Done():
+				return true
+			case rows <- row:
+				return false
+			}
 		}
 		// FIXME: the error is currently lost
-		st.dbh.Select(table, cb, cols...)
+		st.dbh.SelectDone(table, cb, cols...)
+		wg.Done()
 	}()
 
 	return &Rows{
 		columns: cols,
 		rows:    rows,
+		wg:      wg,
+		cancel:  cancel,
 	}, nil
 }
 
@@ -144,9 +156,13 @@ func (st *Statement) expandSelectColumns(sel sqsql.SelectStmt) ([]string, error)
 type Rows struct {
 	columns []string
 	rows    chan sqlittle.Row
+	wg      *sync.WaitGroup
+	cancel  func()
 }
 
-func (*Rows) Close() error {
+func (r *Rows) Close() error {
+	r.cancel()
+	r.wg.Wait()
 	return nil
 }
 
