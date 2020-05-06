@@ -33,6 +33,9 @@ func (db *DB) Close() error {
 // values.
 type RowCB func(Row)
 
+// Like RowCB, but return `true` when you're done reading rows
+type RowDoneCB func(Row) bool
+
 // Select the columns from every row from the given table. Order is the rowid
 // order for rowid tables, and the ordered primary key for non-rowid tables
 // (`WITHOUT ROWID`).
@@ -40,6 +43,16 @@ type RowCB func(Row)
 // For rowid tables the special values "rowid", "oid", and "_rowid_" will load
 // the rowid (unless there is a column with that name).
 func (db *DB) Select(table string, cb RowCB, columns ...string) error {
+	innerCB := func(row Row) bool {
+		cb(row)
+		return false // not done
+	}
+	return db.SelectDone(table, innerCB, columns...)
+}
+
+// SelectDone is the same as Select(), but the callback can stop the iterating.
+// Useful for implementing things like `LIMIT`.
+func (db *DB) SelectDone(table string, cb RowDoneCB, columns ...string) error {
 	if err := db.db.RLock(); err != nil {
 		return err
 	}
@@ -181,4 +194,23 @@ func (db *DB) PKSelect(table string, key Key, cb RowCB, columns ...string) error
 	} else {
 		return pkSelect(db.db, s, key, cb, columns)
 	}
+}
+
+// Columns gives the column names in the table.
+func (db *DB) Columns(table string) ([]string, error) {
+	if err := db.db.RLock(); err != nil {
+		return nil, err
+	}
+	defer db.db.RUnlock()
+
+	s, err := db.db.Schema(table)
+	if err != nil {
+		return nil, err
+	}
+
+	var cols []string
+	for _, c := range s.Columns {
+		cols = append(cols, c.Column)
+	}
+	return cols, nil
 }

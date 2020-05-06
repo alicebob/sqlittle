@@ -310,3 +310,29 @@ func TestSelectOverflow(t *testing.T) {
 
 	db.Select("test", func(row Row) {}, "id")
 }
+
+func TestSelectDone(t *testing.T) {
+	db, err := Open("testdata/words.sqlite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var words []string
+	var i = 0
+	cb := func(r Row) bool {
+		var w string
+		if err := r.Scan(nil, &w); err != nil {
+			t.Fatal(err)
+		}
+		words = append(words, w)
+		i++
+		return i >= 10
+	}
+	if err := db.SelectDone("words", cb, "length", "word"); err != nil {
+		t.Fatal(err)
+	}
+	if have, want := len(words), 10; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}

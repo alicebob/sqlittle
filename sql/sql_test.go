@@ -75,6 +75,14 @@ func TestSelect(t *testing.T) {
 		"SELECT aap,noot, mies FROM foo2",
 		SelectStmt{Columns: []string{"aap", "noot", "mies"}, Table: "foo2"},
 	)
+	sqlOK(t,
+		`SELECT aap," foo", mies FROM foo2`,
+		SelectStmt{Columns: []string{"aap", " foo", "mies"}, Table: "foo2"},
+	)
+	sqlOK(t,
+		"SeLeCt * FROM foo_bar",
+		SelectStmt{Columns: []string{"*"}, Table: "foo_bar"},
+	)
 
 	// create what?
 	sqlError(t, "CREATE nothing foo", errors.New("syntax error"))
