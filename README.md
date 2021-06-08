@@ -169,8 +169,8 @@ func Albums() {
 
 # &c.
 
-[![GoDoc](https://godoc.org/github.com/alicebob/sqlittle?status.svg)](https://godoc.org/github.com/alicebob/sqlittle)
-[![Build Status](https://travis-ci.org/alicebob/sqlittle.png?branch=master)](https://travis-ci.org/alicebob/sqlittle)
+[![GoDoc](https://pkg.go.dev/badge/github.com/alicebob/sqlittle)](https://pkg.go.dev/github.com/alicebob/sqlittle)
+[![Build Status](https://travis-ci.com/alicebob/sqlittle.png?branch=master)](https://travis-ci.com/alicebob/sqlittle)
 
 `make fuzz` uses [go-fuzz](https://github.com/dvyukov/go-fuzz)
 
