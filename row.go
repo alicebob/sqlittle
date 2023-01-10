@@ -18,21 +18,21 @@ type Row sdb.Record
 
 // Scan converts a row with database values to the Go values you want.
 // Supported Go types:
-//  - bool
-//  - float64
-//  - int
-//  - int32
-//  - int64
-//  - string
-//  - []byte
-//  - time.Time
-//  - nil (skips the column)
+//   - bool
+//   - float64
+//   - int
+//   - int32
+//   - int64
+//   - string
+//   - []byte
+//   - time.Time
+//   - nil (skips the column)
 //
 // Conversions are usually stricter than in SQLite:
-//  - string to number does not accept trailing letters such as in "123test"
-//  - string to bool needs to convert to a number cleanly
-//  - numbers are stored as either int64 or float64, and are converted
-//    with the normal Go conversions.
+//   - string to number does not accept trailing letters such as in "123test"
+//   - string to bool needs to convert to a number cleanly
+//   - numbers are stored as either int64 or float64, and are converted
+//     with the normal Go conversions.
 //
 // Values are a copy of the database bytes; they stay valid even after closing
 // the database.

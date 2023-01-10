@@ -130,14 +130,17 @@ func (db *DB) IndexedSelect(table, index string, cb RowCB, columns ...string) er
 // value stored in the index.
 //
 // For example, given a table:
-//    1: "aap", 1
-//    2: "aap", 13
-//    3: "noot", 12
+//
+//	1: "aap", 1
+//	2: "aap", 13
+//	3: "noot", 12
+//
 // matches:
-//    Key{"aap", 1} will match rows 1
-//    Key{"aap"} will match rows 1 and 2
-//    Key{"noot", 1} will not match any row
-//    Key{} will match every row
+//
+//	Key{"aap", 1} will match rows 1
+//	Key{"aap"} will match rows 1 and 2
+//	Key{"noot", 1} will not match any row
+//	Key{} will match every row
 //
 // If the index has a WHERE expression only the rows matching that expression
 // will be matched.
