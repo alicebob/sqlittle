@@ -7,6 +7,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/stretchr/testify v1.8.1
-	golang.org/x/exp v0.0.0-20190419195159-b8972e603456
-	golang.org/x/sys v0.0.0-20190419153524-e8e3143a4f4a
+	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
+	golang.org/x/sys v0.5.0
 )
